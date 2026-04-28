@@ -252,6 +252,95 @@ TEST_CASE("Sketch can delete unreferenced vertices without corrupting indices"){
     REQUIRE( constraint->line == second_line_idx );
 }
 
+TEST_CASE("Sketch supports shared-vertex construction and primitive vertex hit testing"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto shared = sketch.append_vertex(vec3<double>(1.0, 1.0, 0.0));
+    const auto other_a = sketch.append_vertex(vec3<double>(2.0, 1.0, 0.0));
+    const auto other_b = sketch.append_vertex(vec3<double>(1.0, 2.0, 0.0));
+    const auto line_a = sketch.add_line(shared, other_a, Sketch::geometry_tag_t::normal);
+    const auto line_b = sketch.add_line(shared, other_b, Sketch::geometry_tag_t::support);
+
+    REQUIRE( sketch.vertex_count() == 3U );
+    REQUIRE( sketch.primitive_count() == 2U );
+    REQUIRE( sketch.primitives_referencing_vertex(shared).size() == 2U );
+
+    const auto hit = sketch.nearest_primitive_vertex(vec3<double>(1.02, 1.01, 0.0), 0.1);
+    REQUIRE( hit.has_value() );
+    REQUIRE( hit->second == shared );
+    REQUIRE( (hit->first == line_a || hit->first == line_b) );
+}
+
+TEST_CASE("Sketch can insert and collapse vertices"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    const auto line_idx = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                          vec3<double>(4.0, 0.0, 0.0),
+                                          Sketch::geometry_tag_t::normal);
+
+    const auto inserted = sketch.insert_vertex(line_idx, vec3<double>(2.0, 0.0, 0.0));
+    REQUIRE( inserted.has_value() );
+    REQUIRE( sketch.vertex_count() == 3U );
+    REQUIRE( sketch.primitive_count() == 2U );
+
+    const auto line_refs = sketch.primitives_referencing_vertex(inserted.value());
+    REQUIRE( line_refs.size() == 2U );
+    REQUIRE( sketch.collapse_vertices(0U, inserted.value()) );
+    REQUIRE( sketch.primitive_count() == 2U );
+    const auto remaining_refs = sketch.primitives_referencing_vertex(0U);
+    REQUIRE( remaining_refs.size() == 2U );
+}
+
+TEST_CASE("Sketch solves perpendicular and overlap constraints"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto line_a = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                        vec3<double>(4.0, 0.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+    const auto line_b = sketch.add_line(vec3<double>(1.0, 1.0, 0.0),
+                                        vec3<double>(3.0, 2.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+    const auto vertex_a = sketch.append_vertex(vec3<double>(9.0, 9.0, 0.0));
+    const auto vertex_b = sketch.append_vertex(vec3<double>(10.0, 11.0, 0.0));
+
+    sketch.add_perpendicular_constraint(line_a, line_b);
+    sketch.add_overlap_constraint(vertex_a, vertex_b);
+
+    REQUIRE( sketch.solve_constraints() == 0U );
+
+    const auto *a = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(line_a));
+    const auto *b = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(line_b));
+    REQUIRE( a != nullptr );
+    REQUIRE( b != nullptr );
+
+    const auto dir_a = sketch.vertex(a->vertices[1]) - sketch.vertex(a->vertices[0]);
+    const auto dir_b = sketch.vertex(b->vertices[1]) - sketch.vertex(b->vertices[0]);
+    REQUIRE( doctest::Approx(dir_a.Dot(dir_b)).epsilon(1E-6) == 0.0 );
+    REQUIRE( sketch.vertex(vertex_a).distance(sketch.vertex(vertex_b)) == doctest::Approx(0.0).epsilon(1E-9) );
+}
+
+TEST_CASE("Sketch can delete primitives and constraints directly"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    const auto line_a = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                        vec3<double>(1.0, 0.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+    const auto line_b = sketch.add_line(vec3<double>(0.0, 1.0, 0.0),
+                                        vec3<double>(1.0, 1.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+    sketch.add_parallel_constraint(line_a, line_b);
+    sketch.add_perpendicular_constraint(line_a, line_b);
+
+    REQUIRE( sketch.constraint_count() == 2U );
+    REQUIRE( sketch.delete_constraint(0U) );
+    REQUIRE( sketch.constraint_count() == 1U );
+    REQUIRE( sketch.delete_primitive(line_a) );
+    REQUIRE( sketch.primitive_count() == 1U );
+    REQUIRE( sketch.constraint_count() == 0U );
+}
+
 TEST_CASE("Sketch files round-trip through disk serialization"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
@@ -259,6 +348,8 @@ TEST_CASE("Sketch files round-trip through disk serialization"){
                                           vec3<double>(2.123456789012345, 0.0, 0.0),
                                           Sketch::geometry_tag_t::support);
     sketch.add_distance_constraint(line_idx, 2.0);
+    sketch.add_overlap_constraint(sketch.append_vertex(vec3<double>(3.0, 0.0, 0.0)),
+                                  sketch.append_vertex(vec3<double>(3.0, 1.0, 0.0)));
 
     const auto unique_suffix = std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     const auto path = std::filesystem::temp_directory_path() / ("dcma_sketch_roundtrip_test_" + unique_suffix + ".dcmasketch");
@@ -276,6 +367,7 @@ TEST_CASE("Sketch files round-trip through disk serialization"){
     REQUIRE( loaded_line->tag == Sketch::geometry_tag_t::support );
     REQUIRE( loaded.vertex(loaded_line->vertices[0]).x == doctest::Approx(0.123456789012345).epsilon(1E-15) );
     REQUIRE( loaded.vertex(loaded_line->vertices[1]).x == doctest::Approx(2.123456789012345).epsilon(1E-15) );
+    REQUIRE( loaded.describe_constraint(1U) == "overlap" );
 
     std::filesystem::remove(path);
 }

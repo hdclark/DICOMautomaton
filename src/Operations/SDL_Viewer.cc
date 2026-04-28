@@ -1608,16 +1608,19 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct sketch_slot_t {
         sketch_history_t history;
         std::set<std::size_t> selection;
+        std::set<Sketch::vertex_index_t> vertex_selection;
     };
 
     struct pending_sketch_primitive_t {
         std::optional<Sketch::primitive_kind_t> kind;
         Sketch::geometry_tag_t tag = Sketch::geometry_tag_t::normal;
+        bool polyline = false;
         std::vector<vec3<double>> points;
 
         void clear(){
             kind = {};
             tag = Sketch::geometry_tag_t::normal;
+            polyline = false;
             points.clear();
         }
 
@@ -1629,7 +1632,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!kind) return 0U;
             switch(kind.value()){
                 case Sketch::primitive_kind_t::vertex: return 1U;
-                case Sketch::primitive_kind_t::line:   return 2U;
+                case Sketch::primitive_kind_t::line:   return polyline ? 2U : 2U;
                 case Sketch::primitive_kind_t::circle: return 2U;
                 case Sketch::primitive_kind_t::arc:    return 3U;
                 case Sketch::primitive_kind_t::bezier: return 4U;
@@ -1641,13 +1644,19 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!kind) return "idle";
             switch(kind.value()){
                 case Sketch::primitive_kind_t::vertex: return "vertex";
-                case Sketch::primitive_kind_t::line:   return "line";
+                case Sketch::primitive_kind_t::line:   return polyline ? "polyline" : "line";
                 case Sketch::primitive_kind_t::circle: return "circle";
                 case Sketch::primitive_kind_t::arc:    return "arc";
                 case Sketch::primitive_kind_t::bezier: return "bezier";
             }
             return "unknown";
         }
+    };
+
+    enum class sketch_tool_mode_t {
+        select,
+        insert_vertex,
+        collapse_vertices,
     };
 
     struct sketch_drag_state_t {
@@ -1671,10 +1680,13 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::vector<sketch_slot_t> sketch_slots(1U);
     int sketch_slot_num = 0;
     pending_sketch_primitive_t sketch_pending_primitive;
+    sketch_tool_mode_t sketch_tool_mode = sketch_tool_mode_t::select;
     sketch_drag_state_t sketch_drag_state;
     std::optional<std::size_t> sketch_hovered_primitive;
+    std::optional<Sketch::vertex_index_t> sketch_hovered_vertex;
     std::optional<std::size_t> sketch_last_unresolved_constraints = 0U;
     bool sketch_show_indices = false;
+    double sketch_snap_distance = 1.0;
     bool view_sketch_editor_enabled = false;
     std::array<char, 4096> sketch_save_path = {};
     std::array<char, 4096> sketch_load_path = {};
@@ -1771,11 +1783,13 @@ bool SDL_Viewer(Drover &DICOM_data,
         sketch_pending_primitive.clear();
         sketch_drag_state.clear();
         sketch_hovered_primitive = {};
+        sketch_hovered_vertex = {};
     };
 
     const auto reset_sketch_slot = [&](sketch_slot_t &slot) -> void {
         slot.history.reset();
         slot.selection.clear();
+        slot.vertex_selection.clear();
     };
 
     const auto current_sketch = [&]() -> Sketch& {
@@ -1837,6 +1851,34 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                double pxl_dy) -> double {
         return std::max<double>( std::max<double>(pxl_dx, pxl_dy) * 2.0,
                                  6.0 / std::max<double>(mouse_pos.pixel_scale, 1.0E-3f) );
+    };
+
+    const auto sketch_snap_direction = [](const Sketch::plane_frame_t &plane,
+                                          const vec3<double> &origin,
+                                          const vec3<double> &point) -> vec3<double> {
+        const auto delta = point - origin;
+        const auto u = plane.row_unit.Dot(delta);
+        const auto v = plane.col_unit.Dot(delta);
+        const auto r = std::hypot(u, v);
+        if(r <= std::numeric_limits<double>::epsilon()) return point;
+        const auto step = std::acos(-1.0) / 4.0;
+        const auto snapped_theta = std::round(std::atan2(v, u) / step) * step;
+        return origin
+             + plane.row_unit * (std::cos(snapped_theta) * r)
+             + plane.col_unit * (std::sin(snapped_theta) * r);
+    };
+
+    const auto sketch_constraint_indicator = [](Sketch::constraint_kind_t kind) -> const char* {
+        switch(kind){
+            case Sketch::constraint_kind_t::horizontal: return "H";
+            case Sketch::constraint_kind_t::vertical: return "V";
+            case Sketch::constraint_kind_t::distance: return "d";
+            case Sketch::constraint_kind_t::parallel: return "||";
+            case Sketch::constraint_kind_t::perpendicular: return "_|_";
+            case Sketch::constraint_kind_t::tangent: return "~";
+            case Sketch::constraint_kind_t::overlap: return "o";
+        }
+        return "?";
     };
 
     // Resets the contouring image to match the display image characteristics.
@@ -5521,15 +5563,20 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &reset_sketch_slot,
                                            &sketch_is_compatible_with_image,
                                            &sketch_selection_tolerance,
+                                           &sketch_snap_direction,
+                                           &sketch_constraint_indicator,
                                            &sketch_tag_colour,
                                            &sketch_hovered_primitive,
+                                           &sketch_hovered_vertex,
                                            &sketch_pending_primitive,
+                                           &sketch_tool_mode,
                                            &sketch_drag_state,
                                            &sketch_slot_num,
                                            &ensure_sketch_slots,
                                            &clear_sketch_interaction_state,
                                            &sketch_last_unresolved_constraints,
                                            &sketch_show_indices,
+                                           &sketch_snap_distance,
                                            &view_sketch_editor_enabled,
                                            &sketch_save_path,
                                            &sketch_load_path,
@@ -5896,9 +5943,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if( image_mouse_pos.mouse_hovering_image
                 &&  sketch_compatible ){
                     const auto tol = sketch_selection_tolerance(image_mouse_pos, disp_img_it->pxl_dx, disp_img_it->pxl_dy);
-                    sketch_hovered_primitive = sketch.nearest_primitive(image_mouse_pos.dicom_pos, tol);
+                    if(const auto hovered_vertex = sketch.nearest_primitive_vertex(image_mouse_pos.dicom_pos, tol); hovered_vertex){
+                        sketch_hovered_primitive = hovered_vertex->first;
+                        sketch_hovered_vertex = hovered_vertex->second;
+                    }else{
+                        sketch_hovered_primitive = sketch.nearest_primitive(image_mouse_pos.dicom_pos, tol);
+                        sketch_hovered_vertex = {};
+                    }
                 }else if(!sketch_drag_state.selection_box_active){
                     sketch_hovered_primitive = {};
+                    sketch_hovered_vertex = {};
                 }
 
                 if(sketch_compatible){
@@ -5915,6 +5969,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                         const bool is_selected = (slot.selection.count(i) != 0U);
                         const bool is_hovered = sketch_hovered_primitive && (sketch_hovered_primitive.value() == i);
+                        const auto referenced_vertices = primitive->referenced_vertices();
                         const auto base_colour = sketch_tag_colour(primitive->tag);
                         auto colour = base_colour;
                         if(is_selected){
@@ -5936,11 +5991,23 @@ bool SDL_Viewer(Drover &DICOM_data,
                             }
                         }
 
-                        if(is_selected || is_hovered){
-                            for(const auto vertex_idx : primitive->referenced_vertices()){
+                        const bool has_selected_vertex = std::any_of(std::begin(referenced_vertices),
+                                                                     std::end(referenced_vertices),
+                                                                     [&](const auto vertex_idx){
+                                                                         return slot.vertex_selection.count(vertex_idx) != 0U;
+                                                                     });
+                        if(is_selected || is_hovered || has_selected_vertex){
+                            for(const auto vertex_idx : referenced_vertices){
                                 const auto p = image_mouse_pos.DICOM_to_pixels(sketch.vertex(vertex_idx));
-                                imgs_window_draw_list->AddCircleFilled(p, 4.0f, ImColor(1.0f, 1.0f, 1.0f, 0.95f));
-                                imgs_window_draw_list->AddCircle(p, 5.0f, colour, 0, 1.5f);
+                                const bool vertex_selected = (slot.vertex_selection.count(vertex_idx) != 0U);
+                                const bool vertex_hovered = sketch_hovered_vertex && (sketch_hovered_vertex.value() == vertex_idx);
+                                const auto vertex_fill = vertex_selected ? ImColor(1.00f, 0.35f, 0.95f, 1.00f)
+                                                                         : (vertex_hovered ? ImColor(1.00f, 1.00f, 0.25f, 1.00f)
+                                                                                           : ImColor(1.0f, 1.0f, 1.0f, 0.95f));
+                                const auto vertex_outline = vertex_selected ? ImColor(1.00f, 0.10f, 0.80f, 1.00f)
+                                                                            : colour;
+                                imgs_window_draw_list->AddCircleFilled(p, vertex_selected ? 4.5f : 4.0f, vertex_fill);
+                                imgs_window_draw_list->AddCircle(p, vertex_selected ? 6.0f : 5.0f, vertex_outline, 0, vertex_selected ? 2.0f : 1.5f);
                             }
                         }
 
@@ -5948,7 +6015,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if(!samples.empty()){
                                 primitive_label_positions.at(i) = samples.at(samples.size() / 2U);
                             }
-                            for(const auto vertex_idx : primitive->referenced_vertices()){
+                            for(const auto vertex_idx : referenced_vertices){
                                 if(vertex_idx < vertex_label_tags.size()){
                                     auto &tag_slot = vertex_label_tags.at(vertex_idx);
                                     if(!tag_slot || (tag_slot.value() == Sketch::geometry_tag_t::support && primitive->tag == Sketch::geometry_tag_t::normal)){
@@ -5964,7 +6031,23 @@ bool SDL_Viewer(Drover &DICOM_data,
                         auto preview_colour = sketch_tag_colour(sketch_pending_primitive.tag);
                         std::vector<vec3<double>> preview_points = sketch_pending_primitive.points;
                         if(image_mouse_pos.mouse_hovering_image){
-                            preview_points.push_back(image_mouse_pos.dicom_pos);
+                            auto preview_point = image_mouse_pos.dicom_pos;
+                            if(io.KeyCtrl && sketch.has_plane() && !sketch_pending_primitive.points.empty()){
+                                const bool angular_snap = (sketch_pending_primitive.kind == Sketch::primitive_kind_t::line)
+                                                       || (sketch_pending_primitive.kind == Sketch::primitive_kind_t::circle)
+                                                       || (sketch_pending_primitive.kind == Sketch::primitive_kind_t::arc);
+                                if(angular_snap){
+                                    preview_point = sketch_snap_direction(sketch.plane(),
+                                                                         sketch_pending_primitive.points.front(),
+                                                                         preview_point);
+                                }
+                            }
+                            if(0.0 < sketch_snap_distance){
+                                if(const auto snapped_vertex = sketch.nearest_vertex(preview_point, sketch_snap_distance); snapped_vertex){
+                                    preview_point = sketch.vertex(snapped_vertex.value());
+                                }
+                            }
+                            preview_points.push_back(preview_point);
                         }
                         for(const auto &p : preview_points){
                             imgs_window_draw_list->AddCircleFilled(image_mouse_pos.DICOM_to_pixels(p), 3.5f, preview_colour);
@@ -5975,6 +6058,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                            preview_colour,
                                                            1.5f);
                         }
+                    }else if( (sketch_tool_mode == sketch_tool_mode_t::insert_vertex)
+                           && image_mouse_pos.mouse_hovering_image
+                           && sketch_hovered_primitive ){
+                        imgs_window_draw_list->AddCircleFilled(image_mouse_pos.DICOM_to_pixels(image_mouse_pos.dicom_pos),
+                                                               4.5f,
+                                                               ImColor(1.00f, 0.55f, 0.15f, 1.00f));
                     }
 
                     if(sketch_show_indices){
@@ -5992,10 +6081,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                             imgs_window_draw_list->AddText(origin, colour, text.c_str());
                         };
 
+                        const auto vertex_label_colour = ImColor(1.00f, 0.78f, 0.18f, 1.00f);
+                        const auto primitive_label_colour = ImColor(0.25f, 1.00f, 0.40f, 1.00f);
+                        const auto constraint_label_colour = ImColor(0.98f, 0.42f, 1.00f, 1.00f);
+
                         for(std::size_t vertex_idx = 0U; vertex_idx < vertex_label_tags.size(); ++vertex_idx){
                             if(!vertex_label_tags.at(vertex_idx)) continue;
                             draw_sketch_label(sketch.vertex(vertex_idx),
-                                              sketch_tag_colour(vertex_label_tags.at(vertex_idx).value()),
+                                              vertex_label_colour,
                                               std::to_string(vertex_idx),
                                               ImVec2(10.0f, -10.0f));
                         }
@@ -6004,7 +6097,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const auto *primitive = sketch.primitive(primitive_idx);
                             if((primitive == nullptr) || !primitive_label_positions.at(primitive_idx)) continue;
                             draw_sketch_label(primitive_label_positions.at(primitive_idx).value(),
-                                              sketch_tag_colour(primitive->tag),
+                                              primitive_label_colour,
                                               std::to_string(primitive_idx),
                                               ImVec2(0.0f, -12.0f));
                         }
@@ -6028,13 +6121,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             }
                             if(count == 0U) continue;
                             centre /= static_cast<double>(count);
-                            auto colour = sketch_tag_colour(label_tag);
+                            auto colour = constraint_label_colour;
                             if(!constraint->enabled){
                                 colour.Value.w = 0.55f;
                             }
                             draw_sketch_label(centre,
                                               colour,
-                                              std::to_string(constraint_idx),
+                                              std::to_string(constraint_idx) + " " + sketch_constraint_indicator(constraint->kind()),
                                               ImVec2(0.0f, 12.0f));
                         }
                     }
@@ -6051,6 +6144,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
             }else if(!view_toggles.view_vector_sketching_enabled){
                 sketch_hovered_primitive = {};
+                sketch_hovered_vertex = {};
             }
 
             if(view_toggles.view_vector_sketching_enabled){
@@ -6066,6 +6160,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ensure_sketch_slots(static_cast<std::size_t>(std::max(sketch_slot_num, 0)));
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
+                    current_sketch_slot().vertex_selection.clear();
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("New Sketch")){
@@ -6073,6 +6168,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     sketch_slot_num = static_cast<int>(sketch_slots.size() - 1U);
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
+                    current_sketch_slot().vertex_selection.clear();
                     sketch_last_unresolved_constraints = 0U;
                     sketch_file_status.clear();
                 }
@@ -6088,6 +6184,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
+                    current_sketch_slot().vertex_selection.clear();
                     sketch_last_unresolved_constraints = 0U;
                 }
 
@@ -6111,6 +6208,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     slot.history.snapshot();
                     slot.history.current().clear();
                     slot.selection.clear();
+                    slot.vertex_selection.clear();
                     sketch_last_unresolved_constraints = 0U;
                     clear_sketch_interaction_state();
                 }
@@ -6126,11 +6224,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(clicked_undo_sketch){
                     slot.history.undo();
                     slot.selection.clear();
+                    slot.vertex_selection.clear();
                     clear_sketch_interaction_state();
                 }
                 if(clicked_redo_sketch){
                     slot.history.redo();
                     slot.selection.clear();
+                    slot.vertex_selection.clear();
                     clear_sketch_interaction_state();
                 }
 
@@ -6185,6 +6285,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     reset_sketch_slot(slot);
                                     slot.history.current() = loaded_sketch;
                                     slot.selection.clear();
+                                    slot.vertex_selection.clear();
                                     clear_sketch_interaction_state();
                                     sketch_last_unresolved_constraints = 0U;
                                     sketch_file_status = "Loaded sketch from '" + filepath.string() + "'";
@@ -6212,7 +6313,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }else if(sketch_dof.remaining == 0U){
                     ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.4f, 1.0f), "Sketch is fully constrained");
                 }
-                ImGui::Text("Selected: %zu", slot.selection.size());
+                ImGui::Text("Selected primitives: %zu  vertices: %zu", slot.selection.size(), slot.vertex_selection.size());
                 if(sketch_pending_primitive.active()){
                     const auto remaining_points = sketch_pending_primitive.required_points() - sketch_pending_primitive.points.size();
                     ImGui::Text("Pending: add %s (%zu more click%s)",
@@ -6228,16 +6329,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Text("Last solve unresolved: %zu", sketch_last_unresolved_constraints.value());
                 }
                 ImGui::Checkbox("Show sketch numbers", &sketch_show_indices);
+                ImGui::SetNextItemWidth(140.0f);
+                ImGui::InputDouble("Snap-to distance", &sketch_snap_distance, 0.1, 1.0, "%.4f");
+                sketch_snap_distance = std::max(0.0, sketch_snap_distance);
                 if(!sketch_file_status.empty()){
                     ImGui::TextWrapped("%s", sketch_file_status.c_str());
                 }
 
                 const auto activate_sketch_primitive = [&](Sketch::primitive_kind_t kind,
-                                                           Sketch::geometry_tag_t tag) -> void {
+                                                           Sketch::geometry_tag_t tag,
+                                                           bool polyline = false) -> void {
                     sketch_pending_primitive.kind = kind;
                     sketch_pending_primitive.tag = tag;
+                    sketch_pending_primitive.polyline = polyline;
                     sketch_pending_primitive.points.clear();
                     sketch_drag_state.clear();
+                    sketch_tool_mode = sketch_tool_mode_t::select;
                 };
 
                 ImGui::Separator();
@@ -6248,6 +6355,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::SameLine();
                 if(ImGui::Button("Line")){
                     activate_sketch_primitive(Sketch::primitive_kind_t::line, Sketch::geometry_tag_t::normal);
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Polyline")){
+                    activate_sketch_primitive(Sketch::primitive_kind_t::line, Sketch::geometry_tag_t::normal, true);
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Circle")){
@@ -6270,6 +6381,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     activate_sketch_primitive(Sketch::primitive_kind_t::line, Sketch::geometry_tag_t::support);
                 }
                 ImGui::SameLine();
+                if(ImGui::Button("Support Polyline")){
+                    activate_sketch_primitive(Sketch::primitive_kind_t::line, Sketch::geometry_tag_t::support, true);
+                }
+                ImGui::SameLine();
                 if(ImGui::Button("Support Circle")){
                     activate_sketch_primitive(Sketch::primitive_kind_t::circle, Sketch::geometry_tag_t::support);
                 }
@@ -6283,9 +6398,25 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 ImGui::Separator();
                 ImGui::Text("Geometry Selection");
-                ImGui::TextWrapped("Click to select. Hold ctrl to add one primitive at a time. Click and drag to select all primitives inside a box.");
+                ImGui::TextWrapped("Click to select primitives or visible control vertices. Hold ctrl to add one item at a time. Click and drag to select all primitives inside a box.");
+                if(sketch_tool_mode == sketch_tool_mode_t::insert_vertex){
+                    ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.25f, 1.0f), "Insert vertex mode active (press escape to cancel).");
+                }else if(sketch_tool_mode == sketch_tool_mode_t::collapse_vertices){
+                    ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.25f, 1.0f), "Collapse vertices mode active (pick two vertices or press escape).");
+                }
                 if(ImGui::Button("Clear Selection")){
                     slot.selection.clear();
+                    slot.vertex_selection.clear();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Insert Vertex Mode")){
+                    sketch_tool_mode = sketch_tool_mode_t::insert_vertex;
+                    sketch_pending_primitive.clear();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Collapse Vertices Mode")){
+                    sketch_tool_mode = sketch_tool_mode_t::collapse_vertices;
+                    sketch_pending_primitive.clear();
                 }
 
                 std::vector<std::size_t> selected_lines;
@@ -6331,6 +6462,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                 }
                 ImGui::SameLine();
+                if(ImGui::Button("Perpendicular")){
+                    if(selected_lines.size() == 2U){
+                        auto &editable_sketch = create_sketch_snapshot(disp_img_it);
+                        editable_sketch.add_perpendicular_constraint(selected_lines[0], selected_lines[1]);
+                    }
+                }
+                ImGui::SameLine();
                 if(ImGui::Button("Tangent")){
                     if(slot.selection.size() == 2U){
                         auto it = std::begin(slot.selection);
@@ -6339,6 +6477,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const auto primitive_b = *it;
                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                         editable_sketch.add_tangent_constraint(primitive_a, primitive_b);
+                    }
+                }
+                if(ImGui::Button("Overlap")){
+                    if(slot.vertex_selection.size() == 2U){
+                        auto it = std::begin(slot.vertex_selection);
+                        const auto vertex_a = *it;
+                        ++it;
+                        const auto vertex_b = *it;
+                        auto &editable_sketch = create_sketch_snapshot(disp_img_it);
+                        editable_sketch.add_overlap_constraint(vertex_a, vertex_b);
                     }
                 }
                 if(ImGui::Button("Compute Constraints")){
@@ -6378,6 +6526,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                         fn(editable_sketch);
                         slot.selection.clear();
+                        slot.vertex_selection.clear();
                         clear_sketch_interaction_state();
                     };
 
@@ -6439,7 +6588,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ImGui::SetNextItemWidth(100.0f);
                             changed = ImGui::InputDouble("z", &z) || changed;
                             ImGui::SameLine();
-                            const bool delete_vertex_clicked = ImGui::Button("Delete");
+                            const bool delete_vertex_clicked = ImGui::Button("Delete##vertex");
                             ImGui::PopID();
 
                             if(changed){
@@ -6470,7 +6619,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ImGui::SetNextItemWidth(140.0f);
                             const bool tag_changed = ImGui::Combo("Tag", &tag_idx, "normal\0support\0");
                             ImGui::SameLine();
-                            const bool delete_primitive_clicked = ImGui::Button("Delete");
+                            const bool delete_primitive_clicked = ImGui::Button("Delete##primitive");
 
                             if(tag_changed){
                                 edit_current_sketch([&](Sketch &editable_sketch){
@@ -6634,13 +6783,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if(constraint == nullptr) continue;
 
                             const auto primitive_count = slot.history.current().primitive_count();
+                            const auto vertex_count = slot.history.current().vertex_count();
 
                             ImGui::PushID(static_cast<int>(constraint_idx));
                             ImGui::Text("Constraint %zu (%s)", constraint_idx, slot.history.current().describe_constraint(constraint_idx).c_str());
                             bool enabled = constraint->enabled;
                             bool changed = ImGui::Checkbox("Enabled", &enabled);
                             ImGui::SameLine();
-                            const bool delete_constraint_clicked = ImGui::Button("Delete");
+                            const bool delete_constraint_clicked = ImGui::Button("Delete##constraint");
                             if(changed){
                                 edit_current_sketch([&](Sketch &editable_sketch){
                                     if(auto *editable_constraint = editable_sketch.constraint(constraint_idx); editable_constraint != nullptr){
@@ -6720,6 +6870,24 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     ImGui::PopID();
                                     break;
                                 }
+                            }else if(const auto *perpendicular = dynamic_cast<const Sketch::perpendicular_constraint_t*>(constraint); perpendicular != nullptr){
+                                int line_a = static_cast<int>(perpendicular->line_a);
+                                int line_b = static_cast<int>(perpendicular->line_b);
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Line A", &line_a);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Line B", &line_b) || changed;
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::perpendicular_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->line_a = clamp_debug_index(line_a, primitive_count);
+                                            editable_constraint->line_b = clamp_debug_index(line_b, primitive_count);
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
                             }else if(const auto *tangent = dynamic_cast<const Sketch::tangent_constraint_t*>(constraint); tangent != nullptr){
                                 int primitive_a = static_cast<int>(tangent->primitive_a);
                                 int primitive_b = static_cast<int>(tangent->primitive_b);
@@ -6733,6 +6901,24 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         if(auto *editable_constraint = dynamic_cast<Sketch::tangent_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
                                             editable_constraint->primitive_a = clamp_debug_index(primitive_a, primitive_count);
                                             editable_constraint->primitive_b = clamp_debug_index(primitive_b, primitive_count);
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *overlap = dynamic_cast<const Sketch::overlap_constraint_t*>(constraint); overlap != nullptr){
+                                int vertex_a = static_cast<int>(overlap->vertex_a);
+                                int vertex_b = static_cast<int>(overlap->vertex_b);
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Vertex A", &vertex_a);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Vertex B", &vertex_b) || changed;
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::overlap_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->vertex_a = clamp_debug_index(vertex_a, vertex_count);
+                                            editable_constraint->vertex_b = clamp_debug_index(vertex_b, vertex_count);
                                         }
                                     });
                                     ImGui::PopID();
@@ -9699,8 +9885,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                &ensure_sketch_plane,
                                                &sketch_is_compatible_with_image,
                                                &sketch_selection_tolerance,
+                                               &sketch_snap_direction,
                                                &sketch_pending_primitive,
+                                               &sketch_tool_mode,
                                                &sketch_drag_state,
+                                               &sketch_hovered_primitive,
+                                               &sketch_hovered_vertex,
+                                               &sketch_snap_distance,
                                                &sketch_last_unresolved_constraints ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -9820,6 +10011,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 const bool pressing_ctrl_Z = (io.KeyCtrl && ImGui::IsKeyPressed( SDL_SCANCODE_Z ));
                 const bool pressing_ctrl_Y = (io.KeyCtrl && ImGui::IsKeyPressed( SDL_SCANCODE_Y ));
+                const bool pressing_escape = ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE);
 
 
                 if( image_mouse_pos_opt.value().image_window_focused
@@ -9876,7 +10068,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                         &&  sketch_is_compatible_with_image(slot.history.current(), disp_img_it) ){
                             const auto selected = slot.history.current().primitives_inside_box(sketch_drag_state.anchor.value(),
                                                                                                sketch_drag_state.last_pos.value());
-                            if(!io.KeyCtrl) slot.selection.clear();
+                            if(!io.KeyCtrl){
+                                slot.selection.clear();
+                                slot.vertex_selection.clear();
+                            }
                             slot.selection.insert(std::begin(selected), std::end(selected));
                         }
                         sketch_drag_state.clear();
@@ -9890,7 +10085,21 @@ bool SDL_Viewer(Drover &DICOM_data,
                             slot.history.redo();
                         }
                         slot.selection.clear();
+                        slot.vertex_selection.clear();
                         clear_sketch_interaction_state();
+
+                    }else if( view_toggles.view_vector_sketching_enabled
+                          &&  pressing_escape ){
+                        auto &slot = current_sketch_slot();
+                        if(sketch_pending_primitive.active() || (sketch_tool_mode != sketch_tool_mode_t::select)){
+                            sketch_pending_primitive.clear();
+                            sketch_tool_mode = sketch_tool_mode_t::select;
+                            sketch_drag_state.clear();
+                        }else{
+                            slot.selection.clear();
+                            slot.vertex_selection.clear();
+                            clear_sketch_interaction_state();
+                        }
 
                     }else if( view_toggles.view_vector_sketching_enabled
                           &&  img_valid
@@ -9903,56 +10112,150 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const auto tol = sketch_selection_tolerance(image_mouse_pos_opt.value(),
                                                                     disp_img_it->pxl_dx,
                                                                     disp_img_it->pxl_dy);
+                        const auto resolve_pending_point = [&](Sketch &editable_sketch,
+                                                               vec3<double> point) -> std::pair<vec3<double>, bool> {
+                            if(io.KeyCtrl && editable_sketch.has_plane() && !sketch_pending_primitive.points.empty()){
+                                const bool angular_snap = (sketch_pending_primitive.kind == Sketch::primitive_kind_t::line)
+                                                       || (sketch_pending_primitive.kind == Sketch::primitive_kind_t::circle)
+                                                       || (sketch_pending_primitive.kind == Sketch::primitive_kind_t::arc);
+                                if(angular_snap){
+                                    point = sketch_snap_direction(editable_sketch.plane(),
+                                                                 sketch_pending_primitive.points.front(),
+                                                                 point);
+                                }
+                            }
+                            bool snapped_existing_vertex = false;
+                            if(0.0 < sketch_snap_distance){
+                                if(const auto snapped_vertex = editable_sketch.nearest_vertex(point, sketch_snap_distance); snapped_vertex){
+                                    point = editable_sketch.vertex(snapped_vertex.value());
+                                    snapped_existing_vertex = true;
+                                }
+                            }
+                            return std::make_pair(point, snapped_existing_vertex);
+                        };
+                        const auto resolve_vertex_index = [&](Sketch &editable_sketch,
+                                                              const vec3<double> &point) -> std::pair<Sketch::vertex_index_t, bool> {
+                            if(0.0 < sketch_snap_distance){
+                                if(const auto snapped_vertex = editable_sketch.nearest_vertex(point, sketch_snap_distance); snapped_vertex){
+                                    return std::make_pair(snapped_vertex.value(), true);
+                                }
+                            }
+                            return std::make_pair(editable_sketch.append_vertex(point), false);
+                        };
 
                         if(0.0f == io.MouseDownDuration[0]){
                             if(sketch_pending_primitive.active()){
                                 if(!ensure_sketch_plane(sketch, disp_img_it)){
                                     YLOGWARN("Current sketch belongs to a different image plane; reset or switch sketch slots before editing");
                                 }else{
-                                    sketch_pending_primitive.points.push_back(mouse_pos);
+                                    const auto resolved_point = resolve_pending_point(sketch, mouse_pos);
+                                    sketch_pending_primitive.points.push_back(resolved_point.first);
                                     if(sketch_pending_primitive.points.size() == sketch_pending_primitive.required_points()){
                                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                                         std::size_t primitive_idx = 0U;
+                                        bool stop_polyline = false;
                                         switch(sketch_pending_primitive.kind.value()){
                                             case Sketch::primitive_kind_t::vertex:
-                                                primitive_idx = editable_sketch.add_vertex_primitive(sketch_pending_primitive.points.at(0),
-                                                                                                     sketch_pending_primitive.tag);
+                                                primitive_idx = editable_sketch.add_vertex_primitive(
+                                                    resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(0)).first,
+                                                    sketch_pending_primitive.tag);
                                                 break;
                                             case Sketch::primitive_kind_t::line:
-                                                primitive_idx = editable_sketch.add_line(sketch_pending_primitive.points.at(0),
-                                                                                         sketch_pending_primitive.points.at(1),
-                                                                                         sketch_pending_primitive.tag);
+                                                {
+                                                    const auto start_vertex = resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(0));
+                                                    const auto stop_vertex = resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(1));
+                                                    primitive_idx = editable_sketch.add_line(start_vertex.first,
+                                                                                             stop_vertex.first,
+                                                                                             sketch_pending_primitive.tag);
+                                                    stop_polyline = sketch_pending_primitive.polyline && stop_vertex.second;
+                                                }
                                                 break;
                                             case Sketch::primitive_kind_t::circle:
-                                                primitive_idx = editable_sketch.add_circle(sketch_pending_primitive.points.at(0),
-                                                                                           sketch_pending_primitive.points.at(1),
-                                                                                           sketch_pending_primitive.tag);
+                                                primitive_idx = editable_sketch.add_circle(
+                                                    resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(0)).first,
+                                                    resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(1)).first,
+                                                    sketch_pending_primitive.tag);
                                                 break;
                                             case Sketch::primitive_kind_t::arc:
-                                                primitive_idx = editable_sketch.add_arc(sketch_pending_primitive.points.at(0),
-                                                                                        sketch_pending_primitive.points.at(1),
-                                                                                        sketch_pending_primitive.points.at(2),
-                                                                                        sketch_pending_primitive.tag);
+                                                primitive_idx = editable_sketch.add_arc(
+                                                    resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(0)).first,
+                                                    resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(1)).first,
+                                                    resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(2)).first,
+                                                    sketch_pending_primitive.tag);
                                                 break;
                                             case Sketch::primitive_kind_t::bezier:
-                                                primitive_idx = editable_sketch.add_bezier({ sketch_pending_primitive.points.at(0),
-                                                                                             sketch_pending_primitive.points.at(1),
-                                                                                             sketch_pending_primitive.points.at(2),
-                                                                                             sketch_pending_primitive.points.at(3) },
-                                                                                           sketch_pending_primitive.tag);
+                                                primitive_idx = editable_sketch.add_bezier(
+                                                    { resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(0)).first,
+                                                      resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(1)).first,
+                                                      resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(2)).first,
+                                                      resolve_vertex_index(editable_sketch, sketch_pending_primitive.points.at(3)).first },
+                                                    sketch_pending_primitive.tag);
                                                 break;
                                         }
                                         slot.selection = { primitive_idx };
+                                        slot.vertex_selection.clear();
                                         sketch_last_unresolved_constraints = {};
-                                        sketch_pending_primitive.clear();
+                                        if(sketch_pending_primitive.polyline && !stop_polyline){
+                                            sketch_pending_primitive.points = { sketch_pending_primitive.points.back() };
+                                        }else{
+                                            sketch_pending_primitive.clear();
+                                        }
+                                    }
+                                }
+                            }else if(sketch_tool_mode == sketch_tool_mode_t::insert_vertex){
+                                if(sketch_is_compatible_with_image(sketch, disp_img_it) && sketch_hovered_primitive){
+                                    auto &editable_sketch = create_sketch_snapshot(disp_img_it);
+                                    if(const auto inserted_vertex = editable_sketch.insert_vertex(sketch_hovered_primitive.value(), mouse_pos); inserted_vertex){
+                                        slot.selection.clear();
+                                        slot.vertex_selection.clear();
+                                        slot.vertex_selection.insert(inserted_vertex.value());
+                                        sketch_tool_mode = sketch_tool_mode_t::select;
+                                    }
+                                }
+                            }else if(sketch_tool_mode == sketch_tool_mode_t::collapse_vertices){
+                                if(sketch_hovered_vertex){
+                                    if(!io.KeyCtrl && slot.vertex_selection.empty()){
+                                        slot.selection.clear();
+                                    }
+                                    slot.vertex_selection.insert(sketch_hovered_vertex.value());
+                                    if(slot.vertex_selection.size() == 2U){
+                                        auto it = std::begin(slot.vertex_selection);
+                                        const auto keep_vertex = *it;
+                                        ++it;
+                                        const auto remove_vertex = *it;
+                                        auto &editable_sketch = create_sketch_snapshot(disp_img_it);
+                                        editable_sketch.collapse_vertices(keep_vertex, remove_vertex);
+                                        slot.vertex_selection = { keep_vertex };
+                                        sketch_tool_mode = sketch_tool_mode_t::select;
                                     }
                                 }
                             }else{
-                                const auto hit = sketch_is_compatible_with_image(sketch, disp_img_it)
-                                               ? sketch.nearest_primitive(mouse_pos, tol)
-                                               : std::optional<std::size_t>();
-                                if(hit){
-                                    if(!io.KeyCtrl) slot.selection.clear();
+                                const auto hit_vertex = sketch_is_compatible_with_image(sketch, disp_img_it)
+                                                      ? sketch.nearest_primitive_vertex(mouse_pos, tol)
+                                                      : std::optional<std::pair<std::size_t, Sketch::vertex_index_t>>();
+                                const auto hit = hit_vertex
+                                               ? std::optional<std::size_t>(hit_vertex->first)
+                                               : (sketch_is_compatible_with_image(sketch, disp_img_it)
+                                                    ? sketch.nearest_primitive(mouse_pos, tol)
+                                                    : std::optional<std::size_t>());
+                                if(hit_vertex){
+                                    if(!io.KeyCtrl){
+                                        slot.selection.clear();
+                                        slot.vertex_selection.clear();
+                                    }
+                                    slot.selection.insert(hit_vertex->first);
+                                    slot.vertex_selection.insert(hit_vertex->second);
+                                    sketch_drag_state.selection_move_active = true;
+                                    sketch_drag_state.selection_box_active = false;
+                                    sketch_drag_state.snapshot_created = false;
+                                    sketch_drag_state.anchor = mouse_pos;
+                                    sketch_drag_state.last_pos = mouse_pos;
+                                    sketch_drag_state.dragged_vertex = hit_vertex->second;
+                                }else if(hit){
+                                    if(!io.KeyCtrl){
+                                        slot.selection.clear();
+                                        slot.vertex_selection.clear();
+                                    }
                                     slot.selection.insert(hit.value());
                                     sketch_drag_state.selection_move_active = true;
                                     sketch_drag_state.selection_box_active = false;
@@ -9961,7 +10264,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     sketch_drag_state.last_pos = mouse_pos;
                                     sketch_drag_state.dragged_vertex = sketch.nearest_vertex(mouse_pos, tol, slot.selection);
                                 }else{
-                                    if(!io.KeyCtrl) slot.selection.clear();
+                                    if(!io.KeyCtrl){
+                                        slot.selection.clear();
+                                        slot.vertex_selection.clear();
+                                    }
                                     sketch_drag_state.selection_box_active = true;
                                     sketch_drag_state.selection_move_active = false;
                                     sketch_drag_state.snapshot_created = false;

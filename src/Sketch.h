@@ -40,7 +40,9 @@ public:
         vertical,
         distance,
         parallel,
+        perpendicular,
         tangent,
+        overlap,
     };
 
     struct plane_frame_t {
@@ -138,6 +140,7 @@ public:
         virtual std::unique_ptr<constraint_t> clone() const = 0;
         virtual constraint_kind_t kind() const = 0;
         virtual std::vector<primitive_index_t> referenced_primitives() const = 0;
+        virtual std::vector<vertex_index_t> referenced_vertices() const;
     };
 
     struct horizontal_constraint_t : public constraint_t {
@@ -174,6 +177,15 @@ public:
         std::vector<primitive_index_t> referenced_primitives() const override;
     };
 
+    struct perpendicular_constraint_t : public constraint_t {
+        primitive_index_t line_a = 0U;
+        primitive_index_t line_b = 0U;
+
+        std::unique_ptr<constraint_t> clone() const override;
+        constraint_kind_t kind() const override;
+        std::vector<primitive_index_t> referenced_primitives() const override;
+    };
+
     struct tangent_constraint_t : public constraint_t {
         primitive_index_t primitive_a = 0U;
         primitive_index_t primitive_b = 0U;
@@ -181,6 +193,16 @@ public:
         std::unique_ptr<constraint_t> clone() const override;
         constraint_kind_t kind() const override;
         std::vector<primitive_index_t> referenced_primitives() const override;
+    };
+
+    struct overlap_constraint_t : public constraint_t {
+        vertex_index_t vertex_a = 0U;
+        vertex_index_t vertex_b = 0U;
+
+        std::unique_ptr<constraint_t> clone() const override;
+        constraint_kind_t kind() const override;
+        std::vector<primitive_index_t> referenced_primitives() const override;
+        std::vector<vertex_index_t> referenced_vertices() const override;
     };
 
     Sketch();
@@ -199,10 +221,15 @@ public:
 
     vertex_index_t append_vertex(const vec3<double> &point);
 
+    primitive_index_t add_vertex_primitive(vertex_index_t vertex, geometry_tag_t tag);
     primitive_index_t add_vertex_primitive(const vec3<double> &point, geometry_tag_t tag);
+    primitive_index_t add_line(vertex_index_t start, vertex_index_t stop, geometry_tag_t tag);
     primitive_index_t add_line(const vec3<double> &start, const vec3<double> &stop, geometry_tag_t tag);
+    primitive_index_t add_circle(vertex_index_t center, vertex_index_t radius_point, geometry_tag_t tag);
     primitive_index_t add_circle(const vec3<double> &center, const vec3<double> &radius_point, geometry_tag_t tag);
+    primitive_index_t add_arc(vertex_index_t center, vertex_index_t start, vertex_index_t stop, geometry_tag_t tag);
     primitive_index_t add_arc(const vec3<double> &center, const vec3<double> &start, const vec3<double> &stop, geometry_tag_t tag);
+    primitive_index_t add_bezier(const std::array<vertex_index_t, 4> &control_vertices, geometry_tag_t tag);
     primitive_index_t add_bezier(const std::array<vec3<double>, 4> &control_points, geometry_tag_t tag);
 
     std::size_t vertex_count() const;
@@ -223,9 +250,14 @@ public:
     std::optional<vertex_index_t> nearest_vertex(const vec3<double> &point,
                                                  double tolerance,
                                                  const std::set<primitive_index_t> &primitive_mask = {}) const;
+    std::optional<std::pair<primitive_index_t, vertex_index_t>> nearest_primitive_vertex(
+        const vec3<double> &point,
+        double tolerance,
+        const std::set<primitive_index_t> &primitive_mask = {}) const;
 
     std::vector<primitive_index_t> primitives_inside_box(const vec3<double> &a, const vec3<double> &b) const;
     std::set<vertex_index_t> collect_vertices(const std::set<primitive_index_t> &primitives) const;
+    std::vector<primitive_index_t> primitives_referencing_vertex(vertex_index_t idx) const;
 
     void set_vertex(vertex_index_t idx, const vec3<double> &point);
     void translate_vertices(const std::set<vertex_index_t> &indices, const vec3<double> &delta);
@@ -236,6 +268,8 @@ public:
     bool delete_primitive(primitive_index_t idx);
     bool delete_constraint(constraint_index_t idx);
     std::size_t delete_unreferenced_vertices();
+    std::optional<vertex_index_t> insert_vertex(primitive_index_t idx, const vec3<double> &point);
+    bool collapse_vertices(vertex_index_t keep_idx, vertex_index_t remove_idx);
     void clear_vertices();
     void clear_primitives();
     void clear_constraints();
@@ -244,7 +278,9 @@ public:
     constraint_index_t add_vertical_constraint(primitive_index_t line_idx);
     constraint_index_t add_distance_constraint(primitive_index_t line_idx, double target_distance = std::numeric_limits<double>::quiet_NaN());
     constraint_index_t add_parallel_constraint(primitive_index_t line_a, primitive_index_t line_b);
+    constraint_index_t add_perpendicular_constraint(primitive_index_t line_a, primitive_index_t line_b);
     constraint_index_t add_tangent_constraint(primitive_index_t primitive_a, primitive_index_t primitive_b);
+    constraint_index_t add_overlap_constraint(vertex_index_t vertex_a, vertex_index_t vertex_b);
 
     std::size_t solve_constraints(std::size_t max_iterations = 2U);
     std::string describe_constraint(constraint_index_t idx) const;
