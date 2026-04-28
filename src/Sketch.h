@@ -79,6 +79,34 @@ public:
         std::size_t disabled_constraints = 0U;
     };
 
+    struct solve_options_t {
+        std::size_t max_iterations = 64U;
+        double absolute_tolerance = 1.0E-10;
+        double relative_tolerance = 1.0E-8;
+        double max_time_seconds = 0.0;
+        double sticky_weight = 1.0E-4;
+        bool enable_sticky_constraints = true;
+        double residual_tolerance = 1.0E-4;
+        double finite_difference_step = 1.0E-6;
+        double initial_lambda = 1.0E-3;
+        double lambda_increase_factor = 10.0;
+        double lambda_decrease_factor = 0.1;
+    };
+
+    struct solve_report_t {
+        std::size_t unresolved_constraints = 0U;
+        std::size_t enabled_constraints = 0U;
+        std::size_t residual_count = 0U;
+        std::size_t jacobian_rank = 0U;
+        double cost = std::numeric_limits<double>::quiet_NaN();
+        double conflict_norm = 0.0;
+        int64_t iterations = 0;
+        bool converged = false;
+        bool used_svd = false;
+        bool conflicting_constraints = false;
+        std::string reason;
+    };
+
     struct primitive_t {
         geometry_tag_t tag = geometry_tag_t::normal;
 
@@ -310,6 +338,8 @@ public:
     constraint_index_t add_overlap_constraint(vertex_index_t vertex_a, vertex_index_t vertex_b);
 
     std::size_t solve_constraints(std::size_t max_iterations = 2U);
+    std::size_t solve_constraints(const solve_options_t &options);
+    const solve_report_t& last_solve_report() const;
     std::string describe_constraint(constraint_index_t idx) const;
     bool save_to_file(const std::filesystem::path &path, std::string *error_message = nullptr) const;
     static bool load_from_file(const std::filesystem::path &path, Sketch &out, std::string *error_message = nullptr);
@@ -320,6 +350,7 @@ private:
     std::vector<std::unique_ptr<constraint_t>> constraints_;
     bool has_plane_ = false;
     plane_frame_t plane_ = {};
+    solve_report_t last_solve_report_ = {};
 
     static double normalize_angle(double x);
     static double squared_distance_to_segment(const projection_t &p, const projection_t &a, const projection_t &b);

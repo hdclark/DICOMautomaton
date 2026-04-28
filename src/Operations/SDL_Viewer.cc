@@ -1744,6 +1744,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool sketch_show_vertex_numbers = false;
     bool sketch_show_primitive_numbers = false;
     bool sketch_show_constraint_numbers = false;
+    Sketch::solve_options_t sketch_solve_options;
     bool sketch_solve_on_edit = true;
     double sketch_snap_distance = 5.0;
     bool view_sketch_editor_enabled = false;
@@ -1900,7 +1901,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     };
     const auto solve_sketch_after_edit = [&](Sketch &editable_sketch) -> void {
         if(sketch_solve_on_edit){
-            sketch_last_unresolved_constraints = editable_sketch.solve_constraints();
+            sketch_last_unresolved_constraints = editable_sketch.solve_constraints(sketch_solve_options);
         }else{
             sketch_last_unresolved_constraints = {};
         }
@@ -5649,12 +5650,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &sketch_slot_num,
                                            &ensure_sketch_slots,
                                             &clear_sketch_interaction_state,
-                                            &sketch_last_unresolved_constraints,
-                                            &sketch_show_vertex_numbers,
-                                            &sketch_show_primitive_numbers,
-                                            &sketch_show_constraint_numbers,
-                                            &sketch_show_indices,
-                                            &sketch_solve_on_edit,
+                                             &sketch_last_unresolved_constraints,
+                                             &sketch_show_vertex_numbers,
+                                             &sketch_show_primitive_numbers,
+                                             &sketch_show_constraint_numbers,
+                                             &sketch_solve_options,
+                                             &sketch_solve_on_edit,
                                             &sketch_snap_distance,
                                             &view_sketch_editor_enabled,
                                             &sketch_save_path,
@@ -6470,6 +6471,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 const auto sketch_dof = sketch.summarize_degrees_of_freedom();
+                const auto &sketch_solve_report = sketch.last_solve_report();
                 ImGui::Text("History: %zu / %zu", slot.history.current_version + 1U, slot.history.versions.size());
                 ImGui::Text("Geometry: %zu  Constraints: %zu", sketch.primitive_count(), sketch.constraint_count());
                 ImGui::Text("DOF: %zu / %zu remaining", sketch_dof.remaining, sketch_dof.total);
@@ -6493,6 +6495,19 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
                 if(sketch_last_unresolved_constraints){
                     ImGui::Text("Last solve unresolved: %zu", sketch_last_unresolved_constraints.value());
+                    if(!sketch_solve_report.reason.empty()){
+                        ImGui::Text("Last solve: %s after %" PRId64 " iteration%s",
+                                    sketch_solve_report.reason.c_str(),
+                                    sketch_solve_report.iterations,
+                                    (sketch_solve_report.iterations == 1) ? "" : "s");
+                    }
+                    ImGui::Text("Last solve cost: %.6g", sketch_solve_report.cost);
+                    if(sketch_solve_report.conflicting_constraints){
+                        ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.25f, 1.0f),
+                                           "Constraint conflict detected (SVD norm %.6g, rank %zu)",
+                                           sketch_solve_report.conflict_norm,
+                                           sketch_solve_report.jacobian_rank);
+                    }
                 }
                 ImGui::SetNextItemWidth(140.0f);
                 ImGui::InputDouble("Snap-to distance", &sketch_snap_distance, 0.1, 1.0, "%.4f");
@@ -6696,10 +6711,29 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Separator();
                 ImGui::Text("Constraint Solving");
                 ImGui::Checkbox("Solve on edit", &sketch_solve_on_edit);
+                int sketch_solver_max_iterations = static_cast<int>(
+                    std::min<std::size_t>(sketch_solve_options.max_iterations,
+                                          static_cast<std::size_t>(std::numeric_limits<int>::max())));
+                ImGui::SetNextItemWidth(140.0f);
+                ImGui::InputInt("Max iterations", &sketch_solver_max_iterations);
+                sketch_solve_options.max_iterations = static_cast<std::size_t>(std::max(sketch_solver_max_iterations, 1));
+                ImGui::SetNextItemWidth(140.0f);
+                ImGui::InputDouble("Absolute tolerance", &sketch_solve_options.absolute_tolerance, 0.0, 0.0, "%.3e");
+                sketch_solve_options.absolute_tolerance = std::max(0.0, sketch_solve_options.absolute_tolerance);
+                ImGui::SetNextItemWidth(140.0f);
+                ImGui::InputDouble("Relative tolerance", &sketch_solve_options.relative_tolerance, 0.0, 0.0, "%.3e");
+                sketch_solve_options.relative_tolerance = std::max(0.0, sketch_solve_options.relative_tolerance);
+                ImGui::SetNextItemWidth(140.0f);
+                ImGui::InputDouble("Max solve time (s)", &sketch_solve_options.max_time_seconds, 0.0, 0.0, "%.3f");
+                sketch_solve_options.max_time_seconds = std::max(0.0, sketch_solve_options.max_time_seconds);
+                ImGui::Checkbox("Sticky constraints", &sketch_solve_options.enable_sticky_constraints);
+                ImGui::SetNextItemWidth(140.0f);
+                ImGui::InputDouble("Sticky weight", &sketch_solve_options.sticky_weight, 0.0, 0.0, "%.3e");
+                sketch_solve_options.sticky_weight = std::max(0.0, sketch_solve_options.sticky_weight);
                 if(ImGui::Button("Compute Constraints")){
                     if(sketch.constraint_count() != 0U){
                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
-                        sketch_last_unresolved_constraints = editable_sketch.solve_constraints();
+                        sketch_last_unresolved_constraints = editable_sketch.solve_constraints(sketch_solve_options);
                     }else{
                         sketch_last_unresolved_constraints = 0U;
                     }

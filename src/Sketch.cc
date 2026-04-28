@@ -4,12 +4,23 @@
 
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <limits>
-#include <tuple>
+#include <numeric>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
+
+#ifdef DCMA_USE_EIGEN
+    #include <eigen3/Eigen/Dense>
+    #include <eigen3/Eigen/SVD>
+    #include <eigen3/Eigen/Sparse>
+#endif // DCMA_USE_EIGEN
+
+#include "YgorOptimizeLM.h"
 
 namespace {
 
@@ -233,6 +244,382 @@ static std::size_t constraint_dof_contribution(const Sketch::constraint_t &const
     }
     return 0U;
 }
+
+struct residual_block_t {
+    std::size_t constraint_idx = 0U;
+    std::size_t begin = 0U;
+    std::size_t count = 0U;
+    bool sticky = false;
+};
+
+struct line_binding_t {
+    Sketch::vertex_index_t a = 0U;
+    Sketch::vertex_index_t b = 0U;
+};
+
+struct round_binding_t {
+    Sketch::vertex_index_t center = 0U;
+    Sketch::vertex_index_t radius_point = 0U;
+};
+
+struct tangent_descriptor_t {
+    enum class mode_t {
+        unsupported,
+        line_round,
+        round_round_external,
+        round_round_internal,
+    };
+
+    mode_t mode = mode_t::unsupported;
+    double internal_sign = 1.0;
+};
+
+static void append_residual_block(std::vector<double> &residuals,
+                                  std::vector<residual_block_t> *blocks,
+                                  std::size_t constraint_idx,
+                                  std::initializer_list<double> values,
+                                  bool sticky = false){
+    const auto begin = residuals.size();
+    residuals.insert(std::end(residuals), std::begin(values), std::end(values));
+    if(blocks != nullptr){
+        residual_block_t block;
+        block.constraint_idx = constraint_idx;
+        block.begin = begin;
+        block.count = values.size();
+        block.sticky = sticky;
+        blocks->push_back(block);
+    }
+}
+
+static std::optional<line_binding_t> get_line_binding(const Sketch &sketch,
+                                                      Sketch::primitive_index_t primitive_idx){
+    const auto *line = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(primitive_idx));
+    if(line == nullptr) return {};
+    return line_binding_t{ line->vertices[0], line->vertices[1] };
+}
+
+static std::optional<round_binding_t> get_round_binding(const Sketch &sketch,
+                                                        Sketch::primitive_index_t primitive_idx){
+    if(const auto *circle = dynamic_cast<const Sketch::circle_primitive_t*>(sketch.primitive(primitive_idx)); circle != nullptr){
+        return round_binding_t{ circle->center, circle->radius_point };
+    }
+    if(const auto *arc = dynamic_cast<const Sketch::arc_primitive_t*>(sketch.primitive(primitive_idx)); arc != nullptr){
+        return round_binding_t{ arc->center, arc->start };
+    }
+    return {};
+}
+
+static double signed_distance_to_line(const Sketch::projection_t &point,
+                                      const Sketch::projection_t &line_a,
+                                      const Sketch::projection_t &line_b){
+    const auto du = line_b.u - line_a.u;
+    const auto dv = line_b.v - line_a.v;
+    const auto denom = std::hypot(du, dv);
+    if(denom <= std::numeric_limits<double>::epsilon()){
+        return std::hypot(point.u - line_a.u, point.v - line_a.v);
+    }
+    return ((point.u - line_a.u) * dv - (point.v - line_a.v) * du) / denom;
+}
+
+static double projected_distance(const Sketch::projection_t &a,
+                                 const Sketch::projection_t &b){
+    return std::hypot(a.u - b.u, a.v - b.v);
+}
+
+struct sketch_solver_context_t {
+    const Sketch &sketch;
+    const Sketch::solve_options_t &options;
+    std::vector<Sketch::projection_t> initial_vertices;
+    std::vector<tangent_descriptor_t> tangent_descriptors;
+
+    explicit sketch_solver_context_t(const Sketch &sketch_in,
+                                     const Sketch::solve_options_t &options_in)
+        : sketch(sketch_in),
+          options(options_in) {
+        initial_vertices.reserve(sketch.vertex_count());
+        for(std::size_t i = 0U; i < sketch.vertex_count(); ++i){
+            initial_vertices.push_back(sketch.project(sketch.vertex(i)));
+        }
+
+        tangent_descriptors.resize(sketch.constraint_count());
+        for(std::size_t i = 0U; i < sketch.constraint_count(); ++i){
+            const auto *tangent = dynamic_cast<const Sketch::tangent_constraint_t*>(sketch.constraint(i));
+            if(tangent == nullptr) continue;
+
+            const auto line_a = get_line_binding(sketch, tangent->primitive_a);
+            const auto line_b = get_line_binding(sketch, tangent->primitive_b);
+            const auto round_a = get_round_binding(sketch, tangent->primitive_a);
+            const auto round_b = get_round_binding(sketch, tangent->primitive_b);
+
+            auto &descriptor = tangent_descriptors.at(i);
+            if(line_a && round_b){
+                descriptor.mode = tangent_descriptor_t::mode_t::line_round;
+            }else if(round_a && line_b){
+                descriptor.mode = tangent_descriptor_t::mode_t::line_round;
+            }else if(round_a && round_b){
+                const auto centre_a = initial_vertices.at(round_a->center);
+                const auto centre_b = initial_vertices.at(round_b->center);
+                const auto radius_a = projected_distance(centre_a, initial_vertices.at(round_a->radius_point));
+                const auto radius_b = projected_distance(centre_b, initial_vertices.at(round_b->radius_point));
+                const auto centre_distance = projected_distance(centre_a, centre_b);
+                const auto external_error = std::abs(centre_distance - (radius_a + radius_b));
+                const auto internal_error = std::abs(centre_distance - std::abs(radius_a - radius_b));
+                if(internal_error < external_error){
+                    descriptor.mode = tangent_descriptor_t::mode_t::round_round_internal;
+                    descriptor.internal_sign = ((radius_a - radius_b) >= 0.0) ? 1.0 : -1.0;
+                }else{
+                    descriptor.mode = tangent_descriptor_t::mode_t::round_round_external;
+                }
+            }
+        }
+    }
+
+    std::size_t state_size() const{
+        return initial_vertices.size() * 2U;
+    }
+
+    std::vector<double> initial_state() const{
+        std::vector<double> out;
+        out.reserve(state_size());
+        for(const auto &projected_vertex : initial_vertices){
+            out.push_back(projected_vertex.u);
+            out.push_back(projected_vertex.v);
+        }
+        return out;
+    }
+
+    Sketch::projection_t projected_vertex(const std::vector<double> &state,
+                                          Sketch::vertex_index_t vertex_idx) const{
+        const auto base = vertex_idx * 2U;
+        return { state.at(base), state.at(base + 1U) };
+    }
+
+    double round_radius(const std::vector<double> &state,
+                        const round_binding_t &round) const{
+        return projected_distance(projected_vertex(state, round.center),
+                                  projected_vertex(state, round.radius_point));
+    }
+
+    std::vector<double> residual_vector(const std::vector<double> &state,
+                                        std::vector<residual_block_t> *blocks = nullptr,
+                                        std::size_t *enabled_constraints = nullptr) const{
+        std::vector<double> residuals;
+        residuals.reserve((sketch.constraint_count() * 2U) + state.size());
+        if(blocks != nullptr) blocks->clear();
+        if(enabled_constraints != nullptr) *enabled_constraints = 0U;
+
+        for(std::size_t constraint_idx = 0U; constraint_idx < sketch.constraint_count(); ++constraint_idx){
+            const auto *constraint_ptr = sketch.constraint(constraint_idx);
+            if((constraint_ptr == nullptr) || !constraint_ptr->enabled) continue;
+            if(enabled_constraints != nullptr) ++(*enabled_constraints);
+
+            if(const auto *horizontal = dynamic_cast<const Sketch::horizontal_constraint_t*>(constraint_ptr); horizontal != nullptr){
+                const auto line = get_line_binding(sketch, horizontal->line);
+                if(!line){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                    continue;
+                }
+                const auto a = projected_vertex(state, line->a);
+                const auto b = projected_vertex(state, line->b);
+                append_residual_block(residuals, blocks, constraint_idx, { b.v - a.v });
+
+            }else if(const auto *vertical = dynamic_cast<const Sketch::vertical_constraint_t*>(constraint_ptr); vertical != nullptr){
+                const auto line = get_line_binding(sketch, vertical->line);
+                if(!line){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                    continue;
+                }
+                const auto a = projected_vertex(state, line->a);
+                const auto b = projected_vertex(state, line->b);
+                append_residual_block(residuals, blocks, constraint_idx, { b.u - a.u });
+
+            }else if(const auto *distance = dynamic_cast<const Sketch::distance_constraint_t*>(constraint_ptr); distance != nullptr){
+                const auto line = get_line_binding(sketch, distance->line);
+                if(!line){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                    continue;
+                }
+                const auto a = projected_vertex(state, line->a);
+                const auto b = projected_vertex(state, line->b);
+                const auto du = b.u - a.u;
+                const auto dv = b.v - a.v;
+                append_residual_block(residuals, blocks, constraint_idx, {
+                    (du * du) + (dv * dv) - (distance->target_distance * distance->target_distance)
+                });
+
+            }else if(const auto *parallel = dynamic_cast<const Sketch::parallel_constraint_t*>(constraint_ptr); parallel != nullptr){
+                const auto line_a = get_line_binding(sketch, parallel->line_a);
+                const auto line_b = get_line_binding(sketch, parallel->line_b);
+                if(!line_a || !line_b){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                    continue;
+                }
+                const auto a0 = projected_vertex(state, line_a->a);
+                const auto a1 = projected_vertex(state, line_a->b);
+                const auto b0 = projected_vertex(state, line_b->a);
+                const auto b1 = projected_vertex(state, line_b->b);
+                append_residual_block(residuals, blocks, constraint_idx, {
+                    ((a1.u - a0.u) * (b1.v - b0.v)) - ((a1.v - a0.v) * (b1.u - b0.u))
+                });
+
+            }else if(const auto *perpendicular = dynamic_cast<const Sketch::perpendicular_constraint_t*>(constraint_ptr); perpendicular != nullptr){
+                const auto line_a = get_line_binding(sketch, perpendicular->line_a);
+                const auto line_b = get_line_binding(sketch, perpendicular->line_b);
+                if(!line_a || !line_b){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                    continue;
+                }
+                const auto a0 = projected_vertex(state, line_a->a);
+                const auto a1 = projected_vertex(state, line_a->b);
+                const auto b0 = projected_vertex(state, line_b->a);
+                const auto b1 = projected_vertex(state, line_b->b);
+                append_residual_block(residuals, blocks, constraint_idx, {
+                    ((a1.u - a0.u) * (b1.u - b0.u)) + ((a1.v - a0.v) * (b1.v - b0.v))
+                });
+
+            }else if(const auto *pin = dynamic_cast<const Sketch::pin_constraint_t*>(constraint_ptr); pin != nullptr){
+                if(pin->vertex >= initial_vertices.size()){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0, 1.0 });
+                    continue;
+                }
+                const auto projected = projected_vertex(state, pin->vertex);
+                const auto target = sketch.project(pin->pinned_position);
+                append_residual_block(residuals, blocks, constraint_idx, {
+                    projected.u - target.u,
+                    projected.v - target.v
+                });
+
+            }else if(const auto *tangent = dynamic_cast<const Sketch::tangent_constraint_t*>(constraint_ptr); tangent != nullptr){
+                const auto descriptor = tangent_descriptors.at(constraint_idx);
+                const auto line_a = get_line_binding(sketch, tangent->primitive_a);
+                const auto line_b = get_line_binding(sketch, tangent->primitive_b);
+                const auto round_a = get_round_binding(sketch, tangent->primitive_a);
+                const auto round_b = get_round_binding(sketch, tangent->primitive_b);
+
+                if(descriptor.mode == tangent_descriptor_t::mode_t::line_round){
+                    const auto line = line_a ? line_a : line_b;
+                    const auto round = round_a ? round_a : round_b;
+                    if(!line || !round){
+                        append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                        continue;
+                    }
+                    const auto p0 = projected_vertex(state, line->a);
+                    const auto p1 = projected_vertex(state, line->b);
+                    const auto centre = projected_vertex(state, round->center);
+                    const auto radius = round_radius(state, *round);
+                    append_residual_block(residuals, blocks, constraint_idx, {
+                        std::abs(signed_distance_to_line(centre, p0, p1)) - radius
+                    });
+                }else if(descriptor.mode == tangent_descriptor_t::mode_t::round_round_external
+                      || descriptor.mode == tangent_descriptor_t::mode_t::round_round_internal){
+                    if(!round_a || !round_b){
+                        append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                        continue;
+                    }
+                    const auto centre_a = projected_vertex(state, round_a->center);
+                    const auto centre_b = projected_vertex(state, round_b->center);
+                    const auto radius_a = round_radius(state, *round_a);
+                    const auto radius_b = round_radius(state, *round_b);
+                    const auto centre_distance = projected_distance(centre_a, centre_b);
+                    if(descriptor.mode == tangent_descriptor_t::mode_t::round_round_external){
+                        append_residual_block(residuals, blocks, constraint_idx, {
+                            centre_distance - (radius_a + radius_b)
+                        });
+                    }else{
+                        append_residual_block(residuals, blocks, constraint_idx, {
+                            centre_distance - (descriptor.internal_sign * (radius_a - radius_b))
+                        });
+                    }
+                }else{
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                }
+
+            }else if(const auto *mirror = dynamic_cast<const Sketch::mirror_constraint_t*>(constraint_ptr); mirror != nullptr){
+                const auto line = get_line_binding(sketch, mirror->line);
+                if(!line || (mirror->vertex_a >= initial_vertices.size()) || (mirror->vertex_b >= initial_vertices.size())){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0, 1.0 });
+                    continue;
+                }
+                const auto line_a = projected_vertex(state, line->a);
+                const auto line_b = projected_vertex(state, line->b);
+                const auto reflected = reflect_across_line(projected_vertex(state, mirror->vertex_a), line_a, line_b);
+                const auto vertex_b = projected_vertex(state, mirror->vertex_b);
+                append_residual_block(residuals, blocks, constraint_idx, {
+                    vertex_b.u - reflected.u,
+                    vertex_b.v - reflected.v
+                });
+
+            }else if(const auto *overlap = dynamic_cast<const Sketch::overlap_constraint_t*>(constraint_ptr); overlap != nullptr){
+                if((overlap->vertex_a >= initial_vertices.size()) || (overlap->vertex_b >= initial_vertices.size())){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0, 1.0 });
+                    continue;
+                }
+                const auto a = projected_vertex(state, overlap->vertex_a);
+                const auto b = projected_vertex(state, overlap->vertex_b);
+                append_residual_block(residuals, blocks, constraint_idx, {
+                    b.u - a.u,
+                    b.v - a.v
+                });
+
+            }else{
+                append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+            }
+        }
+
+        if(options.enable_sticky_constraints && (options.sticky_weight > 0.0)){
+            for(std::size_t i = 0U; i < initial_vertices.size(); ++i){
+                const auto projected = projected_vertex(state, i);
+                const auto anchor = initial_vertices.at(i);
+                append_residual_block(residuals, blocks, i, {
+                    options.sticky_weight * (projected.u - anchor.u),
+                    options.sticky_weight * (projected.v - anchor.v)
+                }, true);
+            }
+        }
+
+        return residuals;
+    }
+
+#ifdef DCMA_USE_EIGEN
+    struct jacobian_bundle_t {
+        Eigen::SparseMatrix<double> sparse;
+        Eigen::MatrixXd dense;
+    };
+
+    jacobian_bundle_t jacobian(const std::vector<double> &state) const{
+        std::vector<residual_block_t> blocks;
+        const auto base_residuals = residual_vector(state, &blocks, nullptr);
+        jacobian_bundle_t out;
+        out.dense = Eigen::MatrixXd::Zero(static_cast<Eigen::Index>(base_residuals.size()),
+                                          static_cast<Eigen::Index>(state.size()));
+        std::vector<Eigen::Triplet<double>> triplets;
+        const auto step = std::max(options.finite_difference_step, 1.0E-9);
+
+        for(std::size_t col = 0U; col < state.size(); ++col){
+            auto plus = state;
+            auto minus = state;
+            plus.at(col) += step;
+            minus.at(col) -= step;
+            const auto residuals_plus = residual_vector(plus, nullptr, nullptr);
+            const auto residuals_minus = residual_vector(minus, nullptr, nullptr);
+            for(std::size_t row = 0U; row < base_residuals.size(); ++row){
+                const auto derivative = (residuals_plus.at(row) - residuals_minus.at(row)) / (2.0 * step);
+                if(std::abs(derivative) > 1.0E-12){
+                    out.dense(static_cast<Eigen::Index>(row), static_cast<Eigen::Index>(col)) = derivative;
+                    triplets.emplace_back(static_cast<Eigen::Index>(row),
+                                          static_cast<Eigen::Index>(col),
+                                          derivative);
+                }
+            }
+        }
+
+        out.sparse.resize(static_cast<Eigen::Index>(base_residuals.size()),
+                          static_cast<Eigen::Index>(state.size()));
+        out.sparse.setFromTriplets(std::begin(triplets), std::end(triplets));
+        return out;
+    }
+#endif // DCMA_USE_EIGEN
+};
 
 }
 
@@ -1602,171 +1989,118 @@ Sketch::collapse_vertices(vertex_index_t keep_idx, vertex_index_t remove_idx){
 
 std::size_t
 Sketch::solve_constraints(std::size_t max_iterations){
-    std::size_t unresolved = 0U;
-    for(std::size_t iter = 0U; iter < std::max<std::size_t>(max_iterations, 1U); ++iter){
-        unresolved = 0U;
-        bool updated_vertices = false;
-        for(const auto &constraint_ptr : constraints_){
-            if((constraint_ptr == nullptr) || !constraint_ptr->enabled){
-                continue;
-            }
+    solve_options_t options;
+    options.max_iterations = std::max<std::size_t>(max_iterations, 1U);
+    return solve_constraints(options);
+}
 
-            if(const auto *horizontal = dynamic_cast<const horizontal_constraint_t*>(constraint_ptr.get()); horizontal != nullptr){
-                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(horizontal->line));
-                if(line == nullptr){
-                    ++unresolved;
-                    continue;
-                }
-                auto a = project(vertex(line->vertices[0]));
-                auto b = project(vertex(line->vertices[1]));
-                b.v = a.v;
-                vertices_.at(line->vertices[1]) = lift(b);
-                updated_vertices = true;
+std::size_t
+Sketch::solve_constraints(const solve_options_t &options){
+    last_solve_report_ = {};
 
-            }else if(const auto *vertical = dynamic_cast<const vertical_constraint_t*>(constraint_ptr.get()); vertical != nullptr){
-                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(vertical->line));
-                if(line == nullptr){
-                    ++unresolved;
-                    continue;
-                }
-                auto a = project(vertex(line->vertices[0]));
-                auto b = project(vertex(line->vertices[1]));
-                b.u = a.u;
-                vertices_.at(line->vertices[1]) = lift(b);
-                updated_vertices = true;
+    if(!has_plane_ || constraints_.empty() || vertices_.empty()){
+        return 0U;
+    }
 
-            }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
-                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->line));
-                if(line == nullptr){
-                    ++unresolved;
-                    continue;
-                }
-                const auto a = project(vertex(line->vertices[0]));
-                auto b = project(vertex(line->vertices[1]));
-                auto du = b.u - a.u;
-                auto dv = b.v - a.v;
-                const auto len = std::hypot(du, dv);
-                if(len <= std::numeric_limits<double>::epsilon()){
-                    du = 1.0;
-                    dv = 0.0;
-                }else{
-                    du /= len;
-                    dv /= len;
-                }
-                b.u = a.u + du * distance->target_distance;
-                b.v = a.v + dv * distance->target_distance;
-                vertices_.at(line->vertices[1]) = lift(b);
-                updated_vertices = true;
+    sketch_solver_context_t context(*this, options);
+    auto initial_state = context.initial_state();
+    std::size_t enabled_constraints = 0U;
+    const auto initial_residuals = context.residual_vector(initial_state, nullptr, &enabled_constraints);
+    last_solve_report_.enabled_constraints = enabled_constraints;
+    last_solve_report_.residual_count = initial_residuals.size();
 
-            }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){
-                const auto *line_a = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_a));
-                const auto *line_b = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_b));
-                if((line_a == nullptr) || (line_b == nullptr)){
-                    ++unresolved;
-                    continue;
-                }
-                const auto a0 = project(vertex(line_a->vertices[0]));
-                const auto a1 = project(vertex(line_a->vertices[1]));
-                auto b0 = project(vertex(line_b->vertices[0]));
-                auto b1 = project(vertex(line_b->vertices[1]));
-                auto dir_u = a1.u - a0.u;
-                auto dir_v = a1.v - a0.v;
-                const auto dir_len = std::hypot(dir_u, dir_v);
-                auto len_b = std::hypot(b1.u - b0.u, b1.v - b0.v);
-                if((dir_len <= std::numeric_limits<double>::epsilon()) || (len_b <= std::numeric_limits<double>::epsilon())){
-                    ++unresolved;
-                    continue;
-                }
-                dir_u /= dir_len;
-                dir_v /= dir_len;
-                std::tie(dir_u, dir_v) = orient_unit_direction(b1.u - b0.u,
-                                                               b1.v - b0.v,
-                                                               dir_u,
-                                                               dir_v);
-                b1.u = b0.u + dir_u * len_b;
-                b1.v = b0.v + dir_v * len_b;
-                vertices_.at(line_b->vertices[1]) = lift(b1);
-                updated_vertices = true;
+    lm_optimizer optimizer;
+    optimizer.initial_params = initial_state;
+    optimizer.max_iterations = static_cast<int64_t>(std::max<std::size_t>(options.max_iterations, 1U));
+    if(options.absolute_tolerance > 0.0){
+        optimizer.abs_tol = options.absolute_tolerance;
+    }
+    if(options.relative_tolerance > 0.0){
+        optimizer.rel_tol = options.relative_tolerance;
+    }
+    if(options.max_time_seconds > 0.0){
+        optimizer.max_time = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(options.max_time_seconds));
+    }
+    optimizer.fd_step = std::max(options.finite_difference_step, 1.0E-9);
+    optimizer.initial_lambda = std::max(options.initial_lambda, 1.0E-9);
+    optimizer.lambda_increase_factor = std::max(options.lambda_increase_factor, 1.000001);
+    optimizer.lambda_decrease_factor = std::clamp(options.lambda_decrease_factor, 1.0E-6, 0.999999);
+    optimizer.f = [&context](const std::vector<double> &state) -> double {
+        const auto residuals = context.residual_vector(state, nullptr, nullptr);
+        return std::inner_product(std::begin(residuals), std::end(residuals), std::begin(residuals), 0.0);
+    };
 
-            }else if(const auto *perpendicular = dynamic_cast<const perpendicular_constraint_t*>(constraint_ptr.get()); perpendicular != nullptr){
-                const auto *line_a = dynamic_cast<const line_primitive_t*>(primitive(perpendicular->line_a));
-                const auto *line_b = dynamic_cast<const line_primitive_t*>(primitive(perpendicular->line_b));
-                if((line_a == nullptr) || (line_b == nullptr)){
-                    ++unresolved;
-                    continue;
-                }
-                const auto a0 = project(vertex(line_a->vertices[0]));
-                const auto a1 = project(vertex(line_a->vertices[1]));
-                auto b0 = project(vertex(line_b->vertices[0]));
-                auto b1 = project(vertex(line_b->vertices[1]));
-                auto dir_u = a1.u - a0.u;
-                auto dir_v = a1.v - a0.v;
-                const auto dir_len = std::hypot(dir_u, dir_v);
-                auto len_b = std::hypot(b1.u - b0.u, b1.v - b0.v);
-                if((dir_len <= std::numeric_limits<double>::epsilon()) || (len_b <= std::numeric_limits<double>::epsilon())){
-                    ++unresolved;
-                    continue;
-                }
-                dir_u /= dir_len;
-                dir_v /= dir_len;
-                const auto perp_u = -dir_v;
-                const auto perp_v = dir_u;
-                auto [oriented_perp_u, oriented_perp_v] = orient_unit_direction(b1.u - b0.u,
-                                                                                b1.v - b0.v,
-                                                                                perp_u,
-                                                                                perp_v);
-                b1.u = b0.u + oriented_perp_u * len_b;
-                b1.v = b0.v + oriented_perp_v * len_b;
-                vertices_.at(line_b->vertices[1]) = lift(b1);
-                updated_vertices = true;
+    const auto result = optimizer.optimize();
+    last_solve_report_.iterations = result.iterations;
+    last_solve_report_.converged = result.converged;
+    last_solve_report_.reason = result.reason;
+    last_solve_report_.cost = result.cost;
 
-            }else if(dynamic_cast<const pin_constraint_t*>(constraint_ptr.get()) != nullptr){
-                // Pin constraints are enforced after all dependent constraints have been evaluated for the iteration.
+    for(std::size_t vertex_idx = 0U; vertex_idx < vertices_.size(); ++vertex_idx){
+        vertices_.at(vertex_idx) = lift(context.projected_vertex(result.params, vertex_idx));
+    }
+    refresh_all_derived_geometry();
 
-            }else if(const auto *mirror = dynamic_cast<const mirror_constraint_t*>(constraint_ptr.get()); mirror != nullptr){
-                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(mirror->line));
-                if((line == nullptr) || !vertex_index_valid(mirror->vertex_a) || !vertex_index_valid(mirror->vertex_b)){
-                    ++unresolved;
-                    continue;
-                }
-                const auto a = project(vertex(line->vertices[0]));
-                const auto b = project(vertex(line->vertices[1]));
-                if(squared_distance_between(a, b) <= std::numeric_limits<double>::epsilon()){
-                    ++unresolved;
-                    continue;
-                }
-                const auto reflected = reflect_across_line(project(vertex(mirror->vertex_a)), a, b);
-                vertices_.at(mirror->vertex_b) = lift(reflected);
-                updated_vertices = true;
+    std::vector<residual_block_t> final_blocks;
+    std::size_t final_enabled_constraints = 0U;
+    auto final_state = context.initial_state();
+    for(std::size_t vertex_idx = 0U; vertex_idx < vertices_.size(); ++vertex_idx){
+        const auto base = vertex_idx * 2U;
+        const auto projected = project(vertices_.at(vertex_idx));
+        final_state.at(base) = projected.u;
+        final_state.at(base + 1U) = projected.v;
+    }
+    const auto final_residuals = context.residual_vector(final_state, &final_blocks, &final_enabled_constraints);
+    last_solve_report_.enabled_constraints = final_enabled_constraints;
+    last_solve_report_.residual_count = final_residuals.size();
 
-            }else if(const auto *overlap = dynamic_cast<const overlap_constraint_t*>(constraint_ptr.get()); overlap != nullptr){
-                if(!vertex_index_valid(overlap->vertex_a) || !vertex_index_valid(overlap->vertex_b)){
-                    ++unresolved;
-                    continue;
-                }
-                vertices_.at(overlap->vertex_b) = vertices_.at(overlap->vertex_a);
-                updated_vertices = true;
-
-            }else{
-                ++unresolved;
-            }
+    const auto tolerance = std::max(options.residual_tolerance, 1.0E-9);
+    for(const auto &block : final_blocks){
+        if(block.sticky) continue;
+        double block_norm_sq = 0.0;
+        for(std::size_t i = 0U; i < block.count; ++i){
+            block_norm_sq += final_residuals.at(block.begin + i) * final_residuals.at(block.begin + i);
         }
-        for(const auto &constraint_ptr : constraints_){
-            if((constraint_ptr == nullptr) || !constraint_ptr->enabled) continue;
-            if(const auto *pin = dynamic_cast<const pin_constraint_t*>(constraint_ptr.get()); pin != nullptr){
-                if(!vertex_index_valid(pin->vertex)){
-                    ++unresolved;
-                    continue;
-                }
-                vertices_.at(pin->vertex) = pin->pinned_position;
-                updated_vertices = true;
-            }
-        }
-        if(updated_vertices){
-            refresh_all_derived_geometry();
+        if(std::sqrt(block_norm_sq) > tolerance){
+            ++last_solve_report_.unresolved_constraints;
         }
     }
-    return unresolved;
+
+#ifdef DCMA_USE_EIGEN
+    const auto jacobian = context.jacobian(final_state);
+    last_solve_report_.used_svd = true;
+    if((jacobian.dense.rows() > 0) && (jacobian.dense.cols() > 0)){
+        Eigen::BDCSVD<Eigen::MatrixXd> svd(jacobian.dense, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        const auto singular_values = svd.singularValues();
+        if(singular_values.size() > 0){
+            const auto max_singular = singular_values(0);
+            const auto rank_tolerance = std::numeric_limits<double>::epsilon()
+                                      * static_cast<double>(std::max(jacobian.dense.rows(), jacobian.dense.cols()))
+                                      * std::max(max_singular, 1.0);
+            last_solve_report_.jacobian_rank = static_cast<std::size_t>((singular_values.array() > rank_tolerance).count());
+
+            Eigen::VectorXd residual_vector = Eigen::Map<const Eigen::VectorXd>(final_residuals.data(),
+                                                                                static_cast<Eigen::Index>(final_residuals.size()));
+            if(last_solve_report_.jacobian_rank > 0U){
+                const auto active_u = svd.matrixU().leftCols(static_cast<Eigen::Index>(last_solve_report_.jacobian_rank));
+                const auto projected_residuals = active_u * (active_u.transpose() * residual_vector);
+                last_solve_report_.conflict_norm = (residual_vector - projected_residuals).norm();
+            }else{
+                last_solve_report_.conflict_norm = residual_vector.norm();
+            }
+            last_solve_report_.conflicting_constraints = (last_solve_report_.conflict_norm > tolerance)
+                                                      && (last_solve_report_.unresolved_constraints != 0U);
+        }
+    }
+#endif // DCMA_USE_EIGEN
+
+    return last_solve_report_.unresolved_constraints;
+}
+
+const Sketch::solve_report_t&
+Sketch::last_solve_report() const{
+    return last_solve_report_;
 }
 
 std::string
