@@ -29,6 +29,7 @@ namespace {
 constexpr double solver_min_epsilon = 1.0E-9;
 constexpr double jacobian_sparsity_threshold = 1.0E-12;
 constexpr std::size_t max_refinement_passes = 8U;
+// C++17 does not provide std::numbers::pi, so keep a local constant for the taper helpers below.
 constexpr double pi_constant = 3.141592653589793238462643383279502884;
 
 Sketch::projection_t cubic_bezier_point(const Sketch::projection_t &p0,
@@ -340,6 +341,9 @@ static double projected_distance(const Sketch::projection_t &a,
 static double extrusion_scale_factor(double reference_half_extent,
                                      double extrusion_length,
                                      double angle_degrees){
+    // Convert a taper angle into a uniform in-plane cap scale. A return value of 1.0 preserves
+    // the original cap size; values above 1.0 expand it; values below 1.0 narrow it; NaN signals
+    // invalid non-finite input values that should be rejected by the caller.
     if(reference_half_extent <= solver_min_epsilon) return 1.0;
     if(!std::isfinite(extrusion_length) || !std::isfinite(angle_degrees)){
         return std::numeric_limits<double>::quiet_NaN();
@@ -353,6 +357,8 @@ static double extrusion_scale_factor(double reference_half_extent,
 static Sketch::projection_t scale_projection_about(const Sketch::projection_t &point,
                                                    const Sketch::projection_t &centre,
                                                    double scale){
+    // Uniformly scale a 2D projected point about the sketch bounding-box centre before lifting it
+    // back into 3D, which keeps tapering centred on the original sketch footprint.
     return {
         centre.u + ((point.u - centre.u) * scale),
         centre.v + ((point.v - centre.v) * scale)
