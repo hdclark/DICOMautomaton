@@ -29,6 +29,7 @@ namespace {
 constexpr double solver_min_epsilon = 1.0E-9;
 constexpr double jacobian_sparsity_threshold = 1.0E-12;
 constexpr std::size_t max_refinement_passes = 8U;
+constexpr double pi_constant = 3.141592653589793238462643383279502884;
 
 Sketch::projection_t cubic_bezier_point(const Sketch::projection_t &p0,
                                         const Sketch::projection_t &p1,
@@ -344,8 +345,7 @@ static double extrusion_scale_factor(double reference_half_extent,
         return std::numeric_limits<double>::quiet_NaN();
     }
     if(std::abs(angle_degrees) <= solver_min_epsilon) return 1.0;
-    const auto pi = std::acos(-1.0);
-    const auto angle_radians = angle_degrees * (pi / 180.0);
+    const auto angle_radians = angle_degrees * (pi_constant / 180.0);
     const auto delta = std::tan(angle_radians) * std::abs(extrusion_length);
     return (reference_half_extent + delta) / reference_half_extent;
 }
@@ -2238,6 +2238,8 @@ Sketch::add_distance_constraint(primitive_index_t primitive_idx, double target_d
         }else if(const auto *arc = dynamic_cast<const arc_primitive_t*>(primitive(primitive_idx)); arc != nullptr){
             const auto start_radius = vertex(arc->center).distance(vertex(arc->start));
             const auto stop_radius = vertex(arc->center).distance(vertex(arc->stop));
+            // Arcs can drift slightly out of round before the constraint is added, so seed the
+            // requested radius from the mean of both endpoints instead of privileging one side.
             constraint->target_distance = 0.5 * (start_radius + stop_radius);
         }else{
             throw std::invalid_argument("Distance constraints currently require a line, circle, or arc primitive");

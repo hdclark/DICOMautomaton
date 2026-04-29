@@ -6703,7 +6703,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Text("%s constraint", numeric_constraint_mode_name(sketch_numeric_constraint_popup.mode));
                     ImGui::Text("Affected primitives: %zu", sketch_numeric_constraint_popup.primitives.size());
                     ImGui::SetNextItemWidth(180.0f);
-                    ImGui::InputDouble("Value (mm)", &sketch_numeric_constraint_popup.value, 0.1, 1.0, "%.6f");
+                    ImGui::InputDouble("Value (mm)", &sketch_numeric_constraint_popup.value, 0.1, 1.0, "%.3f");
                     if(ImGui::Button("Add")){
                         const auto mode = sketch_numeric_constraint_popup.mode;
                         const auto primitives = sketch_numeric_constraint_popup.primitives;
