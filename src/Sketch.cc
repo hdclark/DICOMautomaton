@@ -334,6 +334,11 @@ static double projected_distance(const Sketch::projection_t &a,
     return std::hypot(a.u - b.u, a.v - b.v);
 }
 
+static bool projected_segment_is_degenerate(const Sketch::projection_t &a,
+                                            const Sketch::projection_t &b){
+    return projected_distance(a, b) <= solver_min_epsilon;
+}
+
 struct sketch_solver_context_t {
     const Sketch &sketch;
     const Sketch::solve_options_t &options;
@@ -466,6 +471,10 @@ struct sketch_solver_context_t {
                 const auto a1 = projected_vertex(state, line_a->b);
                 const auto b0 = projected_vertex(state, line_b->a);
                 const auto b1 = projected_vertex(state, line_b->b);
+                if(projected_segment_is_degenerate(a0, a1) || projected_segment_is_degenerate(b0, b1)){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                    continue;
+                }
                 append_residual_block(residuals, blocks, constraint_idx, {
                     ((a1.u - a0.u) * (b1.v - b0.v)) - ((a1.v - a0.v) * (b1.u - b0.u))
                 });
@@ -481,6 +490,10 @@ struct sketch_solver_context_t {
                 const auto a1 = projected_vertex(state, line_a->b);
                 const auto b0 = projected_vertex(state, line_b->a);
                 const auto b1 = projected_vertex(state, line_b->b);
+                if(projected_segment_is_degenerate(a0, a1) || projected_segment_is_degenerate(b0, b1)){
+                    append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+                    continue;
+                }
                 append_residual_block(residuals, blocks, constraint_idx, {
                     ((a1.u - a0.u) * (b1.u - b0.u)) + ((a1.v - a0.v) * (b1.v - b0.v))
                 });
@@ -913,6 +926,7 @@ Sketch::copy_from(const Sketch &in){
     }
     has_plane_ = in.has_plane_;
     plane_ = in.plane_;
+    last_solve_report_ = in.last_solve_report_;
 }
 
 void
@@ -2049,6 +2063,7 @@ Sketch::solve_constraints(const solve_options_t &options){
         vertices_.at(vertex_idx) = lift(context.projected_vertex(result.params, vertex_idx));
     }
 
+    bool has_nonlinear_constraints = false;
     std::set<vertex_index_t> refinement_anchor_vertices;
     for(const auto &constraint_ptr : constraints_){
         if((constraint_ptr == nullptr) || !constraint_ptr->enabled){
@@ -2074,6 +2089,7 @@ Sketch::solve_constraints(const solve_options_t &options){
                 refinement_anchor_vertices.insert(line->vertices[1]);
             }
         }else if(const auto *tangent = dynamic_cast<const tangent_constraint_t*>(constraint_ptr.get()); tangent != nullptr){
+            has_nonlinear_constraints = true;
             if(const auto *primitive_ptr = primitive(tangent->primitive_a); primitive_ptr != nullptr){
                 const auto refs = primitive_ptr->referenced_vertices();
                 refinement_anchor_vertices.insert(std::begin(refs), std::end(refs));
@@ -2089,136 +2105,138 @@ Sketch::solve_constraints(const solve_options_t &options){
         }
     }
 
-    const auto refinement_passes = std::min<std::size_t>(std::max<std::size_t>(options.max_iterations, 1U),
-                                                         max_refinement_passes);
-    for(std::size_t iter = 0U; iter < refinement_passes; ++iter){
-        for(const auto vertex_idx : refinement_anchor_vertices){
-            if(vertex_idx < context.initial_vertices.size()){
-                vertices_.at(vertex_idx) = lift(context.initial_vertices.at(vertex_idx));
+    if(!has_nonlinear_constraints){
+        const auto refinement_passes = std::min<std::size_t>(std::max<std::size_t>(options.max_iterations, 1U),
+                                                             max_refinement_passes);
+        for(std::size_t iter = 0U; iter < refinement_passes; ++iter){
+            for(const auto vertex_idx : refinement_anchor_vertices){
+                if(vertex_idx < context.initial_vertices.size()){
+                    vertices_.at(vertex_idx) = lift(context.initial_vertices.at(vertex_idx));
+                }
             }
-        }
-        bool updated_vertices = false;
-        for(const auto &constraint_ptr : constraints_){
-            if((constraint_ptr == nullptr) || !constraint_ptr->enabled){
-                continue;
+            bool updated_vertices = false;
+            for(const auto &constraint_ptr : constraints_){
+                if((constraint_ptr == nullptr) || !constraint_ptr->enabled){
+                    continue;
+                }
+
+                if(const auto *horizontal = dynamic_cast<const horizontal_constraint_t*>(constraint_ptr.get()); horizontal != nullptr){
+                    const auto *line = dynamic_cast<const line_primitive_t*>(primitive(horizontal->line));
+                    if(line == nullptr) continue;
+                    auto a = project(vertex(line->vertices[0]));
+                    auto b = project(vertex(line->vertices[1]));
+                    b.v = a.v;
+                    vertices_.at(line->vertices[1]) = lift(b);
+                    updated_vertices = true;
+
+                }else if(const auto *vertical = dynamic_cast<const vertical_constraint_t*>(constraint_ptr.get()); vertical != nullptr){
+                    const auto *line = dynamic_cast<const line_primitive_t*>(primitive(vertical->line));
+                    if(line == nullptr) continue;
+                    auto a = project(vertex(line->vertices[0]));
+                    auto b = project(vertex(line->vertices[1]));
+                    b.u = a.u;
+                    vertices_.at(line->vertices[1]) = lift(b);
+                    updated_vertices = true;
+
+                }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
+                    const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->line));
+                    if(line == nullptr) continue;
+                    const auto a = project(vertex(line->vertices[0]));
+                    auto b = project(vertex(line->vertices[1]));
+                    auto du = b.u - a.u;
+                    auto dv = b.v - a.v;
+                    const auto len = std::hypot(du, dv);
+                    if(len <= std::numeric_limits<double>::epsilon()){
+                        du = 1.0;
+                        dv = 0.0;
+                    }else{
+                        du /= len;
+                        dv /= len;
+                    }
+                    b.u = a.u + du * distance->target_distance;
+                    b.v = a.v + dv * distance->target_distance;
+                    vertices_.at(line->vertices[1]) = lift(b);
+                    updated_vertices = true;
+
+                }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){
+                    const auto *line_a = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_a));
+                    const auto *line_b = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_b));
+                    if((line_a == nullptr) || (line_b == nullptr)) continue;
+                    const auto a0 = project(vertex(line_a->vertices[0]));
+                    const auto a1 = project(vertex(line_a->vertices[1]));
+                    auto b0 = project(vertex(line_b->vertices[0]));
+                    auto b1 = project(vertex(line_b->vertices[1]));
+                    auto dir_u = a1.u - a0.u;
+                    auto dir_v = a1.v - a0.v;
+                    const auto dir_len = std::hypot(dir_u, dir_v);
+                    auto len_b = std::hypot(b1.u - b0.u, b1.v - b0.v);
+                    if((dir_len <= std::numeric_limits<double>::epsilon()) || (len_b <= std::numeric_limits<double>::epsilon())){
+                        continue;
+                    }
+                    dir_u /= dir_len;
+                    dir_v /= dir_len;
+                    std::tie(dir_u, dir_v) = orient_unit_direction(b1.u - b0.u,
+                                                                   b1.v - b0.v,
+                                                                   dir_u,
+                                                                   dir_v);
+                    b1.u = b0.u + dir_u * len_b;
+                    b1.v = b0.v + dir_v * len_b;
+                    vertices_.at(line_b->vertices[1]) = lift(b1);
+                    updated_vertices = true;
+
+                }else if(const auto *perpendicular = dynamic_cast<const perpendicular_constraint_t*>(constraint_ptr.get()); perpendicular != nullptr){
+                    const auto *line_a = dynamic_cast<const line_primitive_t*>(primitive(perpendicular->line_a));
+                    const auto *line_b = dynamic_cast<const line_primitive_t*>(primitive(perpendicular->line_b));
+                    if((line_a == nullptr) || (line_b == nullptr)) continue;
+                    const auto a0 = project(vertex(line_a->vertices[0]));
+                    const auto a1 = project(vertex(line_a->vertices[1]));
+                    auto b0 = project(vertex(line_b->vertices[0]));
+                    auto b1 = project(vertex(line_b->vertices[1]));
+                    auto dir_u = a1.u - a0.u;
+                    auto dir_v = a1.v - a0.v;
+                    const auto dir_len = std::hypot(dir_u, dir_v);
+                    auto len_b = std::hypot(b1.u - b0.u, b1.v - b0.v);
+                    if((dir_len <= std::numeric_limits<double>::epsilon()) || (len_b <= std::numeric_limits<double>::epsilon())){
+                        continue;
+                    }
+                    dir_u /= dir_len;
+                    dir_v /= dir_len;
+                    const auto perp_u = -dir_v;
+                    const auto perp_v = dir_u;
+                    auto [oriented_perp_u, oriented_perp_v] = orient_unit_direction(b1.u - b0.u,
+                                                                                    b1.v - b0.v,
+                                                                                    perp_u,
+                                                                                    perp_v);
+                    b1.u = b0.u + oriented_perp_u * len_b;
+                    b1.v = b0.v + oriented_perp_v * len_b;
+                    vertices_.at(line_b->vertices[1]) = lift(b1);
+                    updated_vertices = true;
+
+                }else if(const auto *mirror = dynamic_cast<const mirror_constraint_t*>(constraint_ptr.get()); mirror != nullptr){
+                    const auto *line = dynamic_cast<const line_primitive_t*>(primitive(mirror->line));
+                    if((line == nullptr) || !vertex_index_valid(mirror->vertex_a) || !vertex_index_valid(mirror->vertex_b)){
+                        continue;
+                    }
+                    const auto a = project(vertex(line->vertices[0]));
+                    const auto b = project(vertex(line->vertices[1]));
+                    const auto reflected = reflect_across_line(project(vertex(mirror->vertex_a)), a, b);
+                    vertices_.at(mirror->vertex_b) = lift(reflected);
+                    updated_vertices = true;
+
+                }else if(const auto *overlap = dynamic_cast<const overlap_constraint_t*>(constraint_ptr.get()); overlap != nullptr){
+                    if(!vertex_index_valid(overlap->vertex_a) || !vertex_index_valid(overlap->vertex_b)){
+                        continue;
+                    }
+                    vertices_.at(overlap->vertex_b) = vertices_.at(overlap->vertex_a);
+                    updated_vertices = true;
+                }
             }
-
-            if(const auto *horizontal = dynamic_cast<const horizontal_constraint_t*>(constraint_ptr.get()); horizontal != nullptr){
-                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(horizontal->line));
-                if(line == nullptr) continue;
-                auto a = project(vertex(line->vertices[0]));
-                auto b = project(vertex(line->vertices[1]));
-                b.v = a.v;
-                vertices_.at(line->vertices[1]) = lift(b);
-                updated_vertices = true;
-
-            }else if(const auto *vertical = dynamic_cast<const vertical_constraint_t*>(constraint_ptr.get()); vertical != nullptr){
-                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(vertical->line));
-                if(line == nullptr) continue;
-                auto a = project(vertex(line->vertices[0]));
-                auto b = project(vertex(line->vertices[1]));
-                b.u = a.u;
-                vertices_.at(line->vertices[1]) = lift(b);
-                updated_vertices = true;
-
-            }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
-                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->line));
-                if(line == nullptr) continue;
-                const auto a = project(vertex(line->vertices[0]));
-                auto b = project(vertex(line->vertices[1]));
-                auto du = b.u - a.u;
-                auto dv = b.v - a.v;
-                const auto len = std::hypot(du, dv);
-                if(len <= std::numeric_limits<double>::epsilon()){
-                    du = 1.0;
-                    dv = 0.0;
-                }else{
-                    du /= len;
-                    dv /= len;
-                }
-                b.u = a.u + du * distance->target_distance;
-                b.v = a.v + dv * distance->target_distance;
-                vertices_.at(line->vertices[1]) = lift(b);
-                updated_vertices = true;
-
-            }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){
-                const auto *line_a = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_a));
-                const auto *line_b = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_b));
-                if((line_a == nullptr) || (line_b == nullptr)) continue;
-                const auto a0 = project(vertex(line_a->vertices[0]));
-                const auto a1 = project(vertex(line_a->vertices[1]));
-                auto b0 = project(vertex(line_b->vertices[0]));
-                auto b1 = project(vertex(line_b->vertices[1]));
-                auto dir_u = a1.u - a0.u;
-                auto dir_v = a1.v - a0.v;
-                const auto dir_len = std::hypot(dir_u, dir_v);
-                auto len_b = std::hypot(b1.u - b0.u, b1.v - b0.v);
-                if((dir_len <= std::numeric_limits<double>::epsilon()) || (len_b <= std::numeric_limits<double>::epsilon())){
-                    continue;
-                }
-                dir_u /= dir_len;
-                dir_v /= dir_len;
-                std::tie(dir_u, dir_v) = orient_unit_direction(b1.u - b0.u,
-                                                               b1.v - b0.v,
-                                                               dir_u,
-                                                               dir_v);
-                b1.u = b0.u + dir_u * len_b;
-                b1.v = b0.v + dir_v * len_b;
-                vertices_.at(line_b->vertices[1]) = lift(b1);
-                updated_vertices = true;
-
-            }else if(const auto *perpendicular = dynamic_cast<const perpendicular_constraint_t*>(constraint_ptr.get()); perpendicular != nullptr){
-                const auto *line_a = dynamic_cast<const line_primitive_t*>(primitive(perpendicular->line_a));
-                const auto *line_b = dynamic_cast<const line_primitive_t*>(primitive(perpendicular->line_b));
-                if((line_a == nullptr) || (line_b == nullptr)) continue;
-                const auto a0 = project(vertex(line_a->vertices[0]));
-                const auto a1 = project(vertex(line_a->vertices[1]));
-                auto b0 = project(vertex(line_b->vertices[0]));
-                auto b1 = project(vertex(line_b->vertices[1]));
-                auto dir_u = a1.u - a0.u;
-                auto dir_v = a1.v - a0.v;
-                const auto dir_len = std::hypot(dir_u, dir_v);
-                auto len_b = std::hypot(b1.u - b0.u, b1.v - b0.v);
-                if((dir_len <= std::numeric_limits<double>::epsilon()) || (len_b <= std::numeric_limits<double>::epsilon())){
-                    continue;
-                }
-                dir_u /= dir_len;
-                dir_v /= dir_len;
-                const auto perp_u = -dir_v;
-                const auto perp_v = dir_u;
-                auto [oriented_perp_u, oriented_perp_v] = orient_unit_direction(b1.u - b0.u,
-                                                                                b1.v - b0.v,
-                                                                                perp_u,
-                                                                                perp_v);
-                b1.u = b0.u + oriented_perp_u * len_b;
-                b1.v = b0.v + oriented_perp_v * len_b;
-                vertices_.at(line_b->vertices[1]) = lift(b1);
-                updated_vertices = true;
-
-            }else if(const auto *mirror = dynamic_cast<const mirror_constraint_t*>(constraint_ptr.get()); mirror != nullptr){
-                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(mirror->line));
-                if((line == nullptr) || !vertex_index_valid(mirror->vertex_a) || !vertex_index_valid(mirror->vertex_b)){
-                    continue;
-                }
-                const auto a = project(vertex(line->vertices[0]));
-                const auto b = project(vertex(line->vertices[1]));
-                const auto reflected = reflect_across_line(project(vertex(mirror->vertex_a)), a, b);
-                vertices_.at(mirror->vertex_b) = lift(reflected);
-                updated_vertices = true;
-
-            }else if(const auto *overlap = dynamic_cast<const overlap_constraint_t*>(constraint_ptr.get()); overlap != nullptr){
-                if(!vertex_index_valid(overlap->vertex_a) || !vertex_index_valid(overlap->vertex_b)){
-                    continue;
-                }
-                vertices_.at(overlap->vertex_b) = vertices_.at(overlap->vertex_a);
-                updated_vertices = true;
+            enforce_pinned_vertices();
+            if(updated_vertices){
+                refresh_all_derived_geometry();
+            }else{
+                break;
             }
-        }
-        enforce_pinned_vertices();
-        if(updated_vertices){
-            refresh_all_derived_geometry();
-        }else{
-            break;
         }
     }
     refresh_all_derived_geometry();

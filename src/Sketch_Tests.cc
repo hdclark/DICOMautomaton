@@ -257,6 +257,25 @@ TEST_CASE("Sketch solver reports conflicting constraints"){
 #endif // DCMA_USE_EIGEN
 }
 
+TEST_CASE("Sketch copy preserves the last solve report"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto line_idx = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                          vec3<double>(2.0, 1.0, 0.0),
+                                          Sketch::geometry_tag_t::normal);
+    sketch.add_horizontal_constraint(line_idx);
+
+    Sketch::solve_options_t options;
+    options.max_iterations = 32U;
+    REQUIRE( sketch.solve_constraints(options) == 0U );
+
+    Sketch copied = sketch;
+    REQUIRE( copied.last_solve_report().unresolved_constraints == sketch.last_solve_report().unresolved_constraints );
+    REQUIRE( copied.last_solve_report().iterations == sketch.last_solve_report().iterations );
+    REQUIRE( copied.last_solve_report().reason == sketch.last_solve_report().reason );
+}
+
 TEST_CASE("Sketch snapshots preserve state"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
@@ -654,6 +673,27 @@ TEST_CASE("Sketch parallel constraints preserve reversed line orientation"){
     const auto b1 = sketch.vertex(parallel_line->vertices[1]);
     REQUIRE( b1.x < b0.x );
     REQUIRE( b1.y == doctest::Approx(b0.y).epsilon(1E-6) );
+}
+
+TEST_CASE("Sketch parallel and perpendicular constraints reject degenerate lines"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto reference_line = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                                vec3<double>(4.0, 0.0, 0.0),
+                                                Sketch::geometry_tag_t::normal);
+    const auto degenerate_parallel = sketch.add_line(vec3<double>(1.0, 1.0, 0.0),
+                                                     vec3<double>(1.0, 1.0, 0.0),
+                                                     Sketch::geometry_tag_t::normal);
+    const auto degenerate_perpendicular = sketch.add_line(vec3<double>(2.0, 2.0, 0.0),
+                                                          vec3<double>(2.0, 2.0, 0.0),
+                                                          Sketch::geometry_tag_t::normal);
+
+    sketch.add_parallel_constraint(reference_line, degenerate_parallel);
+    sketch.add_perpendicular_constraint(reference_line, degenerate_perpendicular);
+
+    REQUIRE( sketch.solve_constraints() == 2U );
+    REQUIRE( sketch.last_solve_report().unresolved_constraints == 2U );
 }
 
 TEST_CASE("Sketch perpendicular constraints preserve reversed line orientation"){
