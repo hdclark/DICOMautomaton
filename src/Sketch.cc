@@ -2504,7 +2504,7 @@ Sketch::build_extruded_surface_mesh(const extrusion_options_t &options,
     }
     if((options.into_frame_length + options.out_of_frame_length) <= solver_min_epsilon){
         store_error(error_message,
-                    "Extrusion lengths must span a positive distance between the into-frame and out-of-frame caps");
+                    "Extrusion lengths must sum to a positive distance between the caps");
         return false;
     }
 

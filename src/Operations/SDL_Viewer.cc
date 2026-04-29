@@ -6972,7 +6972,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::InputDouble("Out of frame (mm)", &sketch_extrude_out_of_frame, 0.5, 5.0, "%.3f");
                     if(ImGui::Button("Insert Surface Mesh")){
                         if(disp_img_it == disp_img_it_t()){
-                            sketch_file_status = "No active image is available for mesh metadata";
+                            sketch_file_status = "Cannot insert surface mesh: no active image available for metadata";
                         }else{
                             Sketch::extrusion_options_t extrusion_options;
                             extrusion_options.into_frame_length = sketch_extrude_into_frame;
