@@ -297,7 +297,7 @@ TEST_CASE("Sketch solve report resets when no constraints are present"){
     REQUIRE( sketch.last_solve_report().enabled_constraints == 0U );
     REQUIRE( sketch.last_solve_report().residual_count == 0U );
     REQUIRE( sketch.last_solve_report().reason.empty() );
-    REQUIRE( !std::isfinite(sketch.last_solve_report().cost) );
+    REQUIRE( std::isnan(sketch.last_solve_report().cost) );
 }
 
 TEST_CASE("Sketch snapshots preserve state"){
