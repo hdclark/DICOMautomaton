@@ -2249,32 +2249,56 @@ Sketch::solve_constraints(const solve_options_t &options){
     }
 
 #ifdef DCMA_USE_EIGEN
-    const auto jacobian = context.jacobian(final_state);
-    last_solve_report_.used_svd = true;
-    if((jacobian.dense.rows() > 0) && (jacobian.dense.cols() > 0)){
-        Eigen::BDCSVD<Eigen::MatrixXd> svd(jacobian.dense, Eigen::ComputeThinU | Eigen::ComputeThinV);
-        const auto singular_values = svd.singularValues();
-        if(singular_values.size() > 0){
-            const auto max_singular = singular_values(0);
-            const auto rank_tolerance = std::numeric_limits<double>::epsilon()
-                                      * static_cast<double>(std::max(jacobian.dense.rows(), jacobian.dense.cols()))
-                                      * std::max(max_singular, 1.0);
-            last_solve_report_.jacobian_rank = static_cast<std::size_t>((singular_values.array() > rank_tolerance).count());
+    last_solve_report_.used_svd = false;
+    if(last_solve_report_.unresolved_constraints != 0U){
+        std::size_t diagnostic_row_count = 0U;
+        for(const auto &block : final_blocks){
+            if(block.sticky) continue;
+            diagnostic_row_count += block.count;
+        }
 
-            Eigen::VectorXd residual_vector = Eigen::Map<const Eigen::VectorXd>(final_residuals.data(),
-                                                                                static_cast<Eigen::Index>(final_residuals.size()));
-            if(last_solve_report_.jacobian_rank > 0U){
-                const auto active_u = svd.matrixU().leftCols(static_cast<Eigen::Index>(last_solve_report_.jacobian_rank));
-                const auto projected_residuals = active_u * (active_u.transpose() * residual_vector);
-                last_solve_report_.conflict_norm = (residual_vector - projected_residuals).norm();
-            }else{
-                last_solve_report_.conflict_norm = residual_vector.norm();
+        if(diagnostic_row_count > 0U){
+            const auto jacobian = context.jacobian(final_state);
+            if((jacobian.dense.rows() >= static_cast<Eigen::Index>(diagnostic_row_count))
+            && (jacobian.dense.cols() > 0)){
+                Eigen::MatrixXd diagnostic_jacobian(static_cast<Eigen::Index>(diagnostic_row_count),
+                                                   jacobian.dense.cols());
+                Eigen::VectorXd residual_vector(static_cast<Eigen::Index>(diagnostic_row_count));
+
+                Eigen::Index diagnostic_row = 0;
+                for(const auto &block : final_blocks){
+                    if(block.sticky) continue;
+                    for(std::size_t i = 0U; i < block.count; ++i, ++diagnostic_row){
+                        const auto source_row = static_cast<Eigen::Index>(block.begin + i);
+                        diagnostic_jacobian.row(diagnostic_row) = jacobian.dense.row(source_row);
+                        residual_vector(diagnostic_row) = final_residuals.at(block.begin + i);
+                    }
+                }
+
+                last_solve_report_.used_svd = true;
+                Eigen::BDCSVD<Eigen::MatrixXd> svd(diagnostic_jacobian, Eigen::ComputeThinU | Eigen::ComputeThinV);
+                const auto singular_values = svd.singularValues();
+                if(singular_values.size() > 0){
+                    const auto max_singular = singular_values(0);
+                    const auto rank_tolerance = std::numeric_limits<double>::epsilon()
+                                              * static_cast<double>(std::max(diagnostic_jacobian.rows(), diagnostic_jacobian.cols()))
+                                              * std::max(max_singular, 1.0);
+                    last_solve_report_.jacobian_rank = static_cast<std::size_t>((singular_values.array() > rank_tolerance).count());
+
+                    if(last_solve_report_.jacobian_rank > 0U){
+                        const auto active_u = svd.matrixU().leftCols(static_cast<Eigen::Index>(last_solve_report_.jacobian_rank));
+                        const auto projected_residuals = active_u * (active_u.transpose() * residual_vector);
+                        last_solve_report_.conflict_norm = (residual_vector - projected_residuals).norm();
+                    }else{
+                        last_solve_report_.conflict_norm = residual_vector.norm();
+                    }
+                    // Treat large off-subspace residual energy as a genuine conflict only when at least one
+                    // user-facing constraint also remains unsatisfied; this avoids flagging benign rank
+                    // deficiency or slow-but-feasible convergence as a hard conflict.
+                    last_solve_report_.conflicting_constraints = (last_solve_report_.conflict_norm > tolerance)
+                                                              && (last_solve_report_.unresolved_constraints != 0U);
+                }
             }
-            // Treat large off-subspace residual energy as a genuine conflict only when at least one
-            // user-facing constraint also remains unsatisfied; this avoids flagging benign rank
-            // deficiency or slow-but-feasible convergence as a hard conflict.
-            last_solve_report_.conflicting_constraints = (last_solve_report_.conflict_norm > tolerance)
-                                                      && (last_solve_report_.unresolved_constraints != 0U);
         }
     }
 #endif // DCMA_USE_EIGEN
