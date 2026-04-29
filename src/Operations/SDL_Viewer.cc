@@ -1748,12 +1748,13 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool sketch_show_vertex_numbers = false;
     bool sketch_show_primitive_numbers = false;
     bool sketch_show_constraint_numbers = false;
-    Sketch::solve_options_t sketch_solve_options = [](){
+    const auto make_default_sketch_solve_options = []() -> Sketch::solve_options_t {
         Sketch::solve_options_t out;
         out.relative_tolerance = 1.0E-5;
         out.max_time_seconds = 0.25;
         return out;
-    }();
+    };
+    Sketch::solve_options_t sketch_solve_options = make_default_sketch_solve_options();
     bool sketch_solve_on_edit = true;
     bool sketch_constrain_to_image_frame = true;
     double sketch_snap_distance = 5.0;
@@ -1877,7 +1878,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         constexpr std::size_t max_log_entries = 256U;
         if(sketch_log_entries.size() > max_log_entries){
             sketch_log_entries.erase(std::begin(sketch_log_entries),
-                                     std::begin(sketch_log_entries) + static_cast<std::ptrdiff_t>(sketch_log_entries.size() - max_log_entries));
+                                     std::end(sketch_log_entries) - static_cast<std::ptrdiff_t>(max_log_entries));
         }
         sketch_log_scroll_to_bottom = true;
     };
@@ -6674,8 +6675,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     sketch_pending_primitive.points.clear();
                     sketch_drag_state.clear();
                     sketch_tool_mode = sketch_tool_mode_t::select;
+                    const auto required_points = sketch_pending_primitive.required_points();
                     append_sketch_log("Pending: add " + sketch_pending_primitive.description()
-                                    + " (" + std::to_string(sketch_pending_primitive.required_points()) + " clicks)");
+                                    + " (" + std::to_string(required_points)
+                                    + ((required_points == 1U) ? " click)" : " clicks)"));
                 };
 
                 ImGui::Separator();

@@ -707,12 +707,19 @@ struct sketch_solver_context_t {
         if(options.constrain_to_bounds && options.bounds && options.bounds->is_valid()){
             for(std::size_t i = 0U; i < initial_vertices.size(); ++i){
                 const auto projected = projected_vertex(state, i);
-                append_residual_block(residuals, blocks, sketch.constraint_count() + i, {
-                    std::max(options.bounds->min.u - projected.u, 0.0),
-                    std::max(projected.u - options.bounds->max.u, 0.0),
-                    std::max(options.bounds->min.v - projected.v, 0.0),
-                    std::max(projected.v - options.bounds->max.v, 0.0)
-                });
+                const auto min_u_violation = std::max(options.bounds->min.u - projected.u, 0.0);
+                const auto max_u_violation = std::max(projected.u - options.bounds->max.u, 0.0);
+                const auto min_v_violation = std::max(options.bounds->min.v - projected.v, 0.0);
+                const auto max_v_violation = std::max(projected.v - options.bounds->max.v, 0.0);
+                if((min_u_violation > 0.0) || (max_u_violation > 0.0)
+                || (min_v_violation > 0.0) || (max_v_violation > 0.0)){
+                    append_residual_block(residuals, blocks, sketch.constraint_count() + i, {
+                        min_u_violation,
+                        max_u_violation,
+                        min_v_violation,
+                        max_v_violation
+                    });
+                }
             }
         }
 
