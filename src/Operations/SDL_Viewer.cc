@@ -1979,8 +1979,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
         return sketch;
     };
-    const auto solve_sketch_after_edit = [&](Sketch &editable_sketch) -> void {
-        const auto solve_options = configured_sketch_solve_options(disp_img_it);
+    const auto solve_sketch_after_edit = [&](Sketch &editable_sketch,
+                                             disp_img_it_t l_img_it) -> void {
+        const auto solve_options = configured_sketch_solve_options(l_img_it);
         if(sketch_solve_on_edit){
             sketch_last_unresolved_constraints = editable_sketch.solve_constraints(solve_options);
         }else{
@@ -1994,7 +1995,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto apply_sketch_edit = [&](disp_img_it_t l_img_it, auto &&fn) -> Sketch& {
         auto &editable_sketch = create_sketch_snapshot(l_img_it);
         fn(editable_sketch);
-        solve_sketch_after_edit(editable_sketch);
+        solve_sketch_after_edit(editable_sketch, l_img_it);
         return editable_sketch;
     };
 
@@ -5729,6 +5730,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &sketch_tag_colour,
                                            &sketch_hovered_primitive,
                                            &sketch_hovered_vertex,
+                                           &sketch_hovered_constraint,
+                                           &sketch_editor_hovered_primitive,
+                                           &sketch_editor_hovered_vertex,
+                                           &sketch_editor_hovered_constraint,
                                            &sketch_pending_primitive,
                                            &sketch_tool_mode,
                                            &sketch_drag_state,
@@ -5741,14 +5746,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                                              &sketch_show_constraint_numbers,
                                              &sketch_solve_options,
                                              &sketch_solve_on_edit,
-                                            &sketch_snap_distance,
-                                            &view_sketch_editor_enabled,
-                                            &sketch_save_path,
-                                            &sketch_load_path,
-                                            &sketch_file_status,
-                                            &create_sketch_snapshot,
-                                            &solve_sketch_after_edit,
-                                            &apply_sketch_edit,
+                                             &sketch_constrain_to_image_frame,
+                                             &sketch_snap_distance,
+                                             &sketch_extrude_into_frame,
+                                             &sketch_extrude_out_of_frame,
+                                             &view_sketch_editor_enabled,
+                                             &sketch_save_path,
+                                             &sketch_load_path,
+                                             &sketch_file_status,
+                                             &sketch_log_entries,
+                                             &sketch_log_scroll_to_bottom,
+                                             &create_sketch_snapshot,
+                                             &append_sketch_log,
+                                             &append_sketch_summary_log,
+                                             &configured_sketch_solve_options,
+                                             &solve_sketch_after_edit,
+                                             &apply_sketch_edit,
 
                                            &img_channel,
                                            &img_features ]() -> void {
@@ -10375,6 +10388,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                 &sketch_drag_state,
                                                 &sketch_hovered_primitive,
                                                 &sketch_hovered_vertex,
+                                                &clamp_point_to_current_sketch_bounds,
+                                                &append_sketch_log,
                                                 &sketch_snap_distance,
                                                 &sketch_last_unresolved_constraints,
                                                 &solve_sketch_after_edit ]() -> void {
@@ -10681,7 +10696,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                     sketch_pending_primitive.tag);
                                                 break;
                                         }
-                                        solve_sketch_after_edit(editable_sketch);
+                                        solve_sketch_after_edit(editable_sketch, disp_img_it);
                                         slot.selection = { primitive_idx };
                                         slot.clear_vertex_selection();
                                         if(sketch_pending_primitive.polyline && !stop_polyline){
@@ -10696,7 +10711,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(sketch_is_compatible_with_image(sketch, disp_img_it) && sketch_hovered_primitive){
                                     auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                                     if(const auto inserted_vertex = editable_sketch.insert_vertex(sketch_hovered_primitive.value(), mouse_pos); inserted_vertex){
-                                        solve_sketch_after_edit(editable_sketch);
+                                        solve_sketch_after_edit(editable_sketch, disp_img_it);
                                         slot.clear_selection();
                                         slot.clear_vertex_selection();
                                         slot.set_single_vertex_selection(inserted_vertex.value());
@@ -10715,7 +10730,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         const auto remove_vertex = ordered_vertices.back();
                                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                                         editable_sketch.collapse_vertices(keep_vertex, remove_vertex);
-                                        solve_sketch_after_edit(editable_sketch);
+                                        solve_sketch_after_edit(editable_sketch, disp_img_it);
                                         slot.clear_selection();
                                         slot.set_single_vertex_selection(keep_vertex);
                                         sketch_tool_mode = sketch_tool_mode_t::select;
@@ -10798,7 +10813,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     editable_sketch.translate_vertices(editable_sketch.collect_vertices(slot.selection),
                                                                        mouse_pos - previous_pos);
                                 }
-                                solve_sketch_after_edit(editable_sketch);
+                                solve_sketch_after_edit(editable_sketch, disp_img_it);
                             }
                         }
 
