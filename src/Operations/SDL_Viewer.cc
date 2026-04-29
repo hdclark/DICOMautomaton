@@ -1748,6 +1748,27 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool sketch_show_vertex_numbers = false;
     bool sketch_show_primitive_numbers = false;
     bool sketch_show_constraint_numbers = false;
+    enum class sketch_numeric_constraint_mode_t {
+        none,
+        distance,
+        length,
+        radius,
+    };
+    struct sketch_numeric_constraint_popup_t {
+        sketch_numeric_constraint_mode_t mode = sketch_numeric_constraint_mode_t::none;
+        std::vector<std::size_t> primitives;
+        double value = 0.0;
+
+        bool active() const{
+            return (mode != sketch_numeric_constraint_mode_t::none);
+        }
+        void clear(){
+            mode = sketch_numeric_constraint_mode_t::none;
+            primitives.clear();
+            value = 0.0;
+        }
+    };
+    sketch_numeric_constraint_popup_t sketch_numeric_constraint_popup;
     const auto make_default_sketch_solve_options = []() -> Sketch::solve_options_t {
         Sketch::solve_options_t out;
         out.relative_tolerance = 1.0E-5;
@@ -1758,8 +1779,11 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool sketch_solve_on_edit = true;
     bool sketch_constrain_to_image_frame = true;
     double sketch_snap_distance = 5.0;
-    double sketch_extrude_into_frame = 5.0;
-    double sketch_extrude_out_of_frame = 5.0;
+    double sketch_extrude_into_frame = 10.0;
+    double sketch_extrude_out_of_frame = 10.0;
+    double sketch_extrude_into_frame_angle = 0.0;
+    double sketch_extrude_out_of_frame_angle = 0.0;
+    bool sketch_export_extrusion_caps = false;
     bool view_sketch_editor_enabled = false;
     std::array<char, 4096> sketch_save_path = {};
     std::array<char, 4096> sketch_load_path = {};
@@ -5747,11 +5771,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                                              &sketch_show_constraint_numbers,
                                              &sketch_solve_options,
                                              &sketch_solve_on_edit,
-                                             &sketch_constrain_to_image_frame,
-                                             &sketch_snap_distance,
-                                             &sketch_extrude_into_frame,
-                                             &sketch_extrude_out_of_frame,
-                                             &view_sketch_editor_enabled,
+                                            &sketch_constrain_to_image_frame,
+                                            &sketch_snap_distance,
+                                            &sketch_extrude_into_frame,
+                                            &sketch_extrude_out_of_frame,
+                                            &sketch_extrude_into_frame_angle,
+                                            &sketch_extrude_out_of_frame_angle,
+                                            &sketch_export_extrusion_caps,
+                                            &sketch_numeric_constraint_popup,
+                                            &view_sketch_editor_enabled,
                                              &sketch_save_path,
                                              &sketch_load_path,
                                              &sketch_file_status,
@@ -6641,6 +6669,65 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::EndPopup();
                 }
 
+                const auto numeric_constraint_mode_name = [](sketch_numeric_constraint_mode_t mode) -> const char* {
+                    switch(mode){
+                        case sketch_numeric_constraint_mode_t::distance: return "Distance";
+                        case sketch_numeric_constraint_mode_t::length:   return "Length";
+                        case sketch_numeric_constraint_mode_t::radius:   return "Radius";
+                        case sketch_numeric_constraint_mode_t::none:     break;
+                    }
+                    return "Constraint";
+                };
+                const auto primitive_constraint_value = [&](std::size_t primitive_idx) -> std::optional<double> {
+                    if(const auto *line = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(primitive_idx)); line != nullptr){
+                        return sketch.vertex(line->vertices[0]).distance(sketch.vertex(line->vertices[1]));
+                    }
+                    if(const auto *circle = dynamic_cast<const Sketch::circle_primitive_t*>(sketch.primitive(primitive_idx)); circle != nullptr){
+                        return sketch.vertex(circle->center).distance(sketch.vertex(circle->radius_point));
+                    }
+                    if(const auto *arc = dynamic_cast<const Sketch::arc_primitive_t*>(sketch.primitive(primitive_idx)); arc != nullptr){
+                        return sketch.vertex(arc->center).distance(sketch.vertex(arc->start));
+                    }
+                    return {};
+                };
+                const auto open_numeric_constraint_popup = [&](sketch_numeric_constraint_mode_t mode,
+                                                               const std::vector<std::size_t> &primitives) -> void {
+                    if(primitives.empty()) return;
+                    sketch_numeric_constraint_popup.mode = mode;
+                    sketch_numeric_constraint_popup.primitives = primitives;
+                    sketch_numeric_constraint_popup.value = primitive_constraint_value(primitives.front()).value_or(0.0);
+                    ImGui::OpenPopup("Add Numeric Sketch Constraint");
+                };
+                if(ImGui::BeginPopupModal("Add Numeric Sketch Constraint", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                    ImGui::Text("%s constraint", numeric_constraint_mode_name(sketch_numeric_constraint_popup.mode));
+                    ImGui::Text("Affected primitives: %zu", sketch_numeric_constraint_popup.primitives.size());
+                    ImGui::SetNextItemWidth(180.0f);
+                    ImGui::InputDouble("Value (mm)", &sketch_numeric_constraint_popup.value, 0.1, 1.0, "%.6f");
+                    sketch_numeric_constraint_popup.value = std::max(0.0, sketch_numeric_constraint_popup.value);
+                    if(ImGui::Button("Add")){
+                        const auto mode = sketch_numeric_constraint_popup.mode;
+                        const auto primitives = sketch_numeric_constraint_popup.primitives;
+                        const auto value = std::max(0.0, sketch_numeric_constraint_popup.value);
+                        apply_sketch_edit(disp_img_it, [&](Sketch &editable_sketch){
+                            for(const auto primitive_idx : primitives){
+                                editable_sketch.add_distance_constraint(primitive_idx, value);
+                            }
+                        });
+                        sketch_file_status = std::string("Added ")
+                                           + numeric_constraint_mode_name(mode)
+                                           + ((primitives.size() == 1U) ? " constraint" : " constraints");
+                        append_sketch_log(sketch_file_status);
+                        sketch_numeric_constraint_popup.clear();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Cancel")){
+                        sketch_numeric_constraint_popup.clear();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
+                }
+
                 ImGui::Text("History: %zu / %zu", slot.history.current_version + 1U, slot.history.versions.size());
                 ImGui::Text("Selected primitives: %zu  vertices/control points: %zu", slot.selection.size(), slot.vertex_selection.size());
                 if(sketch_pending_primitive.active()){
@@ -6664,6 +6751,75 @@ bool SDL_Viewer(Drover &DICOM_data,
                         sketch_log_scroll_to_bottom = false;
                     }
                     ImGui::EndChild();
+                }
+
+                ImGui::Separator();
+                ImGui::Text("Extrude to Surface Mesh");
+                ImGui::TextWrapped("Into/out-of-frame lengths may be negative as long as the combined cap span remains positive.");
+                ImGui::TextWrapped("Positive angles expand the extrusion, negative angles narrow it, and 0 leaves the cap size unchanged.");
+                ImGui::SetNextItemWidth(150.0f);
+                ImGui::InputDouble("Into frame (mm)", &sketch_extrude_into_frame, 0.5, 5.0, "%.3f");
+                ImGui::SetNextItemWidth(150.0f);
+                ImGui::InputDouble("Out of frame (mm)", &sketch_extrude_out_of_frame, 0.5, 5.0, "%.3f");
+                ImGui::SetNextItemWidth(150.0f);
+                ImGui::InputDouble("Into frame angle (deg)", &sketch_extrude_into_frame_angle, 0.5, 5.0, "%.3f");
+                ImGui::SetNextItemWidth(150.0f);
+                ImGui::InputDouble("Out of frame angle (deg)", &sketch_extrude_out_of_frame_angle, 0.5, 5.0, "%.3f");
+                ImGui::Checkbox("Export debug cap meshes", &sketch_export_extrusion_caps);
+                if(ImGui::Button("Insert Surface Mesh")){
+                    if(disp_img_it == disp_img_it_t()){
+                        sketch_file_status = "Cannot insert surface mesh: no active image available for metadata";
+                    }else{
+                        try{
+                            const auto append_surface_mesh = [&](fv_surface_mesh<double, uint64_t> surface_mesh,
+                                                                 const std::string &mesh_label,
+                                                                 const std::string &description) -> void {
+                                auto mesh_metadata = coalesce_metadata_for_basic_mesh(disp_img_it->metadata, meta_evolve::iterate);
+                                surface_mesh.metadata = std::move(mesh_metadata);
+                                surface_mesh.metadata["MeshLabel"] = mesh_label;
+                                surface_mesh.metadata["NormalizedMeshLabel"] = mesh_label;
+                                surface_mesh.metadata["Description"] = description;
+                                DICOM_data.smesh_data.emplace_back(std::make_shared<Surface_Mesh>());
+                                DICOM_data.smesh_data.back()->meshes = std::move(surface_mesh);
+                            };
+
+                            Sketch::extrusion_options_t extrusion_options;
+                            extrusion_options.into_frame_length = sketch_extrude_into_frame;
+                            extrusion_options.out_of_frame_length = sketch_extrude_out_of_frame;
+                            extrusion_options.into_frame_angle_degrees = sketch_extrude_into_frame_angle;
+                            extrusion_options.out_of_frame_angle_degrees = sketch_extrude_out_of_frame_angle;
+                            fv_surface_mesh<double, uint64_t> extruded_mesh;
+                            std::vector<fv_surface_mesh<double, uint64_t>> cap_meshes;
+                            std::string error_message;
+                            const auto mesh_label = "Sketch Extrusion " + std::to_string(sketch_slot_num);
+                            if(slot.history.current().build_extruded_surface_mesh(extrusion_options,
+                                                                                 extruded_mesh,
+                                                                                 sketch_export_extrusion_caps ? &cap_meshes : nullptr,
+                                                                                 &error_message)){
+                                append_surface_mesh(std::move(extruded_mesh),
+                                                    mesh_label,
+                                                    "Extruded vector sketch surface mesh");
+                                if(sketch_export_extrusion_caps){
+                                    for(std::size_t i = 0U; i < cap_meshes.size(); ++i){
+                                        const auto cap_label = mesh_label + ((i == 0U) ? " Near Cap" : " Far Cap");
+                                        append_surface_mesh(std::move(cap_meshes.at(i)),
+                                                            cap_label,
+                                                            "Extruded vector sketch debug cap surface mesh");
+                                    }
+                                }
+                                sketch_file_status = "Inserted a surface mesh from sketch slot " + std::to_string(sketch_slot_num);
+                            }else{
+                                sketch_file_status = error_message;
+                            }
+                        }catch(const std::exception &e){
+                            YLOGWARN("Sketch extrusion UI handler caught exception: '" << e.what() << "'");
+                            sketch_file_status = std::string("Sketch extrusion failed: ") + e.what();
+                        }catch(...){
+                            YLOGWARN("Sketch extrusion UI handler caught an unknown exception");
+                            sketch_file_status = "Sketch extrusion failed with an unknown exception";
+                        }
+                    }
+                    append_sketch_log(sketch_file_status);
                 }
 
                 const auto activate_sketch_primitive = [&](Sketch::primitive_kind_t kind,
@@ -6766,10 +6922,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 std::vector<std::size_t> selected_lines;
+                std::vector<std::size_t> selected_rounds;
                 for(const auto primitive_idx : slot.selection){
                     const auto *primitive = sketch.primitive(primitive_idx);
-                    if(primitive && (primitive->kind() == Sketch::primitive_kind_t::line)){
+                    if(primitive == nullptr) continue;
+                    if(primitive->kind() == Sketch::primitive_kind_t::line){
                         selected_lines.push_back(primitive_idx);
+                    }else if((primitive->kind() == Sketch::primitive_kind_t::circle)
+                          || (primitive->kind() == Sketch::primitive_kind_t::arc)){
+                        selected_rounds.push_back(primitive_idx);
                     }
                 }
                 const auto selected_vertices = slot.ordered_selected_vertices();
@@ -6798,11 +6959,19 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::SameLine();
                 if(ImGui::Button("Distance")){
                     if(!selected_lines.empty()){
-                        apply_sketch_edit(disp_img_it, [&](Sketch &editable_sketch){
-                            for(const auto primitive_idx : selected_lines){
-                                editable_sketch.add_distance_constraint(primitive_idx);
-                            }
-                        });
+                        open_numeric_constraint_popup(sketch_numeric_constraint_mode_t::distance, selected_lines);
+                    }
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Length")){
+                    if(!selected_lines.empty()){
+                        open_numeric_constraint_popup(sketch_numeric_constraint_mode_t::length, selected_lines);
+                    }
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Radius")){
+                    if(!selected_rounds.empty()){
+                        open_numeric_constraint_popup(sketch_numeric_constraint_mode_t::radius, selected_rounds);
                     }
                 }
                 if(ImGui::Button("Parallel")){
@@ -6963,38 +7132,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                         edit_current_sketch([](Sketch &editable_sketch){
                             editable_sketch.clear();
                         });
-                    }
-                    ImGui::Separator();
-                    ImGui::Text("Extrude to Surface Mesh");
-                    ImGui::TextWrapped("Into/out-of-frame lengths may be negative as long as the combined cap span remains positive.");
-                    ImGui::SetNextItemWidth(150.0f);
-                    ImGui::InputDouble("Into frame (mm)", &sketch_extrude_into_frame, 0.5, 5.0, "%.3f");
-                    ImGui::SetNextItemWidth(150.0f);
-                    ImGui::InputDouble("Out of frame (mm)", &sketch_extrude_out_of_frame, 0.5, 5.0, "%.3f");
-                    if(ImGui::Button("Insert Surface Mesh")){
-                        if(disp_img_it == disp_img_it_t()){
-                            sketch_file_status = "Cannot insert surface mesh: no active image available for metadata";
-                        }else{
-                            Sketch::extrusion_options_t extrusion_options;
-                            extrusion_options.into_frame_length = sketch_extrude_into_frame;
-                            extrusion_options.out_of_frame_length = sketch_extrude_out_of_frame;
-                            fv_surface_mesh<double, uint64_t> extruded_mesh;
-                            std::string error_message;
-                            if(slot.history.current().build_extruded_surface_mesh(extrusion_options, extruded_mesh, &error_message)){
-                                auto mesh_metadata = coalesce_metadata_for_basic_mesh(disp_img_it->metadata, meta_evolve::iterate);
-                                const auto mesh_label = "Sketch Extrusion " + std::to_string(sketch_slot_num);
-                                extruded_mesh.metadata = mesh_metadata;
-                                extruded_mesh.metadata["MeshLabel"] = mesh_label;
-                                extruded_mesh.metadata["NormalizedMeshLabel"] = mesh_label;
-                                extruded_mesh.metadata["Description"] = "Extruded vector sketch surface mesh";
-                                DICOM_data.smesh_data.emplace_back(std::make_shared<Surface_Mesh>());
-                                DICOM_data.smesh_data.back()->meshes = std::move(extruded_mesh);
-                                sketch_file_status = "Inserted a surface mesh from sketch slot " + std::to_string(sketch_slot_num);
-                            }else{
-                                sketch_file_status = error_message;
-                            }
-                        }
-                        append_sketch_log(sketch_file_status);
                     }
 
                     if(ImGui::BeginChild("##sketch_debug_state", ImVec2(950.0f, 520.0f), true)){
@@ -7279,17 +7416,26 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     break;
                                 }
                             }else if(const auto *distance = dynamic_cast<const Sketch::distance_constraint_t*>(constraint); distance != nullptr){
-                                int line_idx = static_cast<int>(distance->line);
+                                int primitive_idx = static_cast<int>(distance->primitive);
                                 double target_distance = distance->target_distance;
+                                const char *target_label = "Target Distance";
+                                if(const auto *distance_primitive = slot.history.current().primitive(distance->primitive); distance_primitive != nullptr){
+                                    if(distance_primitive->kind() == Sketch::primitive_kind_t::line){
+                                        target_label = "Length";
+                                    }else if((distance_primitive->kind() == Sketch::primitive_kind_t::circle)
+                                          || (distance_primitive->kind() == Sketch::primitive_kind_t::arc)){
+                                        target_label = "Radius";
+                                    }
+                                }
                                 ImGui::SetNextItemWidth(110.0f);
-                                changed = ImGui::InputInt("Line", &line_idx);
+                                changed = ImGui::InputInt("Primitive", &primitive_idx);
                                 ImGui::SameLine();
                                 ImGui::SetNextItemWidth(120.0f);
-                                changed = ImGui::InputDouble("Target Distance", &target_distance) || changed;
+                                changed = ImGui::InputDouble(target_label, &target_distance) || changed;
                                 if(changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_constraint = dynamic_cast<Sketch::distance_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
-                                            editable_constraint->line = clamp_debug_index(line_idx, primitive_count);
+                                            editable_constraint->primitive = clamp_debug_index(primitive_idx, primitive_count);
                                             editable_constraint->target_distance = target_distance;
                                         }
                                     });

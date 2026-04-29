@@ -21,6 +21,7 @@
 #endif // DCMA_USE_EIGEN
 
 #include "YgorMathDelaunay.h"
+#include "YgorLog.h"
 #include "YgorOptimizeLM.h"
 
 namespace {
@@ -94,7 +95,7 @@ static void remap_constraint_primitives(Sketch::constraint_t &constraint,
     }else if(auto *vertical = dynamic_cast<Sketch::vertical_constraint_t*>(&constraint); vertical != nullptr){
         vertical->line = primitive_remap.at(vertical->line).value();
     }else if(auto *distance = dynamic_cast<Sketch::distance_constraint_t*>(&constraint); distance != nullptr){
-        distance->line = primitive_remap.at(distance->line).value();
+        distance->primitive = primitive_remap.at(distance->primitive).value();
     }else if(auto *parallel = dynamic_cast<Sketch::parallel_constraint_t*>(&constraint); parallel != nullptr){
         parallel->line_a = primitive_remap.at(parallel->line_a).value();
         parallel->line_b = primitive_remap.at(parallel->line_b).value();
@@ -335,6 +336,26 @@ static double projected_distance(const Sketch::projection_t &a,
     return std::hypot(a.u - b.u, a.v - b.v);
 }
 
+static double extrusion_scale_factor(double reference_half_extent,
+                                     double extrusion_length,
+                                     double angle_degrees){
+    if(reference_half_extent <= solver_min_epsilon) return 1.0;
+    if(std::abs(angle_degrees) <= solver_min_epsilon) return 1.0;
+    const auto pi = std::acos(-1.0);
+    const auto angle_radians = angle_degrees * (pi / 180.0);
+    const auto delta = std::tan(angle_radians) * std::abs(extrusion_length);
+    return (reference_half_extent + delta) / reference_half_extent;
+}
+
+static Sketch::projection_t scale_projection_about(const Sketch::projection_t &point,
+                                                   const Sketch::projection_t &centre,
+                                                   double scale){
+    return {
+        centre.u + ((point.u - centre.u) * scale),
+        centre.v + ((point.v - centre.v) * scale)
+    };
+}
+
 static Sketch::projection_t clamp_to_bounds(const Sketch::projection_t &p,
                                             const Sketch::bounding_box_t &bounds){
     return {
@@ -400,6 +421,21 @@ static std::vector<Sketch::projection_t> project_polyline(const Sketch &sketch,
         out.push_back(sketch.project(point));
     }
     return out;
+}
+
+static Sketch::bounding_box_t projected_path_bounds(const Sketch &sketch,
+                                                    const std::vector<extruded_path_t> &paths){
+    Sketch::bounding_box_t bounds;
+    for(const auto &path : paths){
+        for(const auto &point : path.points){
+            const auto projected = sketch.project(point);
+            bounds.min.u = std::min(bounds.min.u, projected.u);
+            bounds.min.v = std::min(bounds.min.v, projected.v);
+            bounds.max.u = std::max(bounds.max.u, projected.u);
+            bounds.max.v = std::max(bounds.max.v, projected.v);
+        }
+    }
+    return bounds;
 }
 
 static double signed_triangle_area2(const Sketch::projection_t &a,
@@ -528,22 +564,27 @@ static std::vector<extruded_path_t> collect_extruded_paths(const Sketch &sketch,
 
 static void append_extruded_polyline_sides(const Sketch &sketch,
                                            const extruded_path_t &path,
+                                           const Sketch::projection_t &scale_centre,
                                            double near_offset,
                                            double far_offset,
+                                           double near_scale,
+                                           double far_scale,
                                            fv_surface_mesh<double, uint64_t> &mesh){
     if(path.points.size() < 2U) return;
     if(path.closed && (path.points.size() < 3U)) return;
 
     const auto normal = sketch.plane().normal();
+    const auto projected_points = project_polyline(sketch, path.points);
     const uint64_t base_vertex = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : path.points){
-        mesh.vertices.emplace_back(point + normal * near_offset);
-        mesh.vertices.emplace_back(point + normal * far_offset);
+    for(const auto &projected_point : projected_points){
+        const auto near_point = sketch.lift(scale_projection_about(projected_point, scale_centre, near_scale));
+        const auto far_point = sketch.lift(scale_projection_about(projected_point, scale_centre, far_scale));
+        mesh.vertices.emplace_back(near_point + normal * near_offset);
+        mesh.vertices.emplace_back(far_point + normal * far_offset);
     }
 
     bool closed_ccw = true;
     if(path.closed){
-        const auto projected_points = project_polyline(sketch, path.points);
         closed_ccw = (signed_polygon_area(projected_points) >= 0.0);
     }
 
@@ -571,18 +612,20 @@ static void append_extruded_polyline_sides(const Sketch &sketch,
 
 static void append_extruded_end_caps(const Sketch &sketch,
                                      const std::vector<extruded_path_t> &paths,
+                                     const Sketch::projection_t &scale_centre,
                                      double near_offset,
                                      double far_offset,
-                                     fv_surface_mesh<double, uint64_t> &mesh){
+                                     double near_scale,
+                                     double far_scale,
+                                     fv_surface_mesh<double, uint64_t> &mesh,
+                                     std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes){
     std::vector<std::vector<Sketch::projection_t>> closed_loops;
     std::vector<vec3<double>> cap_vertices_2d;
-    std::vector<vec3<double>> cap_vertices_world;
     for(const auto &path : paths){
         if(!path.closed || (path.points.size() < 3U)) continue;
         auto projected_loop = project_polyline(sketch, path.points);
         if(projected_loop.size() < 3U) continue;
         closed_loops.push_back(projected_loop);
-        cap_vertices_world.insert(std::end(cap_vertices_world), std::begin(path.points), std::end(path.points));
         for(const auto &point : projected_loop){
             cap_vertices_2d.emplace_back(point.u, point.v, 0.0);
         }
@@ -593,13 +636,21 @@ static void append_extruded_end_caps(const Sketch &sketch,
     if(planar_caps.faces.empty()) return;
 
     const auto normal = sketch.plane().normal();
+    fv_surface_mesh<double, uint64_t> near_cap_mesh;
+    fv_surface_mesh<double, uint64_t> far_cap_mesh;
     const uint64_t near_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : cap_vertices_world){
-        mesh.vertices.emplace_back(point + normal * near_offset);
+    for(const auto &point : cap_vertices_2d){
+        const Sketch::projection_t projected_point{ point.x, point.y };
+        const auto scaled_near = sketch.lift(scale_projection_about(projected_point, scale_centre, near_scale));
+        mesh.vertices.emplace_back(scaled_near + normal * near_offset);
+        near_cap_mesh.vertices.emplace_back(scaled_near + normal * near_offset);
     }
     const uint64_t far_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : cap_vertices_world){
-        mesh.vertices.emplace_back(point + normal * far_offset);
+    for(const auto &point : cap_vertices_2d){
+        const Sketch::projection_t projected_point{ point.x, point.y };
+        const auto scaled_far = sketch.lift(scale_projection_about(projected_point, scale_centre, far_scale));
+        mesh.vertices.emplace_back(scaled_far + normal * far_offset);
+        far_cap_mesh.vertices.emplace_back(scaled_far + normal * far_offset);
     }
 
     for(const auto &face : planar_caps.faces){
@@ -627,9 +678,24 @@ static void append_extruded_end_caps(const Sketch &sketch,
         if(area2 > 0.0){
             append_triangle(mesh, far_base + i0, far_base + i1, far_base + i2);
             append_triangle(mesh, near_base + i0, near_base + i2, near_base + i1);
+            append_triangle(far_cap_mesh, i0, i1, i2);
+            append_triangle(near_cap_mesh, i0, i2, i1);
         }else{
             append_triangle(mesh, far_base + i0, far_base + i2, far_base + i1);
             append_triangle(mesh, near_base + i0, near_base + i1, near_base + i2);
+            append_triangle(far_cap_mesh, i0, i2, i1);
+            append_triangle(near_cap_mesh, i0, i1, i2);
+        }
+    }
+    if(cap_meshes != nullptr){
+        cap_meshes->clear();
+        if(!near_cap_mesh.faces.empty()){
+            near_cap_mesh.recreate_involved_face_index();
+            cap_meshes->push_back(std::move(near_cap_mesh));
+        }
+        if(!far_cap_mesh.faces.empty()){
+            far_cap_mesh.recreate_involved_face_index();
+            cap_meshes->push_back(std::move(far_cap_mesh));
         }
     }
 }
@@ -754,18 +820,26 @@ struct sketch_solver_context_t {
                 append_residual_block(residuals, blocks, constraint_idx, { b.u - a.u });
 
             }else if(const auto *distance = dynamic_cast<const Sketch::distance_constraint_t*>(constraint_ptr); distance != nullptr){
-                const auto line = get_line_binding(sketch, distance->line);
-                if(!line){
+                if(const auto line = get_line_binding(sketch, distance->primitive); line){
+                    const auto a = projected_vertex(state, line->a);
+                    const auto b = projected_vertex(state, line->b);
+                    const auto du = b.u - a.u;
+                    const auto dv = b.v - a.v;
+                    append_residual_block(residuals, blocks, constraint_idx, {
+                        (du * du) + (dv * dv) - (distance->target_distance * distance->target_distance)
+                    });
+                }else if(const auto round = get_round_binding(sketch, distance->primitive); round){
+                    const auto centre = projected_vertex(state, round->center);
+                    const auto radius_point = projected_vertex(state, round->radius_point);
+                    const auto du = radius_point.u - centre.u;
+                    const auto dv = radius_point.v - centre.v;
+                    append_residual_block(residuals, blocks, constraint_idx, {
+                        (du * du) + (dv * dv) - (distance->target_distance * distance->target_distance)
+                    });
+                }else{
                     append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
                     continue;
                 }
-                const auto a = projected_vertex(state, line->a);
-                const auto b = projected_vertex(state, line->b);
-                const auto du = b.u - a.u;
-                const auto dv = b.v - a.v;
-                append_residual_block(residuals, blocks, constraint_idx, {
-                    (du * du) + (dv * dv) - (distance->target_distance * distance->target_distance)
-                });
 
             }else if(const auto *parallel = dynamic_cast<const Sketch::parallel_constraint_t*>(constraint_ptr); parallel != nullptr){
                 const auto line_a = get_line_binding(sketch, parallel->line_a);
@@ -1114,7 +1188,7 @@ Sketch::distance_constraint_t::kind() const{
 
 std::vector<Sketch::primitive_index_t>
 Sketch::distance_constraint_t::referenced_primitives() const{
-    return { line };
+    return { primitive };
 }
 
 std::unique_ptr<Sketch::constraint_t>
@@ -2147,16 +2221,22 @@ Sketch::add_vertical_constraint(primitive_index_t line_idx){
 }
 
 Sketch::constraint_index_t
-Sketch::add_distance_constraint(primitive_index_t line_idx, double target_distance){
-    if(!primitive_index_valid(line_idx)) throw std::out_of_range("Sketch primitive index is out of range");
+Sketch::add_distance_constraint(primitive_index_t primitive_idx, double target_distance){
+    if(!primitive_index_valid(primitive_idx)) throw std::out_of_range("Sketch primitive index is out of range");
     auto constraint = std::make_unique<distance_constraint_t>();
-    constraint->line = line_idx;
+    constraint->primitive = primitive_idx;
     if(std::isfinite(target_distance)){
         constraint->target_distance = target_distance;
     }else{
-        const auto *line = dynamic_cast<const line_primitive_t*>(primitive(line_idx));
-        if(line == nullptr) throw std::invalid_argument("Distance constraints currently require a line primitive");
-        constraint->target_distance = vertex(line->vertices[0]).distance(vertex(line->vertices[1]));
+        if(const auto *line = dynamic_cast<const line_primitive_t*>(primitive(primitive_idx)); line != nullptr){
+            constraint->target_distance = vertex(line->vertices[0]).distance(vertex(line->vertices[1]));
+        }else if(const auto *circle = dynamic_cast<const circle_primitive_t*>(primitive(primitive_idx)); circle != nullptr){
+            constraint->target_distance = vertex(circle->center).distance(vertex(circle->radius_point));
+        }else if(const auto *arc = dynamic_cast<const arc_primitive_t*>(primitive(primitive_idx)); arc != nullptr){
+            constraint->target_distance = vertex(arc->center).distance(vertex(arc->start));
+        }else{
+            throw std::invalid_argument("Distance constraints currently require a line, circle, or arc primitive");
+        }
     }
     return append_constraint(std::move(constraint));
 }
@@ -2420,8 +2500,14 @@ Sketch::solve_constraints(const solve_options_t &options){
             const auto *line = dynamic_cast<const line_primitive_t*>(primitive(vertical->line));
             if(line != nullptr) refinement_anchor_vertices.insert(line->vertices[0]);
         }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
-            const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->line));
+            const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->primitive));
             if(line != nullptr) refinement_anchor_vertices.insert(line->vertices[0]);
+            if(const auto *circle = dynamic_cast<const circle_primitive_t*>(primitive(distance->primitive)); circle != nullptr){
+                refinement_anchor_vertices.insert(circle->center);
+            }
+            if(const auto *arc = dynamic_cast<const arc_primitive_t*>(primitive(distance->primitive)); arc != nullptr){
+                refinement_anchor_vertices.insert(arc->center);
+            }
         }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){
             if(const auto *line = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_a)); line != nullptr){
                 refinement_anchor_vertices.insert(line->vertices[0]);
@@ -2486,24 +2572,72 @@ Sketch::solve_constraints(const solve_options_t &options){
                     updated_vertices = true;
 
                 }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
-                    const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->line));
-                    if(line == nullptr) continue;
-                    const auto a = project(vertex(line->vertices[0]));
-                    auto b = project(vertex(line->vertices[1]));
-                    auto du = b.u - a.u;
-                    auto dv = b.v - a.v;
-                    const auto len = std::hypot(du, dv);
-                    if(len <= std::numeric_limits<double>::epsilon()){
-                        du = 1.0;
-                        dv = 0.0;
-                    }else{
-                        du /= len;
-                        dv /= len;
+                    if(const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->primitive)); line != nullptr){
+                        const auto a = project(vertex(line->vertices[0]));
+                        auto b = project(vertex(line->vertices[1]));
+                        auto du = b.u - a.u;
+                        auto dv = b.v - a.v;
+                        const auto len = std::hypot(du, dv);
+                        if(len <= std::numeric_limits<double>::epsilon()){
+                            du = 1.0;
+                            dv = 0.0;
+                        }else{
+                            du /= len;
+                            dv /= len;
+                        }
+                        b.u = a.u + du * distance->target_distance;
+                        b.v = a.v + dv * distance->target_distance;
+                        vertices_.at(line->vertices[1]) = lift(b);
+                        updated_vertices = true;
+                    }else if(const auto *circle = dynamic_cast<const circle_primitive_t*>(primitive(distance->primitive)); circle != nullptr){
+                        const auto centre = project(vertex(circle->center));
+                        auto radius_point = project(vertex(circle->radius_point));
+                        auto du = radius_point.u - centre.u;
+                        auto dv = radius_point.v - centre.v;
+                        const auto len = std::hypot(du, dv);
+                        if(len <= std::numeric_limits<double>::epsilon()){
+                            du = 1.0;
+                            dv = 0.0;
+                        }else{
+                            du /= len;
+                            dv /= len;
+                        }
+                        radius_point.u = centre.u + du * distance->target_distance;
+                        radius_point.v = centre.v + dv * distance->target_distance;
+                        vertices_.at(circle->radius_point) = lift(radius_point);
+                        updated_vertices = true;
+                    }else if(const auto *arc = dynamic_cast<const arc_primitive_t*>(primitive(distance->primitive)); arc != nullptr){
+                        const auto centre = project(vertex(arc->center));
+                        auto start = project(vertex(arc->start));
+                        auto stop = project(vertex(arc->stop));
+                        auto start_u = start.u - centre.u;
+                        auto start_v = start.v - centre.v;
+                        auto stop_u = stop.u - centre.u;
+                        auto stop_v = stop.v - centre.v;
+                        const auto start_len = std::hypot(start_u, start_v);
+                        const auto stop_len = std::hypot(stop_u, stop_v);
+                        if(start_len <= std::numeric_limits<double>::epsilon()){
+                            start_u = 1.0;
+                            start_v = 0.0;
+                        }else{
+                            start_u /= start_len;
+                            start_v /= start_len;
+                        }
+                        if(stop_len <= std::numeric_limits<double>::epsilon()){
+                            stop_u = 1.0;
+                            stop_v = 0.0;
+                        }else{
+                            stop_u /= stop_len;
+                            stop_v /= stop_len;
+                        }
+                        start.u = centre.u + start_u * distance->target_distance;
+                        start.v = centre.v + start_v * distance->target_distance;
+                        stop.u = centre.u + stop_u * distance->target_distance;
+                        stop.v = centre.v + stop_v * distance->target_distance;
+                        vertices_.at(arc->start) = lift(start);
+                        vertices_.at(arc->stop) = lift(stop);
+                        updated_vertices = true;
                     }
-                    b.u = a.u + du * distance->target_distance;
-                    b.v = a.v + dv * distance->target_distance;
-                    vertices_.at(line->vertices[1]) = lift(b);
-                    updated_vertices = true;
 
                 }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){
                     const auto *line_a = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_a));
@@ -2682,8 +2816,10 @@ Sketch::last_solve_report() const{
 bool
 Sketch::build_extruded_surface_mesh(const extrusion_options_t &options,
                                     fv_surface_mesh<double, uint64_t> &mesh,
+                                    std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes,
                                     std::string *error_message) const{
     mesh = {};
+    if(cap_meshes != nullptr) cap_meshes->clear();
 
     if(!has_plane_){
         store_error(error_message, "Unable to extrude sketch without an embedded plane");
@@ -2697,23 +2833,77 @@ Sketch::build_extruded_surface_mesh(const extrusion_options_t &options,
 
     const double near_offset = -options.out_of_frame_length;
     const double far_offset = options.into_frame_length;
-    const auto curve_segments = std::max<std::size_t>(options.curve_segments, 16U);
-    const auto paths = collect_extruded_paths(*this, curve_segments);
-    bool emitted_geometry = false;
-    for(const auto &path : paths){
-        append_extruded_polyline_sides(*this, path, near_offset, far_offset, mesh);
-        emitted_geometry = emitted_geometry || !path.points.empty();
-    }
-    append_extruded_end_caps(*this, paths, near_offset, far_offset, mesh);
+    try{
+        const auto curve_segments = std::max<std::size_t>(options.curve_segments, 16U);
+        const auto paths = collect_extruded_paths(*this, curve_segments);
+        const auto bounds = projected_path_bounds(*this, paths);
+        if(!bounds.is_valid()){
+            store_error(error_message, "Sketch does not contain any extrudable primitives");
+            return false;
+        }
 
-    if(!emitted_geometry || mesh.faces.empty()){
-        store_error(error_message, "Sketch does not contain any extrudable primitives");
+        const Sketch::projection_t scale_centre = {
+            (bounds.min.u + bounds.max.u) * 0.5,
+            (bounds.min.v + bounds.max.v) * 0.5
+        };
+        const auto half_extent_u = std::max(0.0, (bounds.max.u - bounds.min.u) * 0.5);
+        const auto half_extent_v = std::max(0.0, (bounds.max.v - bounds.min.v) * 0.5);
+        const auto reference_half_extent = std::max(half_extent_u, half_extent_v);
+        const auto near_scale = extrusion_scale_factor(reference_half_extent,
+                                                       options.out_of_frame_length,
+                                                       options.out_of_frame_angle_degrees);
+        const auto far_scale = extrusion_scale_factor(reference_half_extent,
+                                                      options.into_frame_length,
+                                                      options.into_frame_angle_degrees);
+        if((near_scale <= solver_min_epsilon) || (far_scale <= solver_min_epsilon)){
+            store_error(error_message,
+                        "Extrusion angles narrow the sketch past collapse; reduce the magnitude of the narrowing angle");
+            return false;
+        }
+
+        bool emitted_geometry = false;
+        for(const auto &path : paths){
+            append_extruded_polyline_sides(*this,
+                                           path,
+                                           scale_centre,
+                                           near_offset,
+                                           far_offset,
+                                           near_scale,
+                                           far_scale,
+                                           mesh);
+            emitted_geometry = emitted_geometry || !path.points.empty();
+        }
+        append_extruded_end_caps(*this,
+                                 paths,
+                                 scale_centre,
+                                 near_offset,
+                                 far_offset,
+                                 near_scale,
+                                 far_scale,
+                                 mesh,
+                                 cap_meshes);
+
+        if(!emitted_geometry || mesh.faces.empty()){
+            store_error(error_message, "Sketch does not contain any extrudable primitives");
+            mesh = {};
+            if(cap_meshes != nullptr) cap_meshes->clear();
+            return false;
+        }
+        mesh.recreate_involved_face_index();
+        return true;
+    }catch(const std::exception &e){
+        YLOGWARN("Sketch extrusion failed with exception: '" << e.what() << "'");
         mesh = {};
+        if(cap_meshes != nullptr) cap_meshes->clear();
+        store_error(error_message, std::string("Sketch extrusion failed: ") + e.what());
+        return false;
+    }catch(...){
+        YLOGWARN("Sketch extrusion failed with an unknown exception");
+        mesh = {};
+        if(cap_meshes != nullptr) cap_meshes->clear();
+        store_error(error_message, "Sketch extrusion failed with an unknown exception");
         return false;
     }
-
-    mesh.recreate_involved_face_index();
-    return true;
 }
 
 std::string
@@ -2730,7 +2920,17 @@ Sketch::describe_constraint(constraint_index_t idx) const{
             ss << "vertical";
             break;
         case constraint_kind_t::distance:
-            ss << "distance";
+            if(const auto *distance = dynamic_cast<const distance_constraint_t*>(c); distance != nullptr){
+                if(dynamic_cast<const line_primitive_t*>(primitive(distance->primitive)) != nullptr){
+                    ss << "length";
+                }else if(get_round_binding(*this, distance->primitive)){
+                    ss << "radius";
+                }else{
+                    ss << "distance";
+                }
+            }else{
+                ss << "distance";
+            }
             break;
         case constraint_kind_t::parallel:
             ss << "parallel";
@@ -2806,7 +3006,7 @@ Sketch::save_to_file(const std::filesystem::path &path,
         }else if(const auto *vertical = dynamic_cast<const vertical_constraint_t*>(constraint_ptr.get()); vertical != nullptr){
             file << "vertical " << (vertical->enabled ? 1 : 0) << ' ' << vertical->line << '\n';
         }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
-            file << "distance " << (distance->enabled ? 1 : 0) << ' ' << distance->line << ' ' << distance->target_distance << '\n';
+            file << "distance " << (distance->enabled ? 1 : 0) << ' ' << distance->primitive << ' ' << distance->target_distance << '\n';
         }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){
             file << "parallel " << (parallel->enabled ? 1 : 0) << ' ' << parallel->line_a << ' ' << parallel->line_b << '\n';
         }else if(const auto *perpendicular = dynamic_cast<const perpendicular_constraint_t*>(constraint_ptr.get()); perpendicular != nullptr){
@@ -2963,7 +3163,7 @@ Sketch::load_from_file(const std::filesystem::path &path,
             constraint = std::move(out_constraint);
         }else if(kind_token == "distance"){
             auto out_constraint = std::make_unique<distance_constraint_t>();
-            if(!(file >> out_constraint->line >> out_constraint->target_distance)) return fail("Unable to read distance constraint");
+            if(!(file >> out_constraint->primitive >> out_constraint->target_distance)) return fail("Unable to read distance constraint");
             constraint = std::move(out_constraint);
         }else if(kind_token == "parallel"){
             auto out_constraint = std::make_unique<parallel_constraint_t>();

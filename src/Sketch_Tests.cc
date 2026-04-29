@@ -4,6 +4,7 @@
 
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <set>
 #include <vector>
@@ -127,6 +128,24 @@ TEST_CASE("Sketch constraints resolve simple geometry"){
     REQUIRE( doctest::Approx(sketch.vertex(horizontal->vertices[0]).y) == sketch.vertex(horizontal->vertices[1]).y );
     REQUIRE( doctest::Approx(sketch.vertex(vertical->vertices[0]).x) == sketch.vertex(vertical->vertices[1]).x );
     REQUIRE( doctest::Approx(sketch.vertex(distance->vertices[0]).distance(sketch.vertex(distance->vertices[1]))).epsilon(1E-6) == 5.0 );
+}
+
+TEST_CASE("Sketch distance constraints can control round primitive radii"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto circle_idx = sketch.add_circle(vec3<double>(0.0, 0.0, 0.0),
+                                              vec3<double>(1.0, 0.0, 0.0),
+                                              Sketch::geometry_tag_t::normal);
+    const auto *circle = dynamic_cast<const Sketch::circle_primitive_t*>(sketch.primitive(circle_idx));
+    REQUIRE( circle != nullptr );
+
+    sketch.add_pin_constraint(circle->center);
+    sketch.add_distance_constraint(circle_idx, 3.5);
+
+    const auto unresolved = sketch.solve_constraints();
+    REQUIRE( unresolved == 0U );
+    CHECK( doctest::Approx(sketch.vertex(circle->center).distance(sketch.vertex(circle->radius_point))).epsilon(1E-6) == 3.5 );
 }
 
 TEST_CASE("Sketch tangent constraints solve line-circle tangency"){
@@ -794,8 +813,16 @@ TEST_CASE("Sketch extrusion validates span direction"){
     options.out_of_frame_length = -6.0;
     fv_surface_mesh<double, uint64_t> mesh;
     std::string error_message;
-    REQUIRE_FALSE( sketch.build_extruded_surface_mesh(options, mesh, &error_message) );
+    REQUIRE_FALSE( sketch.build_extruded_surface_mesh(options, mesh, nullptr, &error_message) );
     REQUIRE_FALSE( error_message.empty() );
+}
+
+TEST_CASE("Sketch extrusion defaults use ten millimetre spans"){
+    Sketch::extrusion_options_t options;
+    CHECK( options.into_frame_length == doctest::Approx(10.0) );
+    CHECK( options.out_of_frame_length == doctest::Approx(10.0) );
+    CHECK( options.into_frame_angle_degrees == doctest::Approx(0.0) );
+    CHECK( options.out_of_frame_angle_degrees == doctest::Approx(0.0) );
 }
 
 TEST_CASE("Sketch extrusion produces uniformly oriented capped meshes"){
@@ -850,6 +877,40 @@ TEST_CASE("Sketch extrusion produces uniformly oriented capped meshes"){
 
     CHECK( saw_near_cap );
     CHECK( saw_far_cap );
+}
+
+TEST_CASE("Sketch extrusion supports taper angles and cap mesh export"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    sketch.add_circle(vec3<double>(0.0, 0.0, 0.0),
+                      vec3<double>(2.0, 0.0, 0.0),
+                      Sketch::geometry_tag_t::normal);
+
+    Sketch::extrusion_options_t options;
+    options.into_frame_length = 1.0;
+    options.out_of_frame_length = 1.0;
+    options.into_frame_angle_degrees = 45.0;
+    options.out_of_frame_angle_degrees = -45.0;
+    options.curve_segments = 24U;
+
+    fv_surface_mesh<double, uint64_t> mesh;
+    std::vector<fv_surface_mesh<double, uint64_t>> cap_meshes;
+    REQUIRE( sketch.build_extruded_surface_mesh(options, mesh, &cap_meshes) );
+    REQUIRE( cap_meshes.size() == 2U );
+
+    double near_radius = 0.0;
+    double far_radius = 0.0;
+    for(const auto &vertex : cap_meshes.at(0).vertices){
+        near_radius = std::max(near_radius, std::hypot(vertex.x, vertex.y));
+        CHECK( vertex.z == doctest::Approx(-1.0).epsilon(1E-6) );
+    }
+    for(const auto &vertex : cap_meshes.at(1).vertices){
+        far_radius = std::max(far_radius, std::hypot(vertex.x, vertex.y));
+        CHECK( vertex.z == doctest::Approx(1.0).epsilon(1E-6) );
+    }
+
+    CHECK( near_radius == doctest::Approx(1.0).epsilon(1E-4) );
+    CHECK( far_radius == doctest::Approx(3.0).epsilon(1E-4) );
 }
 
 TEST_CASE("Sketch extrusion stitches line loops and preserves holes in end caps"){

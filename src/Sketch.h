@@ -100,8 +100,10 @@ public:
         // Positive values extrude away from the sketch plane along the named direction.
         // Negative values are also legitimate and allow the user to place either cap on the
         // opposite side of the sketch plane, provided the combined span remains positive.
-        double into_frame_length = 5.0;
-        double out_of_frame_length = 5.0;
+        double into_frame_length = 10.0;
+        double out_of_frame_length = 10.0;
+        double into_frame_angle_degrees = 0.0;
+        double out_of_frame_angle_degrees = 0.0;
         std::size_t curve_segments = 48U;
     };
 
@@ -202,7 +204,7 @@ public:
     };
 
     struct distance_constraint_t : public constraint_t {
-        primitive_index_t line = 0U;
+        primitive_index_t primitive = 0U;
         double target_distance = 0.0;
 
         std::unique_ptr<constraint_t> clone() const override;
@@ -342,7 +344,7 @@ public:
 
     constraint_index_t add_horizontal_constraint(primitive_index_t line_idx);
     constraint_index_t add_vertical_constraint(primitive_index_t line_idx);
-    constraint_index_t add_distance_constraint(primitive_index_t line_idx, double target_distance = std::numeric_limits<double>::quiet_NaN());
+    constraint_index_t add_distance_constraint(primitive_index_t primitive_idx, double target_distance = std::numeric_limits<double>::quiet_NaN());
     constraint_index_t add_parallel_constraint(primitive_index_t line_a, primitive_index_t line_b);
     constraint_index_t add_perpendicular_constraint(primitive_index_t line_a, primitive_index_t line_b);
     constraint_index_t add_pin_constraint(vertex_index_t vertex_idx);
@@ -355,6 +357,7 @@ public:
     const solve_report_t& last_solve_report() const;
     bool build_extruded_surface_mesh(const extrusion_options_t &options,
                                      fv_surface_mesh<double, uint64_t> &mesh,
+                                     std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes = nullptr,
                                      std::string *error_message = nullptr) const;
     std::string describe_constraint(constraint_index_t idx) const;
     bool save_to_file(const std::filesystem::path &path, std::string *error_message = nullptr) const;
