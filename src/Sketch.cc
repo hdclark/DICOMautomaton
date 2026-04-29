@@ -2500,12 +2500,13 @@ Sketch::solve_constraints(const solve_options_t &options){
             const auto *line = dynamic_cast<const line_primitive_t*>(primitive(vertical->line));
             if(line != nullptr) refinement_anchor_vertices.insert(line->vertices[0]);
         }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
-            const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->primitive));
+            const auto *distance_primitive = primitive(distance->primitive);
+            const auto *line = dynamic_cast<const line_primitive_t*>(distance_primitive);
             if(line != nullptr) refinement_anchor_vertices.insert(line->vertices[0]);
-            if(const auto *circle = dynamic_cast<const circle_primitive_t*>(primitive(distance->primitive)); circle != nullptr){
+            if(const auto *circle = dynamic_cast<const circle_primitive_t*>(distance_primitive); circle != nullptr){
                 refinement_anchor_vertices.insert(circle->center);
             }
-            if(const auto *arc = dynamic_cast<const arc_primitive_t*>(primitive(distance->primitive)); arc != nullptr){
+            if(const auto *arc = dynamic_cast<const arc_primitive_t*>(distance_primitive); arc != nullptr){
                 refinement_anchor_vertices.insert(arc->center);
             }
         }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){

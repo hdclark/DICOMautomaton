@@ -6679,13 +6679,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                     return "Constraint";
                 };
                 const auto primitive_constraint_value = [&](std::size_t primitive_idx) -> std::optional<double> {
-                    if(const auto *line = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(primitive_idx)); line != nullptr){
+                    const auto *primitive = sketch.primitive(primitive_idx);
+                    if(const auto *line = dynamic_cast<const Sketch::line_primitive_t*>(primitive); line != nullptr){
                         return sketch.vertex(line->vertices[0]).distance(sketch.vertex(line->vertices[1]));
                     }
-                    if(const auto *circle = dynamic_cast<const Sketch::circle_primitive_t*>(sketch.primitive(primitive_idx)); circle != nullptr){
+                    if(const auto *circle = dynamic_cast<const Sketch::circle_primitive_t*>(primitive); circle != nullptr){
                         return sketch.vertex(circle->center).distance(sketch.vertex(circle->radius_point));
                     }
-                    if(const auto *arc = dynamic_cast<const Sketch::arc_primitive_t*>(sketch.primitive(primitive_idx)); arc != nullptr){
+                    if(const auto *arc = dynamic_cast<const Sketch::arc_primitive_t*>(primitive); arc != nullptr){
                         return sketch.vertex(arc->center).distance(sketch.vertex(arc->start));
                     }
                     return {};
