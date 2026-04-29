@@ -334,6 +334,9 @@ static double projected_distance(const Sketch::projection_t &a,
     return std::hypot(a.u - b.u, a.v - b.v);
 }
 
+// Treat segments shorter than the solver epsilon as ill-defined so directional
+// constraints can report them as unresolved instead of silently satisfying a
+// zero determinant/dot-product identity.
 static bool projected_segment_is_degenerate(const Sketch::projection_t &a,
                                             const Sketch::projection_t &b){
     return projected_distance(a, b) <= solver_min_epsilon;
@@ -429,6 +432,8 @@ struct sketch_solver_context_t {
             if(const auto *horizontal = dynamic_cast<const Sketch::horizontal_constraint_t*>(constraint_ptr); horizontal != nullptr){
                 const auto line = get_line_binding(sketch, horizontal->line);
                 if(!line){
+                    // Use a unit penalty to keep the residual clearly non-zero and
+                    // therefore unresolved, without dominating the rest of the system.
                     append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
                     continue;
                 }
@@ -439,6 +444,8 @@ struct sketch_solver_context_t {
             }else if(const auto *vertical = dynamic_cast<const Sketch::vertical_constraint_t*>(constraint_ptr); vertical != nullptr){
                 const auto line = get_line_binding(sketch, vertical->line);
                 if(!line){
+                    // Use a unit penalty to keep the residual clearly non-zero and
+                    // therefore unresolved, without dominating the rest of the system.
                     append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
                     continue;
                 }
@@ -2063,7 +2070,7 @@ Sketch::solve_constraints(const solve_options_t &options){
         vertices_.at(vertex_idx) = lift(context.projected_vertex(result.params, vertex_idx));
     }
 
-    bool has_nonlinear_constraints = false;
+    bool has_tangent_constraints = false;
     std::set<vertex_index_t> refinement_anchor_vertices;
     for(const auto &constraint_ptr : constraints_){
         if((constraint_ptr == nullptr) || !constraint_ptr->enabled){
@@ -2089,7 +2096,7 @@ Sketch::solve_constraints(const solve_options_t &options){
                 refinement_anchor_vertices.insert(line->vertices[1]);
             }
         }else if(const auto *tangent = dynamic_cast<const tangent_constraint_t*>(constraint_ptr.get()); tangent != nullptr){
-            has_nonlinear_constraints = true;
+            has_tangent_constraints = true;
             if(const auto *primitive_ptr = primitive(tangent->primitive_a); primitive_ptr != nullptr){
                 const auto refs = primitive_ptr->referenced_vertices();
                 refinement_anchor_vertices.insert(std::begin(refs), std::end(refs));
@@ -2105,7 +2112,10 @@ Sketch::solve_constraints(const solve_options_t &options){
         }
     }
 
-    if(!has_nonlinear_constraints){
+    // Tangency is solved by the LM pass itself; the linear post-pass can move
+    // vertices in ways that undo that nonlinear solution, so skip refinement
+    // entirely whenever tangent constraints are active.
+    if(!has_tangent_constraints){
         const auto refinement_passes = std::min<std::size_t>(std::max<std::size_t>(options.max_iterations, 1U),
                                                              max_refinement_passes);
         for(std::size_t iter = 0U; iter < refinement_passes; ++iter){
