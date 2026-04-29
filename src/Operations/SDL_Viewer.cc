@@ -6622,7 +6622,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     slot.selection.clear();
                                     slot.clear_vertex_selection();
                                     clear_sketch_interaction_state();
-                                    sketch_last_unresolved_constraints = 0U;
+                                    sketch_last_unresolved_constraints = {};
                                     sketch_file_status = "Loaded sketch from '" + filepath.string() + "'";
                                     append_sketch_log(sketch_file_status);
                                     append_sketch_summary_log(slot.history.current());
