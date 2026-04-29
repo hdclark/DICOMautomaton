@@ -389,19 +389,22 @@ static void append_extruded_polyline_mesh(const Sketch &sketch,
         mesh.vertices.emplace_back(point + normal * far_offset);
     }
 
-    std::vector<Sketch::projection_t> projected_points;
-    projected_points.reserve(unique_points.size());
-    for(const auto &point : unique_points){
-        projected_points.push_back(sketch.project(point));
+    bool closed_ccw = true;
+    if(closed){
+        std::vector<Sketch::projection_t> projected_points;
+        projected_points.reserve(unique_points.size());
+        for(const auto &point : unique_points){
+            projected_points.push_back(sketch.project(point));
+        }
+        closed_ccw = (signed_polygon_area(projected_points) >= 0.0);
     }
-    const bool ccw = (signed_polygon_area(projected_points) >= 0.0);
 
     const auto emit_side_faces = [&](uint64_t i, uint64_t j) -> void {
         const auto near_i = base_vertex + (i * 2U);
         const auto far_i = near_i + 1U;
         const auto near_j = base_vertex + (j * 2U);
         const auto far_j = near_j + 1U;
-        if(ccw){
+        if(!closed || closed_ccw){
             append_triangle(mesh, near_i, near_j, far_j);
             append_triangle(mesh, near_i, far_j, far_i);
         }else{
