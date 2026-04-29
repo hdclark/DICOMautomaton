@@ -340,6 +340,9 @@ static double extrusion_scale_factor(double reference_half_extent,
                                      double extrusion_length,
                                      double angle_degrees){
     if(reference_half_extent <= solver_min_epsilon) return 1.0;
+    if(!std::isfinite(extrusion_length) || !std::isfinite(angle_degrees)){
+        return std::numeric_limits<double>::quiet_NaN();
+    }
     if(std::abs(angle_degrees) <= solver_min_epsilon) return 1.0;
     const auto pi = std::acos(-1.0);
     const auto angle_radians = angle_degrees * (pi / 180.0);
@@ -2233,7 +2236,9 @@ Sketch::add_distance_constraint(primitive_index_t primitive_idx, double target_d
         }else if(const auto *circle = dynamic_cast<const circle_primitive_t*>(primitive(primitive_idx)); circle != nullptr){
             constraint->target_distance = vertex(circle->center).distance(vertex(circle->radius_point));
         }else if(const auto *arc = dynamic_cast<const arc_primitive_t*>(primitive(primitive_idx)); arc != nullptr){
-            constraint->target_distance = vertex(arc->center).distance(vertex(arc->start));
+            const auto start_radius = vertex(arc->center).distance(vertex(arc->start));
+            const auto stop_radius = vertex(arc->center).distance(vertex(arc->stop));
+            constraint->target_distance = 0.5 * (start_radius + stop_radius);
         }else{
             throw std::invalid_argument("Distance constraints currently require a line, circle, or arc primitive");
         }
@@ -2826,6 +2831,13 @@ Sketch::build_extruded_surface_mesh(const extrusion_options_t &options,
         store_error(error_message, "Unable to extrude sketch without an embedded plane");
         return false;
     }
+    if(!std::isfinite(options.into_frame_length)
+    || !std::isfinite(options.out_of_frame_length)
+    || !std::isfinite(options.into_frame_angle_degrees)
+    || !std::isfinite(options.out_of_frame_angle_degrees)){
+        store_error(error_message, "Extrusion lengths and angles must be finite");
+        return false;
+    }
     if((options.into_frame_length + options.out_of_frame_length) <= solver_min_epsilon){
         store_error(error_message,
                     "Extrusion lengths may be negative, but they must sum to a positive distance between the caps");
@@ -2856,6 +2868,10 @@ Sketch::build_extruded_surface_mesh(const extrusion_options_t &options,
         const auto far_scale = extrusion_scale_factor(reference_half_extent,
                                                       options.into_frame_length,
                                                       options.into_frame_angle_degrees);
+        if(!std::isfinite(near_scale) || !std::isfinite(far_scale)){
+            store_error(error_message, "Extrusion scale factors must be finite");
+            return false;
+        }
         if((near_scale <= solver_min_epsilon) || (far_scale <= solver_min_epsilon)){
             store_error(error_message,
                         "Extrusion angles narrow the sketch past collapse; reduce the magnitude of the narrowing angle");

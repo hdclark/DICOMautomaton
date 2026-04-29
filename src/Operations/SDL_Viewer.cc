@@ -6704,12 +6704,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Text("Affected primitives: %zu", sketch_numeric_constraint_popup.primitives.size());
                     ImGui::SetNextItemWidth(180.0f);
                     ImGui::InputDouble("Value (mm)", &sketch_numeric_constraint_popup.value, 0.1, 1.0, "%.6f");
-                    sketch_numeric_constraint_popup.value = std::max(0.0, sketch_numeric_constraint_popup.value);
                     if(ImGui::Button("Add")){
                         const auto mode = sketch_numeric_constraint_popup.mode;
                         const auto primitives = sketch_numeric_constraint_popup.primitives;
                         const auto value = std::max(0.0, sketch_numeric_constraint_popup.value);
                         apply_sketch_edit(disp_img_it, [&](Sketch &editable_sketch){
+                            // The length and radius UI actions are aliases for the generic
+                            // distance constraint applied to lines and round primitives.
                             for(const auto primitive_idx : primitives){
                                 editable_sketch.add_distance_constraint(primitive_idx, value);
                             }
@@ -6772,7 +6773,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         sketch_file_status = "Cannot insert surface mesh: no active image available for metadata";
                     }else{
                         try{
-                            const auto append_surface_mesh = [&](fv_surface_mesh<double, uint64_t> surface_mesh,
+                            const auto append_surface_mesh = [&](fv_surface_mesh<double, uint64_t> &&surface_mesh,
                                                                  const std::string &mesh_label,
                                                                  const std::string &description) -> void {
                                 auto mesh_metadata = coalesce_metadata_for_basic_mesh(disp_img_it->metadata, meta_evolve::iterate);
