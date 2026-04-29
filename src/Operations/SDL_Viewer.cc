@@ -6731,12 +6731,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::InputDouble("Sticky weight", &sketch_solve_options.sticky_weight, 0.0, 0.0, "%.3e");
                 sketch_solve_options.sticky_weight = std::max(0.0, sketch_solve_options.sticky_weight);
                 if(ImGui::Button("Compute Constraints")){
-                    if(sketch.constraint_count() != 0U){
-                        auto &editable_sketch = create_sketch_snapshot(disp_img_it);
-                        sketch_last_unresolved_constraints = editable_sketch.solve_constraints(sketch_solve_options);
-                    }else{
-                        sketch_last_unresolved_constraints = 0U;
-                    }
+                    auto &editable_sketch = create_sketch_snapshot(disp_img_it);
+                    sketch_last_unresolved_constraints = editable_sketch.solve_constraints(sketch_solve_options);
                 }
 
                 ImGui::Separator();

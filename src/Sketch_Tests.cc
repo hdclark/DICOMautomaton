@@ -276,6 +276,30 @@ TEST_CASE("Sketch copy preserves the last solve report"){
     REQUIRE( copied.last_solve_report().reason == sketch.last_solve_report().reason );
 }
 
+TEST_CASE("Sketch solve report resets when no constraints are present"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto line_idx = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                          vec3<double>(2.0, 1.0, 0.0),
+                                          Sketch::geometry_tag_t::normal);
+    sketch.add_horizontal_constraint(line_idx);
+
+    Sketch::solve_options_t options;
+    options.max_iterations = 32U;
+    REQUIRE( sketch.solve_constraints(options) == 0U );
+    REQUIRE( !sketch.last_solve_report().reason.empty() );
+
+    sketch.clear();
+    sketch.set_plane(default_xy_plane());
+    REQUIRE( sketch.solve_constraints(options) == 0U );
+    REQUIRE( sketch.last_solve_report().unresolved_constraints == 0U );
+    REQUIRE( sketch.last_solve_report().enabled_constraints == 0U );
+    REQUIRE( sketch.last_solve_report().residual_count == 0U );
+    REQUIRE( sketch.last_solve_report().reason.empty() );
+    REQUIRE( !std::isfinite(sketch.last_solve_report().cost) );
+}
+
 TEST_CASE("Sketch snapshots preserve state"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
