@@ -711,15 +711,12 @@ struct sketch_solver_context_t {
                 const auto max_u_violation = std::max(projected.u - options.bounds->max.u, 0.0);
                 const auto min_v_violation = std::max(options.bounds->min.v - projected.v, 0.0);
                 const auto max_v_violation = std::max(projected.v - options.bounds->max.v, 0.0);
-                if((min_u_violation > 0.0) || (max_u_violation > 0.0)
-                || (min_v_violation > 0.0) || (max_v_violation > 0.0)){
-                    append_residual_block(residuals, blocks, sketch.constraint_count() + i, {
-                        min_u_violation,
-                        max_u_violation,
-                        min_v_violation,
-                        max_v_violation
-                    });
-                }
+                append_residual_block(residuals, blocks, sketch.constraint_count() + i, {
+                    min_u_violation,
+                    max_u_violation,
+                    min_v_violation,
+                    max_v_violation
+                });
             }
         }
 
