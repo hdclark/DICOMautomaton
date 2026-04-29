@@ -97,6 +97,9 @@ public:
     };
 
     struct extrusion_options_t {
+        // Positive values extrude away from the sketch plane along the named direction.
+        // Negative values are also legitimate and allow the user to place either cap on the
+        // opposite side of the sketch plane, provided the combined span remains positive.
         double into_frame_length = 5.0;
         double out_of_frame_length = 5.0;
         std::size_t curve_segments = 48U;

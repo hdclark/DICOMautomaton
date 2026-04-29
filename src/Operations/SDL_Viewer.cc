@@ -1744,7 +1744,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::optional<std::size_t> sketch_editor_hovered_primitive;
     std::optional<Sketch::vertex_index_t> sketch_editor_hovered_vertex;
     std::optional<std::size_t> sketch_editor_hovered_constraint;
-    std::optional<std::size_t> sketch_last_unresolved_constraints = 0U;
+    std::optional<std::size_t> sketch_last_unresolved_constraints = {};
     bool sketch_show_vertex_numbers = false;
     bool sketch_show_primitive_numbers = false;
     bool sketch_show_constraint_numbers = false;
@@ -6496,7 +6496,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
                     current_sketch_slot().clear_vertex_selection();
-                    sketch_last_unresolved_constraints = 0U;
+                    sketch_last_unresolved_constraints = {};
                     sketch_file_status.clear();
                     append_sketch_log("Created sketch slot " + std::to_string(sketch_slot_num));
                 }
@@ -6513,7 +6513,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
                     current_sketch_slot().clear_vertex_selection();
-                    sketch_last_unresolved_constraints = 0U;
+                    sketch_last_unresolved_constraints = {};
                     append_sketch_log("Deleted the current sketch slot");
                 }
 
@@ -6538,7 +6538,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     slot.history.current().clear();
                     slot.selection.clear();
                     slot.clear_vertex_selection();
-                    sketch_last_unresolved_constraints = 0U;
+                    sketch_last_unresolved_constraints = {};
                     clear_sketch_interaction_state();
                     append_sketch_log("Reset the current sketch");
                 }
@@ -6966,6 +6966,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                     ImGui::Separator();
                     ImGui::Text("Extrude to Surface Mesh");
+                    ImGui::TextWrapped("Into/out-of-frame lengths may be negative as long as the combined cap span remains positive.");
                     ImGui::SetNextItemWidth(150.0f);
                     ImGui::InputDouble("Into frame (mm)", &sketch_extrude_into_frame, 0.5, 5.0, "%.3f");
                     ImGui::SetNextItemWidth(150.0f);
