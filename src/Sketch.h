@@ -85,6 +85,8 @@ public:
         double absolute_tolerance = 0.0;
         double relative_tolerance = 0.0;
         double max_time_seconds = 0.0;
+        bool constrain_to_bounds = false;
+        std::optional<bounding_box_t> bounds = {};
         double sticky_weight = 1.0E-4;
         bool enable_sticky_constraints = true;
         double residual_tolerance = 1.0E-4;
@@ -92,6 +94,12 @@ public:
         double initial_lambda = 1.0E-3;
         double lambda_increase_factor = 10.0;
         double lambda_decrease_factor = 0.1;
+    };
+
+    struct extrusion_options_t {
+        double into_frame_length = 5.0;
+        double out_of_frame_length = 5.0;
+        std::size_t curve_segments = 48U;
     };
 
     struct solve_report_t {
@@ -314,6 +322,7 @@ public:
     void set_vertex(vertex_index_t idx, const vec3<double> &point);
     void translate_vertices(const std::set<vertex_index_t> &indices, const vec3<double> &delta);
     void refresh_geometry();
+    bool clamp_vertices_to_bounds(const bounding_box_t &bounds);
     dof_summary_t summarize_degrees_of_freedom() const;
     std::set<vertex_index_t> fully_constrained_vertices() const;
     std::set<primitive_index_t> fully_constrained_primitives() const;
@@ -341,6 +350,9 @@ public:
     std::size_t solve_constraints(std::size_t max_iterations = 128U);
     std::size_t solve_constraints(const solve_options_t &options);
     const solve_report_t& last_solve_report() const;
+    bool build_extruded_surface_mesh(const extrusion_options_t &options,
+                                     fv_surface_mesh<double, uint64_t> &mesh,
+                                     std::string *error_message = nullptr) const;
     std::string describe_constraint(constraint_index_t idx) const;
     bool save_to_file(const std::filesystem::path &path, std::string *error_message = nullptr) const;
     static bool load_from_file(const std::filesystem::path &path, Sketch &out, std::string *error_message = nullptr);

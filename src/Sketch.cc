@@ -334,6 +334,116 @@ static double projected_distance(const Sketch::projection_t &a,
     return std::hypot(a.u - b.u, a.v - b.v);
 }
 
+static Sketch::projection_t clamp_to_bounds(const Sketch::projection_t &p,
+                                            const Sketch::bounding_box_t &bounds){
+    return {
+        std::clamp(p.u, bounds.min.u, bounds.max.u),
+        std::clamp(p.v, bounds.min.v, bounds.max.v)
+    };
+}
+
+static double signed_polygon_area(const std::vector<Sketch::projection_t> &points){
+    if(points.size() < 3U) return 0.0;
+    double twice_area = 0.0;
+    for(std::size_t i = 0U; i < points.size(); ++i){
+        const auto &a = points.at(i);
+        const auto &b = points.at((i + 1U) % points.size());
+        twice_area += (a.u * b.v) - (b.u * a.v);
+    }
+    return twice_area * 0.5;
+}
+
+static bool points_coincident(const vec3<double> &a,
+                              const vec3<double> &b,
+                              double tolerance = 1.0E-6){
+    return a.distance(b) <= tolerance;
+}
+
+static void append_triangle(fv_surface_mesh<double, uint64_t> &mesh,
+                            uint64_t a,
+                            uint64_t b,
+                            uint64_t c){
+    if((a == b) || (b == c) || (a == c)) return;
+    mesh.faces.emplace_back(std::vector<uint64_t>{ a, b, c });
+}
+
+static void append_extruded_polyline_mesh(const Sketch &sketch,
+                                          const std::vector<vec3<double>> &polyline,
+                                          bool closed,
+                                          double near_offset,
+                                          double far_offset,
+                                          fv_surface_mesh<double, uint64_t> &mesh){
+    if(polyline.size() < 2U) return;
+
+    std::vector<vec3<double>> unique_points = polyline;
+    if(closed && points_coincident(unique_points.front(), unique_points.back())){
+        unique_points.pop_back();
+    }
+    if(unique_points.size() < 2U) return;
+    if(closed && (unique_points.size() < 3U)) return;
+
+    const auto normal = sketch.plane().normal();
+    const uint64_t base_vertex = static_cast<uint64_t>(mesh.vertices.size());
+    for(const auto &point : unique_points){
+        mesh.vertices.emplace_back(point + normal * near_offset);
+        mesh.vertices.emplace_back(point + normal * far_offset);
+    }
+
+    std::vector<Sketch::projection_t> projected_points;
+    projected_points.reserve(unique_points.size());
+    for(const auto &point : unique_points){
+        projected_points.push_back(sketch.project(point));
+    }
+    const bool ccw = (signed_polygon_area(projected_points) >= 0.0);
+
+    const auto emit_side_faces = [&](uint64_t i, uint64_t j) -> void {
+        const auto near_i = base_vertex + (i * 2U);
+        const auto far_i = near_i + 1U;
+        const auto near_j = base_vertex + (j * 2U);
+        const auto far_j = near_j + 1U;
+        if(ccw){
+            append_triangle(mesh, near_i, near_j, far_j);
+            append_triangle(mesh, near_i, far_j, far_i);
+        }else{
+            append_triangle(mesh, near_i, far_j, near_j);
+            append_triangle(mesh, near_i, far_i, far_j);
+        }
+    };
+
+    for(uint64_t i = 0U; (i + 1U) < static_cast<uint64_t>(unique_points.size()); ++i){
+        emit_side_faces(i, i + 1U);
+    }
+    if(closed){
+        emit_side_faces(static_cast<uint64_t>(unique_points.size() - 1U), 0U);
+
+        vec3<double> centroid(0.0, 0.0, 0.0);
+        for(const auto &point : unique_points){
+            centroid += point;
+        }
+        centroid /= static_cast<double>(unique_points.size());
+
+        const auto near_center = static_cast<uint64_t>(mesh.vertices.size());
+        mesh.vertices.emplace_back(centroid + normal * near_offset);
+        const auto far_center = static_cast<uint64_t>(mesh.vertices.size());
+        mesh.vertices.emplace_back(centroid + normal * far_offset);
+
+        for(uint64_t i = 0U; i < static_cast<uint64_t>(unique_points.size()); ++i){
+            const auto j = (i + 1U) % static_cast<uint64_t>(unique_points.size());
+            const auto near_i = base_vertex + (i * 2U);
+            const auto far_i = near_i + 1U;
+            const auto near_j = base_vertex + (j * 2U);
+            const auto far_j = near_j + 1U;
+            if(ccw){
+                append_triangle(mesh, far_center, far_i, far_j);
+                append_triangle(mesh, near_center, near_j, near_i);
+            }else{
+                append_triangle(mesh, far_center, far_j, far_i);
+                append_triangle(mesh, near_center, near_i, near_j);
+            }
+        }
+    }
+}
+
 // Treat segments shorter than the solver epsilon as ill-defined so directional
 // constraints can report them as unresolved instead of silently satisfying a
 // zero determinant/dot-product identity.
@@ -591,6 +701,18 @@ struct sketch_solver_context_t {
 
             }else{
                 append_residual_block(residuals, blocks, constraint_idx, { 1.0 });
+            }
+        }
+
+        if(options.constrain_to_bounds && options.bounds && options.bounds->is_valid()){
+            for(std::size_t i = 0U; i < initial_vertices.size(); ++i){
+                const auto projected = projected_vertex(state, i);
+                append_residual_block(residuals, blocks, sketch.constraint_count() + i, {
+                    std::max(options.bounds->min.u - projected.u, 0.0),
+                    std::max(projected.u - options.bounds->max.u, 0.0),
+                    std::max(options.bounds->min.v - projected.v, 0.0),
+                    std::max(projected.v - options.bounds->max.v, 0.0)
+                });
             }
         }
 
@@ -1545,6 +1667,26 @@ Sketch::refresh_geometry(){
     refresh_all_derived_geometry();
 }
 
+bool
+Sketch::clamp_vertices_to_bounds(const bounding_box_t &bounds){
+    if(!has_plane_ || !bounds.is_valid()) return false;
+
+    bool changed = false;
+    for(auto &point : vertices_){
+        const auto projected = project(point);
+        const auto clamped = clamp_to_bounds(projected, bounds);
+        if((std::abs(projected.u - clamped.u) > solver_min_epsilon)
+        || (std::abs(projected.v - clamped.v) > solver_min_epsilon)){
+            point = lift(clamped);
+            changed = true;
+        }
+    }
+    if(changed){
+        refresh_all_derived_geometry();
+    }
+    return changed;
+}
+
 Sketch::dof_summary_t
 Sketch::summarize_degrees_of_freedom() const{
     dof_summary_t out;
@@ -2027,7 +2169,8 @@ std::size_t
 Sketch::solve_constraints(const solve_options_t &options){
     last_solve_report_ = {};
 
-    if(!has_plane_ || constraints_.empty() || vertices_.empty()){
+    const bool solve_with_bounds = options.constrain_to_bounds && options.bounds && options.bounds->is_valid();
+    if(!has_plane_ || vertices_.empty() || (constraints_.empty() && !solve_with_bounds)){
         return 0U;
     }
 
@@ -2115,7 +2258,7 @@ Sketch::solve_constraints(const solve_options_t &options){
     // Tangency is solved by the LM pass itself; the linear post-pass can move
     // vertices in ways that undo that nonlinear solution, so skip refinement
     // entirely whenever tangent constraints are active.
-    if(!has_tangent_constraints){
+    if(!has_tangent_constraints && !constraints_.empty()){
         const auto refinement_passes = std::min<std::size_t>(std::max<std::size_t>(options.max_iterations, 1U),
                                                              max_refinement_passes);
         for(std::size_t iter = 0U; iter < refinement_passes; ++iter){
@@ -2250,6 +2393,9 @@ Sketch::solve_constraints(const solve_options_t &options){
         }
     }
     refresh_all_derived_geometry();
+    if(solve_with_bounds){
+        clamp_vertices_to_bounds(options.bounds.value());
+    }
 
     std::vector<residual_block_t> final_blocks;
     std::size_t final_enabled_constraints = 0U;
@@ -2337,6 +2483,51 @@ Sketch::solve_constraints(const solve_options_t &options){
 const Sketch::solve_report_t&
 Sketch::last_solve_report() const{
     return last_solve_report_;
+}
+
+bool
+Sketch::build_extruded_surface_mesh(const extrusion_options_t &options,
+                                    fv_surface_mesh<double, uint64_t> &mesh,
+                                    std::string *error_message) const{
+    mesh = {};
+
+    if(!has_plane_){
+        store_error(error_message, "Unable to extrude sketch without an embedded plane");
+        return false;
+    }
+    if((options.into_frame_length + options.out_of_frame_length) <= solver_min_epsilon){
+        store_error(error_message,
+                    "Extrusion lengths must span a positive distance between the out-of-frame and into-frame caps");
+        return false;
+    }
+
+    const double near_offset = -options.out_of_frame_length;
+    const double far_offset = options.into_frame_length;
+    const auto curve_segments = std::max<std::size_t>(options.curve_segments, 16U);
+    bool emitted_geometry = false;
+
+    for(std::size_t primitive_idx = 0U; primitive_idx < primitive_count(); ++primitive_idx){
+        const auto *primitive_ptr = primitive(primitive_idx);
+        if(primitive_ptr == nullptr) continue;
+        if(primitive_ptr->kind() == primitive_kind_t::vertex) continue;
+
+        auto samples = sample_primitive(primitive_idx, curve_segments);
+        if(samples.size() < 2U) continue;
+
+        const bool closed = (primitive_ptr->kind() == primitive_kind_t::circle)
+                         || points_coincident(samples.front(), samples.back());
+        append_extruded_polyline_mesh(*this, samples, closed, near_offset, far_offset, mesh);
+        emitted_geometry = true;
+    }
+
+    if(!emitted_geometry || mesh.faces.empty()){
+        store_error(error_message, "Sketch does not contain any extrudable primitives");
+        mesh = {};
+        return false;
+    }
+
+    mesh.recreate_involved_face_index();
+    return true;
 }
 
 std::string
