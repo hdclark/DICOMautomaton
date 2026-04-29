@@ -6707,20 +6707,26 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::Button("Add")){
                         const auto mode = sketch_numeric_constraint_popup.mode;
                         const auto primitives = sketch_numeric_constraint_popup.primitives;
-                        const auto value = std::max(0.0, sketch_numeric_constraint_popup.value);
-                        apply_sketch_edit(disp_img_it, [&](Sketch &editable_sketch){
-                            // The length and radius UI actions are aliases for the generic
-                            // distance constraint applied to lines and round primitives.
-                            for(const auto primitive_idx : primitives){
-                                editable_sketch.add_distance_constraint(primitive_idx, value);
-                            }
-                        });
-                        sketch_file_status = std::string("Added ")
-                                           + numeric_constraint_mode_name(mode)
-                                           + ((primitives.size() == 1U) ? " constraint" : " constraints");
-                        append_sketch_log(sketch_file_status);
-                        sketch_numeric_constraint_popup.clear();
-                        ImGui::CloseCurrentPopup();
+                        if(sketch_numeric_constraint_popup.value < 0.0){
+                            sketch_file_status = std::string(numeric_constraint_mode_name(mode))
+                                               + " values must be non-negative";
+                            append_sketch_log(sketch_file_status);
+                        }else{
+                            const auto value = sketch_numeric_constraint_popup.value;
+                            apply_sketch_edit(disp_img_it, [&](Sketch &editable_sketch){
+                                // The length and radius UI actions are aliases for the generic
+                                // distance constraint applied to lines and round primitives.
+                                for(const auto primitive_idx : primitives){
+                                    editable_sketch.add_distance_constraint(primitive_idx, value);
+                                }
+                            });
+                            sketch_file_status = std::string("Added ")
+                                               + numeric_constraint_mode_name(mode)
+                                               + ((primitives.size() == 1U) ? " constraint" : " constraints");
+                            append_sketch_log(sketch_file_status);
+                            sketch_numeric_constraint_popup.clear();
+                            ImGui::CloseCurrentPopup();
+                        }
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Cancel")){

@@ -30,7 +30,7 @@ constexpr double solver_min_epsilon = 1.0E-9;
 constexpr double jacobian_sparsity_threshold = 1.0E-12;
 constexpr std::size_t max_refinement_passes = 8U;
 // C++17 does not provide std::numbers::pi, so keep a local constant for the taper helpers below.
-constexpr double pi_constant = 3.141592653589793238462643383279502884;
+constexpr double pi_constant = 3.1415926535897931;
 
 Sketch::projection_t cubic_bezier_point(const Sketch::projection_t &p0,
                                         const Sketch::projection_t &p1,
