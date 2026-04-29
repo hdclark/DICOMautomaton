@@ -716,7 +716,7 @@ struct sketch_solver_context_t {
                     max_u_violation,
                     min_v_violation,
                     max_v_violation
-                });
+                }, true);
             }
         }
 
