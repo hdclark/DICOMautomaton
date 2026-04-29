@@ -422,12 +422,14 @@ static bool point_in_polygon(const Sketch::projection_t &p,
                              const std::vector<Sketch::projection_t> &polygon){
     if(polygon.size() < 3U) return false;
     bool inside = false;
+    constexpr double tolerance = 1.0E-8;
     for(std::size_t i = 0U, j = polygon.size() - 1U; i < polygon.size(); j = i++){
         const auto &a = polygon.at(j);
         const auto &b = polygon.at(i);
         if(point_on_segment(p, a, b)) return true;
+        if(std::abs(b.v - a.v) <= tolerance) continue;
         const bool intersects = ((a.v > p.v) != (b.v > p.v))
-                             && (p.u < ((b.u - a.u) * (p.v - a.v) / (b.v - a.v + 0.0)) + a.u);
+                             && (p.u < ((b.u - a.u) * (p.v - a.v) / (b.v - a.v)) + a.u);
         if(intersects) inside = !inside;
     }
     return inside;
@@ -460,7 +462,7 @@ static bool edge_midpoints_inside_filled_loops(const Sketch::projection_t &a,
 
 static bool merge_extruded_paths(extruded_path_t &lhs,
                                  extruded_path_t &rhs){
-    if(lhs.closed || rhs.closed || lhs.points.empty() || rhs.points.empty()){
+    if(lhs.closed || rhs.closed || (lhs.points.size() < 2U) || (rhs.points.size() < 2U)){
         return false;
     }
 

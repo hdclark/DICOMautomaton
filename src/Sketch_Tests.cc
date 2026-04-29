@@ -888,8 +888,8 @@ TEST_CASE("Sketch extrusion stitches line loops and preserves holes in end caps"
         if(!is_cap) continue;
         saw_cap_face = true;
 
-        const vec3<double> centroid = (a + b + c) / 3.0;
-        const auto projected = sketch.project(centroid);
+        const vec3<double> face_center = (a + b + c) / 3.0;
+        const auto projected = sketch.project(face_center);
         const bool inside_outer = (std::abs(projected.u) < 5.0) && (std::abs(projected.v) < 5.0);
         const bool inside_hole = (std::abs(projected.u) < 2.0) && (std::abs(projected.v) < 2.0);
         CHECK( inside_outer );
