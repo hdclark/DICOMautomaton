@@ -30,6 +30,14 @@ static Sketch::plane_frame_t default_xz_plane(){
     return out;
 }
 
+static Sketch::plane_frame_t default_oblique_plane(){
+    Sketch::plane_frame_t out;
+    out.origin = vec3<double>(10.0, -3.0, 5.0);
+    out.row_unit = vec3<double>(1.0, 0.0, 0.0);
+    out.col_unit = vec3<double>(0.0, 1.0, 1.0).unit();
+    return out;
+}
+
 }
 
 TEST_CASE("Sketch stores indexed primitives"){
@@ -1080,6 +1088,122 @@ TEST_CASE("Sketch extrusion stitches line loops and preserves holes in end caps"
 
     CHECK( saw_cap_face );
     CHECK( saw_annulus_face );
+}
+
+TEST_CASE("Sketch extrusion preserves oblique sketch plane embedding"){
+    Sketch sketch;
+    sketch.set_plane(default_oblique_plane());
+
+    const auto uv = [&sketch](double u, double v) -> vec3<double> {
+        return sketch.lift(Sketch::projection_t{ u, v });
+    };
+
+    sketch.add_line(uv(-3.0, -2.0), uv( 3.0, -2.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(uv( 3.0, -2.0), uv( 3.0,  2.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(uv( 3.0,  2.0), uv(-3.0,  2.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(uv(-3.0,  2.0), uv(-3.0, -2.0), Sketch::geometry_tag_t::normal);
+
+    Sketch::extrusion_options_t options;
+    options.into_frame_length = 2.0;
+    options.out_of_frame_length = 1.0;
+
+    fv_surface_mesh<double, uint64_t> mesh;
+    std::vector<fv_surface_mesh<double, uint64_t>> cap_meshes;
+    REQUIRE( sketch.build_extruded_surface_mesh(options, mesh, &cap_meshes) );
+    REQUIRE( cap_meshes.size() == 2U );
+
+    const auto normal = sketch.plane().normal();
+    bool saw_near_cap = false;
+    bool saw_far_cap = false;
+    for(const auto &cap_mesh : cap_meshes){
+        REQUIRE( !cap_mesh.vertices.empty() );
+
+        double min_signed_distance = std::numeric_limits<double>::infinity();
+        double max_signed_distance = -std::numeric_limits<double>::infinity();
+        for(const auto &vertex : cap_mesh.vertices){
+            const auto signed_distance = normal.Dot(vertex - sketch.plane().origin);
+            min_signed_distance = std::min(min_signed_distance, signed_distance);
+            max_signed_distance = std::max(max_signed_distance, signed_distance);
+
+            const auto base_point = vertex - normal * signed_distance;
+            const auto projected = sketch.project(base_point);
+            CHECK( projected.u >= (-3.0 - 1.0E-6) );
+            CHECK( projected.u <= ( 3.0 + 1.0E-6) );
+            CHECK( projected.v >= (-2.0 - 1.0E-6) );
+            CHECK( projected.v <= ( 2.0 + 1.0E-6) );
+        }
+
+        CHECK( min_signed_distance == doctest::Approx(max_signed_distance).epsilon(1E-6) );
+        if(std::abs(min_signed_distance + 1.0) <= 1.0E-6){
+            saw_near_cap = true;
+        }
+        if(std::abs(min_signed_distance - 2.0) <= 1.0E-6){
+            saw_far_cap = true;
+        }
+    }
+
+    CHECK( saw_near_cap );
+    CHECK( saw_far_cap );
+}
+
+TEST_CASE("Sketch extrusion normalizes nested loop winding for constrained caps"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    // Outer loop drawn clockwise.
+    sketch.add_line(vec3<double>(-6.0, -6.0, 0.0), vec3<double>(-6.0,  6.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>(-6.0,  6.0, 0.0), vec3<double>( 6.0,  6.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>( 6.0,  6.0, 0.0), vec3<double>( 6.0, -6.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>( 6.0, -6.0, 0.0), vec3<double>(-6.0, -6.0, 0.0), Sketch::geometry_tag_t::normal);
+
+    // Middle loop drawn counter-clockwise.
+    sketch.add_line(vec3<double>(-4.0, -4.0, 0.0), vec3<double>( 4.0, -4.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>( 4.0, -4.0, 0.0), vec3<double>( 4.0,  4.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>( 4.0,  4.0, 0.0), vec3<double>(-4.0,  4.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>(-4.0,  4.0, 0.0), vec3<double>(-4.0, -4.0, 0.0), Sketch::geometry_tag_t::normal);
+
+    // Inner loop drawn clockwise.
+    sketch.add_line(vec3<double>(-2.0, -2.0, 0.0), vec3<double>(-2.0,  2.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>(-2.0,  2.0, 0.0), vec3<double>( 2.0,  2.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>( 2.0,  2.0, 0.0), vec3<double>( 2.0, -2.0, 0.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>( 2.0, -2.0, 0.0), vec3<double>(-2.0, -2.0, 0.0), Sketch::geometry_tag_t::normal);
+
+    Sketch::extrusion_options_t options;
+    options.into_frame_length = 1.5;
+    options.out_of_frame_length = 1.5;
+
+    fv_surface_mesh<double, uint64_t> mesh;
+    REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
+
+    bool saw_outer_annulus = false;
+    bool saw_inner_island = false;
+    for(const auto &face : mesh.faces){
+        REQUIRE( face.size() == 3U );
+        const auto &a = mesh.vertices.at(face.at(0));
+        const auto &b = mesh.vertices.at(face.at(1));
+        const auto &c = mesh.vertices.at(face.at(2));
+        const bool is_cap = (std::abs(a.z + 1.5) <= 1.0E-6 && std::abs(b.z + 1.5) <= 1.0E-6 && std::abs(c.z + 1.5) <= 1.0E-6)
+                         || (std::abs(a.z - 1.5) <= 1.0E-6 && std::abs(b.z - 1.5) <= 1.0E-6 && std::abs(c.z - 1.5) <= 1.0E-6);
+        if(!is_cap) continue;
+
+        const auto projected = sketch.project((a + b + c) / 3.0);
+        const bool inside_outer = (std::abs(projected.u) < 6.0) && (std::abs(projected.v) < 6.0);
+        const bool inside_middle = (std::abs(projected.u) < 4.0) && (std::abs(projected.v) < 4.0);
+        const bool inside_inner = (std::abs(projected.u) < 2.0) && (std::abs(projected.v) < 2.0);
+        const bool inside_removed_band = inside_middle && !inside_inner;
+
+        CHECK( inside_outer );
+        CHECK_FALSE( inside_removed_band );
+        if((4.2 < std::abs(projected.u)) || (4.2 < std::abs(projected.v))){
+            saw_outer_annulus = true;
+        }
+        if((std::abs(projected.u) < 1.5) && (std::abs(projected.v) < 1.5)){
+            saw_inner_island = true;
+        }
+    }
+
+    CHECK( saw_outer_annulus );
+    CHECK( saw_inner_island );
 }
 
 TEST_CASE("Sketch extrusion mesh has no internal faces after post-processing"){

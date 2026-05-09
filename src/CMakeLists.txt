@@ -113,9 +113,6 @@ set_target_properties(  Sketch_Constraints_obj PROPERTIES POSITION_INDEPENDENT_C
 add_library(            Sketch_Fillets_obj OBJECT Sketch_Fillets.cc )
 set_target_properties(  Sketch_Fillets_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            Sketch_AdaptivePredicates_obj OBJECT Sketch_AdaptivePredicates.cc )
-set_target_properties(  Sketch_AdaptivePredicates_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-
 add_library(            Sketch_Tests_obj OBJECT Sketch_Tests.cc )
 set_target_properties(  Sketch_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -505,7 +502,6 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Sketch_Extrude_obj>
     $<TARGET_OBJECTS:Sketch_Constraints_obj>
     $<TARGET_OBJECTS:Sketch_Fillets_obj>
-    $<TARGET_OBJECTS:Sketch_AdaptivePredicates_obj>
     $<TARGET_OBJECTS:Sketch_Tests_obj>
     $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:CSG_SDF_obj>
@@ -630,7 +626,6 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Sketch_Extrude_obj>
         $<TARGET_OBJECTS:Sketch_Constraints_obj>
         $<TARGET_OBJECTS:Sketch_Fillets_obj>
-        $<TARGET_OBJECTS:Sketch_AdaptivePredicates_obj>
         $<TARGET_OBJECTS:Sketch_Tests_obj>
         $<TARGET_OBJECTS:Metadata_obj>
         $<TARGET_OBJECTS:CSG_SDF_obj>

@@ -2,8 +2,6 @@
 
 #include "Sketch_Extrude.h"
 #include "Sketch.h"
-#include "Sketch_AdaptivePredicates.h"
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -20,7 +18,7 @@
 #include <vector>
 
 #include "YgorLog.h"
-#include "YgorMathDelaunay.h"
+#include "YgorMathConstrainedDelaunay.h"
 
 namespace {
 
@@ -60,16 +58,69 @@ static Sketch::projection_t scale_projection_about(const Sketch::projection_t &p
     };
 }
 
-static double signed_polygon_area(const std::vector<Sketch::projection_t> &points){
+static vec2<double> to_vec2(const Sketch::projection_t &point){
+    return vec2<double>(point.u, point.v);
+}
+
+static Sketch::projection_t to_projection(const vec2<double> &point){
+    return Sketch::projection_t{ point.x, point.y };
+}
+
+static long double signed_polygon_area(const std::vector<vec2<double>> &points){
     if(points.size() < 3U) return 0.0;
-    double twice_area = 0.0;
+    long double twice_area = 0.0;
     for(std::size_t i = 0U; i < points.size(); ++i){
         const auto &a = points.at(i);
         const auto &b = points.at((i + 1U) % points.size());
-        twice_area += (a.u * b.v) - (b.u * a.v);
+        twice_area += (static_cast<long double>(a.x) * static_cast<long double>(b.y))
+                    - (static_cast<long double>(b.x) * static_cast<long double>(a.y));
     }
     return twice_area * 0.5;
 }
+
+static vec2<double> compute_interior_probe(const std::vector<vec2<double>> &loop){
+    if(loop.empty()) return {};
+
+    double min_x = loop.front().x;
+    double max_x = loop.front().x;
+    double min_y = loop.front().y;
+    double max_y = loop.front().y;
+    for(const auto &point : loop){
+        min_x = std::min(min_x, point.x);
+        max_x = std::max(max_x, point.x);
+        min_y = std::min(min_y, point.y);
+        max_y = std::max(max_y, point.y);
+    }
+    const auto span = std::max(max_x - min_x, max_y - min_y);
+    const auto epsilon = std::max(span * 1.0E-6, 1.0E-8);
+    const auto area = signed_polygon_area(loop);
+    const auto orientation_sign = (area >= 0.0L) ? 1.0 : -1.0;
+
+    for(std::size_t i = 0U; i < loop.size(); ++i){
+        const auto &a = loop.at(i);
+        const auto &b = loop.at((i + 1U) % loop.size());
+        const auto edge = b - a;
+        const auto edge_length = edge.length();
+        if(edge_length <= extrude_min_epsilon) continue;
+
+        vec2<double> inward;
+        if(orientation_sign >= 0.0){
+            inward = vec2<double>(-edge.y, edge.x);
+        }else{
+            inward = vec2<double>(edge.y, -edge.x);
+        }
+        inward /= inward.length();
+        return ((a + b) * 0.5) + inward * epsilon;
+    }
+
+    return loop.front();
+}
+
+struct normalized_loop_t {
+    std::vector<vec2<double>> points;
+    vec2<double> interior_probe;
+    std::size_t depth = 0U;
+};
 
 static void append_triangle(fv_surface_mesh<double, uint64_t> &mesh,
                             uint64_t a,
@@ -244,6 +295,16 @@ static std::vector<Sketch::projection_t> project_polyline(const Sketch &sketch,
     return out;
 }
 
+static std::vector<vec2<double>> project_polyline_vec2(const Sketch &sketch,
+                                                       const std::vector<vec3<double>> &polyline){
+    std::vector<vec2<double>> out;
+    out.reserve(polyline.size());
+    for(const auto &point : polyline){
+        out.push_back(to_vec2(sketch.project(point)));
+    }
+    return out;
+}
+
 static Sketch::bounding_box_t projected_path_bounds(const Sketch &sketch,
                                                     const std::vector<extruded_path_t> &paths){
     Sketch::bounding_box_t bounds;
@@ -259,27 +320,20 @@ static Sketch::bounding_box_t projected_path_bounds(const Sketch &sketch,
     return bounds;
 }
 
-static double signed_triangle_area2(const Sketch::projection_t &a,
-                                    const Sketch::projection_t &b,
-                                    const Sketch::projection_t &c){
-    return adaptive_predicate::orient2d(a.u, a.v, b.u, b.v, c.u, c.v);
+static int signed_triangle_orientation(const vec2<double> &a,
+                                       const vec2<double> &b,
+                                       const vec2<double> &c){
+    return orient_sign(a, b, c);
 }
 
-static bool point_on_segment(const Sketch::projection_t &p,
-                             const Sketch::projection_t &a,
-                             const Sketch::projection_t &b){
-    // Use adaptive predicate for the collinearity test.
-    const auto cross = adaptive_predicate::orient2d(a.u, a.v, b.u, b.v, p.u, p.v);
-    if(std::abs(cross) > 0.0) return false;
-    // TODO: needs adaptive predicate for segment-bounding check which is not
-    //       a standard orientation/incircle test and would require a custom
-    //       adaptive-precision interval test.
-    const auto dot = ((p.u - a.u) * (p.u - b.u)) + ((p.v - a.v) * (p.v - b.v));
-    return dot <= 1.0E-8;
+static bool point_on_segment(const vec2<double> &p,
+                             const vec2<double> &a,
+                             const vec2<double> &b){
+    return point_on_closed_segment(p, a, b);
 }
 
-static bool point_in_polygon(const Sketch::projection_t &p,
-                             const std::vector<Sketch::projection_t> &polygon){
+static bool point_in_polygon(const vec2<double> &p,
+                             const std::vector<vec2<double>> &polygon){
     if(polygon.size() < 3U) return false;
     bool inside = false;
     constexpr double tolerance = 1.0E-8;
@@ -287,37 +341,70 @@ static bool point_in_polygon(const Sketch::projection_t &p,
         const auto &a = polygon.at(j);
         const auto &b = polygon.at(i);
         if(point_on_segment(p, a, b)) return true;
-        if(std::abs(b.v - a.v) <= tolerance) continue;
-        const bool intersects = ((a.v > p.v) != (b.v > p.v))
-                             && (p.u < ((b.u - a.u) * (p.v - a.v) / (b.v - a.v)) + a.u);
+        if(std::abs(b.y - a.y) <= tolerance) continue;
+        const bool intersects = ((a.y > p.y) != (b.y > p.y))
+                             && (p.x < ((b.x - a.x) * (p.y - a.y) / (b.y - a.y)) + a.x);
         if(intersects) inside = !inside;
     }
     return inside;
 }
 
-static bool point_in_filled_loops(const Sketch::projection_t &p,
-                                  const std::vector<std::vector<Sketch::projection_t>> &loops){
-    std::size_t containing_loops = 0U;
-    for(const auto &loop : loops){
-        if(point_in_polygon(p, loop)){
-            ++containing_loops;
+static int winding_number(const vec2<double> &p,
+                          const std::vector<vec2<double>> &polygon){
+    if(polygon.size() < 3U) return 0;
+
+    int winding = 0;
+    for(std::size_t i = 0U; i < polygon.size(); ++i){
+        const auto &a = polygon.at(i);
+        const auto &b = polygon.at((i + 1U) % polygon.size());
+        if(point_on_segment(p, a, b)) return (signed_polygon_area(polygon) >= 0.0L) ? 1 : -1;
+
+        if(a.y <= p.y){
+            if((b.y > p.y) && (orient_sign(a, b, p) > 0)){
+                ++winding;
+            }
+        }else if((b.y <= p.y) && (orient_sign(a, b, p) < 0)){
+            --winding;
         }
     }
-    return ((containing_loops % 2U) == 1U);
+    return winding;
 }
 
-static bool edge_midpoints_inside_filled_loops(const Sketch::projection_t &a,
-                                               const Sketch::projection_t &b,
-                                               const Sketch::projection_t &c,
-                                               const std::vector<std::vector<Sketch::projection_t>> &loops){
-    const std::array<Sketch::projection_t, 3> midpoints = {{
-        { (a.u + b.u) * 0.5, (a.v + b.v) * 0.5 },
-        { (b.u + c.u) * 0.5, (b.v + c.v) * 0.5 },
-        { (c.u + a.u) * 0.5, (c.v + a.v) * 0.5 }
-    }};
-    return std::all_of(std::begin(midpoints), std::end(midpoints), [&](const auto &midpoint){
-        return point_in_filled_loops(midpoint, loops);
-    });
+static std::vector<normalized_loop_t>
+normalize_closed_loops(const std::vector<std::vector<vec2<double>>> &raw_loops){
+    std::vector<normalized_loop_t> loops;
+    loops.reserve(raw_loops.size());
+    for(const auto &raw_loop : raw_loops){
+        if(raw_loop.size() < 3U) continue;
+        if(std::abs(signed_polygon_area(raw_loop)) <= extrude_min_epsilon) continue;
+        loops.push_back(normalized_loop_t{ raw_loop, compute_interior_probe(raw_loop), 0U });
+    }
+
+    for(std::size_t i = 0U; i < loops.size(); ++i){
+        for(std::size_t j = 0U; j < loops.size(); ++j){
+            if(i == j) continue;
+            if(point_in_polygon(loops.at(i).interior_probe, loops.at(j).points)){
+                ++loops.at(i).depth;
+            }
+        }
+
+        const bool should_be_ccw = ((loops.at(i).depth % 2U) == 0U);
+        const bool is_ccw = (signed_polygon_area(loops.at(i).points) >= 0.0L);
+        if(should_be_ccw != is_ccw){
+            std::reverse(std::begin(loops.at(i).points), std::end(loops.at(i).points));
+            loops.at(i).interior_probe = compute_interior_probe(loops.at(i).points);
+        }
+    }
+    return loops;
+}
+
+static bool point_in_normalized_loops(const vec2<double> &p,
+                                      const std::vector<normalized_loop_t> &loops){
+    int winding = 0;
+    for(const auto &loop : loops){
+        winding += winding_number(p, loop.points);
+    }
+    return (winding != 0);
 }
 
 static bool merge_extruded_paths(extruded_path_t &lhs,
@@ -450,7 +537,7 @@ static void append_extruded_polyline_sides(const Sketch &sketch,
 
     bool closed_ccw = true;
     if(path.closed){
-        closed_ccw = (signed_polygon_area(projected_points) >= 0.0);
+        closed_ccw = (signed_polygon_area(project_polyline_vec2(sketch, path.points)) >= 0.0L);
     }
 
     const auto emit_side_faces = [&](uint64_t i, uint64_t j) -> void {
@@ -484,20 +571,31 @@ static void append_extruded_end_caps(const Sketch &sketch,
                                      double far_scale,
                                      fv_surface_mesh<double, uint64_t> &mesh,
                                      std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes){
-    std::vector<std::vector<Sketch::projection_t>> closed_loops;
-    std::vector<vec3<double>> cap_vertices_2d;
+    std::vector<std::vector<vec2<double>>> raw_closed_loops;
+    std::vector<vec2<double>> cap_vertices_2d;
+    std::vector<std::vector<uint64_t>> cap_edges_2d;
     for(const auto &path : paths){
         if(!path.closed || (path.points.size() < 3U)) continue;
-        auto projected_loop = project_polyline(sketch, path.points);
+        auto projected_loop = project_polyline_vec2(sketch, path.points);
         if(projected_loop.size() < 3U) continue;
-        closed_loops.push_back(projected_loop);
-        for(const auto &point : projected_loop){
-            cap_vertices_2d.emplace_back(point.u, point.v, 0.0);
+        raw_closed_loops.push_back(projected_loop);
+
+        const auto base_index = static_cast<uint64_t>(cap_vertices_2d.size());
+        for(std::size_t i = 0U; i < projected_loop.size(); ++i){
+            cap_vertices_2d.push_back(projected_loop.at(i));
+            const auto next_i = (i + 1U) % projected_loop.size();
+            cap_edges_2d.push_back(std::vector<uint64_t>{
+                base_index + static_cast<uint64_t>(i),
+                base_index + static_cast<uint64_t>(next_i)
+            });
         }
     }
-    if(closed_loops.empty() || (cap_vertices_2d.size() < 3U)) return;
+    if(raw_closed_loops.empty() || (cap_vertices_2d.size() < 3U)) return;
 
-    const auto planar_caps = Delaunay_Triangulation_2<double, uint64_t>(cap_vertices_2d);
+    const auto closed_loops = normalize_closed_loops(raw_closed_loops);
+    if(closed_loops.empty()) return;
+
+    const auto planar_caps = Constrained_Delaunay_Triangulation_2<double, uint64_t>(cap_vertices_2d, cap_edges_2d);
     if(planar_caps.faces.empty()) return;
 
     const auto normal = sketch.plane().normal();
@@ -505,14 +603,14 @@ static void append_extruded_end_caps(const Sketch &sketch,
     fv_surface_mesh<double, uint64_t> far_cap_mesh;
     const uint64_t near_base = static_cast<uint64_t>(mesh.vertices.size());
     for(const auto &point : cap_vertices_2d){
-        const Sketch::projection_t projected_point{ point.x, point.y };
+        const auto projected_point = to_projection(point);
         const auto scaled_near = sketch.lift(scale_projection_about(projected_point, scale_centre, near_scale));
         mesh.vertices.emplace_back(scaled_near + normal * near_offset);
         near_cap_mesh.vertices.emplace_back(scaled_near + normal * near_offset);
     }
     const uint64_t far_base = static_cast<uint64_t>(mesh.vertices.size());
     for(const auto &point : cap_vertices_2d){
-        const Sketch::projection_t projected_point{ point.x, point.y };
+        const auto projected_point = to_projection(point);
         const auto scaled_far = sketch.lift(scale_projection_about(projected_point, scale_centre, far_scale));
         mesh.vertices.emplace_back(scaled_far + normal * far_offset);
         far_cap_mesh.vertices.emplace_back(scaled_far + normal * far_offset);
@@ -535,23 +633,17 @@ static void append_extruded_end_caps(const Sketch &sketch,
         const auto &a = cap_vertices_2d.at(face.at(0));
         const auto &b = cap_vertices_2d.at(face.at(1));
         const auto &c = cap_vertices_2d.at(face.at(2));
-        const Sketch::projection_t centroid = {
-            (a.x + b.x + c.x) / 3.0,
-            (a.y + b.y + c.y) / 3.0
-        };
-        if(!point_in_filled_loops(centroid, closed_loops)) continue;
+        const vec2<double> centroid((a.x + b.x + c.x) / 3.0,
+                                    (a.y + b.y + c.y) / 3.0);
+        if(!point_in_normalized_loops(centroid, closed_loops)) continue;
 
-        const Sketch::projection_t pa{ a.x, a.y };
-        const Sketch::projection_t pb{ b.x, b.y };
-        const Sketch::projection_t pc{ c.x, c.y };
-
-        const auto area2 = signed_triangle_area2(pa, pb, pc);
-        if(std::abs(area2) <= extrude_min_epsilon) continue;
+        const auto orientation = signed_triangle_orientation(a, b, c);
+        if(orientation == 0) continue;
 
         const auto i0 = static_cast<uint64_t>(face.at(0));
         const auto i1 = static_cast<uint64_t>(face.at(1));
         const auto i2 = static_cast<uint64_t>(face.at(2));
-        cap_candidates.push_back(cap_face_candidate_t{ i0, i1, i2, area2 });
+        cap_candidates.push_back(cap_face_candidate_t{ i0, i1, i2, static_cast<double>(orientation) });
     }
 
     if(cap_candidates.empty()) return;
