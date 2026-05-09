@@ -23,6 +23,8 @@
 namespace {
 
 constexpr double extrude_min_epsilon = 1.0E-9;
+constexpr double interior_probe_relative_epsilon = 1.0E-6;
+constexpr double interior_probe_absolute_epsilon = 1.0E-8;
 
 static void store_error(std::string *error_message,
                         const std::string &message){
@@ -67,13 +69,16 @@ static Sketch::projection_t to_projection(const vec2<double> &point){
 }
 
 static long double signed_polygon_area(const std::vector<vec2<double>> &points){
-    if(points.size() < 3U) return 0.0;
-    long double twice_area = 0.0;
+    if(points.size() < 3U) return 0.0L;
+    long double twice_area = 0.0L;
     for(std::size_t i = 0U; i < points.size(); ++i){
         const auto &a = points.at(i);
         const auto &b = points.at((i + 1U) % points.size());
-        twice_area += (static_cast<long double>(a.x) * static_cast<long double>(b.y))
-                    - (static_cast<long double>(b.x) * static_cast<long double>(a.y));
+        const auto ax = static_cast<long double>(a.x);
+        const auto ay = static_cast<long double>(a.y);
+        const auto bx = static_cast<long double>(b.x);
+        const auto by = static_cast<long double>(b.y);
+        twice_area += (ax * by) - (bx * ay);
     }
     return twice_area * 0.5;
 }
@@ -92,9 +97,11 @@ static vec2<double> compute_interior_probe(const std::vector<vec2<double>> &loop
         max_y = std::max(max_y, point.y);
     }
     const auto span = std::max(max_x - min_x, max_y - min_y);
-    const auto epsilon = std::max(span * 1.0E-6, 1.0E-8);
+    const auto probe_offset = std::max(span * interior_probe_relative_epsilon,
+                                       interior_probe_absolute_epsilon);
     const auto area = signed_polygon_area(loop);
-    const auto orientation_sign = (area >= 0.0L) ? 1.0 : -1.0;
+    if(area == 0.0L) return loop.front();
+    const int orientation_sign = (area >= 0.0L) ? 1 : -1;
 
     for(std::size_t i = 0U; i < loop.size(); ++i){
         const auto &a = loop.at(i);
@@ -104,13 +111,13 @@ static vec2<double> compute_interior_probe(const std::vector<vec2<double>> &loop
         if(edge_length <= extrude_min_epsilon) continue;
 
         vec2<double> inward;
-        if(orientation_sign >= 0.0){
+        if(orientation_sign >= 0){
             inward = vec2<double>(-edge.y, edge.x);
         }else{
             inward = vec2<double>(edge.y, -edge.x);
         }
         inward /= inward.length();
-        return ((a + b) * 0.5) + inward * epsilon;
+        return ((a + b) * 0.5) + inward * probe_offset;
     }
 
     return loop.front();
@@ -354,10 +361,11 @@ static int winding_number(const vec2<double> &p,
     if(polygon.size() < 3U) return 0;
 
     int winding = 0;
+    const auto orientation = (signed_polygon_area(polygon) >= 0.0L) ? 1 : -1;
     for(std::size_t i = 0U; i < polygon.size(); ++i){
         const auto &a = polygon.at(i);
         const auto &b = polygon.at((i + 1U) % polygon.size());
-        if(point_on_segment(p, a, b)) return (signed_polygon_area(polygon) >= 0.0L) ? 1 : -1;
+        if(point_on_segment(p, a, b)) return orientation;
 
         if(a.y <= p.y){
             if((b.y > p.y) && (orient_sign(a, b, p) > 0)){

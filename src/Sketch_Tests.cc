@@ -1093,6 +1093,7 @@ TEST_CASE("Sketch extrusion stitches line loops and preserves holes in end caps"
 TEST_CASE("Sketch extrusion preserves oblique sketch plane embedding"){
     Sketch sketch;
     sketch.set_plane(default_oblique_plane());
+    constexpr double projection_tolerance = 1.0E-6;
 
     const auto uv = [&sketch](double u, double v) -> vec3<double> {
         return sketch.lift(Sketch::projection_t{ u, v });
@@ -1127,17 +1128,17 @@ TEST_CASE("Sketch extrusion preserves oblique sketch plane embedding"){
 
             const auto base_point = vertex - normal * signed_distance;
             const auto projected = sketch.project(base_point);
-            CHECK( projected.u >= (-3.0 - 1.0E-6) );
-            CHECK( projected.u <= ( 3.0 + 1.0E-6) );
-            CHECK( projected.v >= (-2.0 - 1.0E-6) );
-            CHECK( projected.v <= ( 2.0 + 1.0E-6) );
+            CHECK( projected.u >= (-3.0 - projection_tolerance) );
+            CHECK( projected.u <= ( 3.0 + projection_tolerance) );
+            CHECK( projected.v >= (-2.0 - projection_tolerance) );
+            CHECK( projected.v <= ( 2.0 + projection_tolerance) );
         }
 
-        CHECK( min_signed_distance == doctest::Approx(max_signed_distance).epsilon(1E-6) );
-        if(std::abs(min_signed_distance + 1.0) <= 1.0E-6){
+        CHECK( min_signed_distance == doctest::Approx(max_signed_distance).epsilon(projection_tolerance) );
+        if(std::abs(min_signed_distance + 1.0) <= projection_tolerance){
             saw_near_cap = true;
         }
-        if(std::abs(min_signed_distance - 2.0) <= 1.0E-6){
+        if(std::abs(min_signed_distance - 2.0) <= projection_tolerance){
             saw_far_cap = true;
         }
     }
