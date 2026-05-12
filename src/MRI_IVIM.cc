@@ -568,22 +568,24 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
     // Step 3: Estimate f and D* using Levenberg-Marquardt
     double lambda = 1.0;
     double pseudoD = D * 10.0;  // Initial guess
-    float f = 0.15f;            // Initial guess (3% in brain, 20% in highly vascular organs, 30% in parotids)
-    // Note: the b_value_threshold should fluctuate based on the fitted f accounting for the amount of signal decay,
-    // but the threshold in practice impacts the fitted f. So a meta optimization would be needed if both were
-    // fitted at the same time. In practice, selecting a threshold of 200 for brain and 400 for body seems reasonable,
-    // though some tissues vary. The 'optimal' value also depends on the SNR and a variety of other factors.
+    // Initial guess. Literature values:
+    //   - brain: f ≈ 0.03 (low perfusion white matter)
+    //   - parotid (healthy, pre-RT): f ≈ 0.10 (Shen 2024, Becker 2017, Tong 2016)
+    //   - kidney, liver: f ≈ 0.20-0.30
+    float f = 0.1f;
     
-    // Parameter bounds derived roughly from multiple sources. Selected mostly to be as accomodating as possible.
-    //
-    // See doi:10.1002/jmri.27875
-    //     doi:10.1016/j.neuroimage.2017.03.004
-    //     doi:10.1016/j.neuroimage.2017.12.062
-    //     doi:10.1002/mrm.24277
+   
+    // Parameter bounds based on biological plausibility.
+    // D* range from Le Bihan et al., IVIM consensus white paper (doi:10.1148/radiol.2015150789),
+    // and tissue-specific studies including Becker et al. 2017 (parotid),
+    // Jalnefjord et al. 2019 (liver), and Iima & Le Bihan 2016 (review).
+    // D* ranges across human tissues from ~5e-3 (low perfusion brain WM) to
+    // ~200e-3 mm^2/s (high perfusion tissues like parotid post-stimulation).
     const float f_min = 0.0f;
     const float f_max = 0.5f;
-    const double pseudoD_min = D * 3.0;
-    const double pseudoD_max = D * 150.0;
+    const double pseudoD_min = 3.0e-3;  // 3 × 10^-3 mm^2/s
+    const double pseudoD_max = 200.0e-3; // 200 × 10^-3 mm^2/s
+    
     
     MatrixXd h(2,1);
     MatrixXd r(number_bVals, 1);
