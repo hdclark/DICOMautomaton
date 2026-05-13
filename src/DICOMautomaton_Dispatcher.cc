@@ -129,18 +129,18 @@ void remove_file_if_present(const std::filesystem::path &p) noexcept{
 
 int main(int argc, char* argv[]){
 
-const bool stdin_is_pipe = stream_is_pipe_like(stdin);
-const bool stdout_is_redirected = stream_is_redirected(stdout);
+    const bool stdin_is_pipe = stream_is_pipe_like(stdin);
+    const bool stdout_is_redirected = stream_is_redirected(stdout);
 
     // Ignore SIGPIPE signal, which can cause termination when connected to a socket.
 #if !defined(_WIN32) && !defined(_WIN64)
     std::signal(SIGPIPE, SIG_IGN);
 #endif
 
-std::filesystem::path piped_stdin_file;
+    std::filesystem::path piped_stdin_file;
 
-try{
-    //This is the main entry-point into various routines. All major options are set here, via command line arguments.
+    try{
+        //This is the main entry-point into various routines. All major options are set here, via command line arguments.
     // Depending on the arguments received, data is loaded through a variety of loaders and sent on to an analysis
     // dispatcher.
     //
