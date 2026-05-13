@@ -99,7 +99,7 @@ std::filesystem::path make_temporary_stdin_path(){
     for(int64_t i = 0; i < max_attempts; ++i){
         const auto token = std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() )
                          + "_" + std::to_string(rng());
-        const auto p = std::filesystem::temp_directory_path() / ("dcma_stdin_" + token);
+        const auto p = std::filesystem::temp_directory_path() / ("dcma_stdin_" + token + ".ts_dcma");
         if(!std::filesystem::exists(p)) return p;
     }
 
