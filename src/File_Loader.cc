@@ -172,7 +172,7 @@ Load_From_Thrift_Serialization_Files( Drover &DICOM_data,
         Filenames.emplace_back(fn);
     }
 
-    return true;
+    return Filenames.empty();
 }
 #endif // DCMA_USE_THRIFT
 
