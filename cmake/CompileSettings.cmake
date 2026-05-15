@@ -368,6 +368,10 @@ if(WITH_SDL)
         $<BUILD_INTERFACE:${GLEW_INCLUDE_DIRS}>
     )
 endif()
+if(WITH_WT)
+    target_link_libraries(dcma_compile_settings INTERFACE
+        PkgConfig::WT)
+endif()
 if(WITH_GNU_GSL)
     target_include_directories(dcma_compile_settings INTERFACE
         $<BUILD_INTERFACE:${GNU_GSL_INCLUDE_DIRS}>)

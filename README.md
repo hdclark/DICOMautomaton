@@ -30,6 +30,16 @@
   - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
   - [![MXE](https://img.shields.io/badge/Latest_Docker_Build_Base-MXE-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_mxe)
 
+## GNU Guix builds
+
+- The repository includes an idiomatic Guix channel layout under `.guix/modules/` and a package entrypoint at `guix.scm`.
+- The pinned Guix revision used for reproducible Docker builds is recorded in `guix/channels.scm`.
+- To build inside the official Guix Docker image, run `./guix/compile_with_docker.sh`.
+- To request a static-link build variant, run `DCMA_GUIX_LINKAGE=static ./guix/compile_with_docker.sh`.
+- To override the default oldest C++17-capable toolchain choice, run `DCMA_GUIX_C_TOOLCHAIN=gcc-toolchain@13 ./guix/compile_with_docker.sh`.
+- The in-container helper is `guix/build_in_container.sh`, which is suitable for CI systems that already launch a Guix-capable container.
+- Guix couples the effective glibc version to the pinned channel/toolchain set, so targeting an older glibc should be done by updating `guix/channels.scm` to an older Guix revision.
+
 - [Archive of older pre-built continuous integration artifacts](https://halclark.ca/ci/?C=M;O=D)
 
 ## About

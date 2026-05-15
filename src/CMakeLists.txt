@@ -696,8 +696,7 @@ if(WITH_WT)
         "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
         "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
-        wt
-        wthttp
+        $<$<BOOL:${WITH_WT}>:PkgConfig::WT>
         Boost::serialization
         Boost::iostreams
         Boost::thread
