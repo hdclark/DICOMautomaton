@@ -8,6 +8,9 @@ package_name="${DCMA_GUIX_PACKAGE:-dicomautomaton}"
 linkage="${DCMA_GUIX_LINKAGE:-shared}"
 toolchain="${DCMA_GUIX_C_TOOLCHAIN:-gcc-toolchain@8}"
 
+cd "${reporoot}"
+export DCMA_GUIX_REPO_ROOT="${reporoot}"
+
 case "${linkage}" in
     shared) ;;
     static)

@@ -34,7 +34,7 @@
 
 - The repository includes an idiomatic Guix channel layout under `.guix/modules/` and a package entrypoint at `guix.scm`.
 - The pinned Guix revision used for reproducible Docker builds is recorded in `guix/channels.scm`.
-- To build inside the official Guix Docker image, run `./guix/compile_with_docker.sh`.
+- To build inside the default Guix Docker image, run `./guix/compile_with_docker.sh`.
 - To request a static-link build variant, run `DCMA_GUIX_LINKAGE=static ./guix/compile_with_docker.sh`.
 - To override the default oldest C++17-capable toolchain choice, run `DCMA_GUIX_C_TOOLCHAIN=gcc-toolchain@13 ./guix/compile_with_docker.sh`.
 - The in-container helper is `guix/build_in_container.sh`, which is suitable for CI systems that already launch a Guix-capable container.

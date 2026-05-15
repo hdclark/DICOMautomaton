@@ -1,7 +1,7 @@
 (list
   (channel
     (name 'guix)
-    (url "https://git.savannah.gnu.org/git/guix.git")
+    (url "https://github.com/Millak/guix.git")
     (branch "master")
     (commit "58545527cd0fab46e70a3b9593d8e59c689e2b75")
     (introduction

@@ -8,7 +8,8 @@
 
 (define %repo-root
   (canonicalize-path
-   (string-append (current-source-directory) "/../../../")))
+   (or (getenv "DCMA_GUIX_REPO_ROOT")
+       (getcwd))))
 
 (define (github-archive owner repo ref version hash)
   (origin

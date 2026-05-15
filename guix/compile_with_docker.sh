@@ -3,7 +3,7 @@ set -euo pipefail
 
 reporoot="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 output_dir="${DCMA_GUIX_OUTPUT_DIR:-${reporoot}/guix/out}"
-image_name="${DCMA_GUIX_DOCKER_IMAGE:-guix/guix:latest}"
+image_name="${DCMA_GUIX_DOCKER_IMAGE:-metacall/guix:latest}"
 
 mkdir -p "${output_dir}"
 
