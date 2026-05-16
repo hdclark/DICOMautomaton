@@ -27,11 +27,36 @@ target_expression="(@ (dicomautomaton packages) ${package_name})"
 mkdir -p "${output_dir}"
 
 daemon_pid=""
+daemon_socket="/var/guix/daemon-socket/socket"
+disable_chroot="${DCMA_GUIX_DAEMON_DISABLE_CHROOT:-0}"
 if ! pgrep -x guix-daemon >/dev/null 2>&1 ; then
-    guix-daemon --build-users-group=guixbuild --disable-chroot &
+    daemon_cmd=(guix-daemon --build-users-group=guixbuild)
+    if [ "${disable_chroot}" = "1" ] ; then
+        # Opt-in only: disabling chroot reduces Guix build isolation/reproducibility.
+        daemon_cmd+=(--disable-chroot)
+    fi
+    "${daemon_cmd[@]}" &
     daemon_pid="$!"
     trap 'if [ -n "${daemon_pid}" ] ; then kill "${daemon_pid}" ; fi' EXIT
-    sleep 5
+
+    daemon_ready=0
+    for _ in $(seq 1 30) ; do
+        if [ -S "${daemon_socket}" ] ; then
+            daemon_ready=1
+            break
+        fi
+        if ! kill -0 "${daemon_pid}" >/dev/null 2>&1 ; then
+            printf 'guix-daemon exited before becoming ready\n' >&2
+            wait "${daemon_pid}" || true
+            exit 1
+        fi
+        sleep 1
+    done
+
+    if [ "${daemon_ready}" != "1" ] ; then
+        printf 'Timed out waiting for guix-daemon socket: %s\n' "${daemon_socket}" >&2
+        exit 1
+    fi
 fi
 
 guix pull -C "${channels_file}"
