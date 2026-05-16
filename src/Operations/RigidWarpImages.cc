@@ -1,6 +1,7 @@
 //RigidWarpImages.cc - A part of DICOMautomaton 2022. Written by hal clark.
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include <fstream>
 #include <iterator>
@@ -152,9 +153,16 @@ bool RigidWarpImages(Drover &DICOM_data,
                         const auto new_o_unit = new_o_axis.unit();
 
                         const auto eps = std::sqrt( std::numeric_limits<double>::epsilon() );
-                        if( (eps < new_r_unit.Dot(new_c_unit))
-                        ||  (eps < new_c_unit.Dot(new_o_unit))
-                        ||  (eps < new_o_unit.Dot(new_r_unit)) ){
+                        if( !std::isfinite(new_pxl_dx) || !std::isfinite(new_pxl_dy) || !std::isfinite(new_pxl_dz)
+                        ||  !std::isfinite(new_r_unit.x) || !std::isfinite(new_r_unit.y) || !std::isfinite(new_r_unit.z)
+                        ||  !std::isfinite(new_c_unit.x) || !std::isfinite(new_c_unit.y) || !std::isfinite(new_c_unit.z)
+                        ||  !std::isfinite(new_o_unit.x) || !std::isfinite(new_o_unit.y) || !std::isfinite(new_o_unit.z) ){
+                            throw std::invalid_argument("Affine transformation produced an invalid image geometry. Refusing to continue.");
+                        }
+
+                        if( (eps < std::abs(new_r_unit.Dot(new_c_unit)))
+                        ||  (eps < std::abs(new_c_unit.Dot(new_o_unit)))
+                        ||  (eps < std::abs(new_o_unit.Dot(new_r_unit))) ){
                             throw std::invalid_argument("Affine transformation includes shear. Refusing to continue.");
                             // Shear will require voxel resampling. This is not currently supported.
                             // To implement, Gram-schmidt orthogonalize the new units, make another image out of them,

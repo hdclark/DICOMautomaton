@@ -16,6 +16,7 @@
 #include <memory>
 #include <string>
 #include <cstdint>
+#include <iterator>
 //#include <utility>   //For std::pair.
 //#include <algorithm> //std::min_element/max_element.
 //#include <tuple>
@@ -211,23 +212,29 @@ std::unique_ptr<Image_Array> Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_
         return nullptr;
     }
 
-    for(auto i1_it = A->imagecoll.images.begin(), i2_it = --(A->imagecoll.images.begin());
-                (i1_it != A->imagecoll.images.end()) && (i2_it != A->imagecoll.images.end());    ){
-        if( (i1_it->channels != i2_it->channels)
-                || ((i1_it->rows > i2_it->rows) && (i1_it->columns < i2_it->columns)) //One is larger than the other.
-                || ((i1_it->rows < i2_it->rows) && (i1_it->columns > i2_it->columns))  ){
-            YLOGWARN("Unable to meld - one data set (A) is not self-consistent");
-            return nullptr;
+    if(A->imagecoll.images.size() > 1){
+        auto i2_it = A->imagecoll.images.begin();
+        auto i1_it = std::next(i2_it);
+        for( ; i1_it != A->imagecoll.images.end(); ++i1_it, ++i2_it){
+            if( (i1_it->channels != i2_it->channels)
+             || ((i1_it->rows > i2_it->rows) && (i1_it->columns < i2_it->columns)) //One is larger than the other.
+             || ((i1_it->rows < i2_it->rows) && (i1_it->columns > i2_it->columns))  ){
+                YLOGWARN("Unable to meld - one data set (A) is not self-consistent");
+                return nullptr;
+            }
         }
     }
 
-    for(auto i1_it = B->imagecoll.images.begin(), i2_it = --(B->imagecoll.images.begin());
-                (i1_it != B->imagecoll.images.end()) && (i2_it != B->imagecoll.images.end());    ){
-        if( (i1_it->channels != i2_it->channels)
-                || ((i1_it->rows > i2_it->rows) && (i1_it->columns < i2_it->columns)) //One is larger than the other.
-                || ((i1_it->rows < i2_it->rows) && (i1_it->columns > i2_it->columns))  ){
-            YLOGWARN("Unable to meld - one data set (B) is not self-consistent");
-            return nullptr;
+    if(B->imagecoll.images.size() > 1){
+        auto i2_it = B->imagecoll.images.begin();
+        auto i1_it = std::next(i2_it);
+        for( ; i1_it != B->imagecoll.images.end(); ++i1_it, ++i2_it){
+            if( (i1_it->channels != i2_it->channels)
+             || ((i1_it->rows > i2_it->rows) && (i1_it->columns < i2_it->columns)) //One is larger than the other.
+             || ((i1_it->rows < i2_it->rows) && (i1_it->columns > i2_it->columns))  ){
+                YLOGWARN("Unable to meld - one data set (B) is not self-consistent");
+                return nullptr;
+            }
         }
     }
 
@@ -288,4 +295,3 @@ std::unique_ptr<Image_Array> Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_
 
     return out;
 }
-

@@ -91,7 +91,11 @@ function perform_test {
     export TSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1 history_size=5'
     export MSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1'
     export UBSAN_OPTIONS='verbosity=0 coverage=1 coverage_dir="." html_cov_report=1'
-    bash "${s_f_base}" 1>stdout 2>stderr
+    if command -v stdbuf >/dev/null 2>&1 ; then
+        stdbuf -oL -eL bash "${s_f_base}" 1>stdout 2>stderr
+    else
+        bash "${s_f_base}" 1>stdout 2>stderr
+    fi
     local ret_val=$?
 
     # Notify results of the test.
@@ -161,4 +165,3 @@ if [ "${N_failures}" == "0" ] ; then
 else
     exit 1
 fi
-
