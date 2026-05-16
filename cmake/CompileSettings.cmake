@@ -369,8 +369,8 @@ if(WITH_SDL)
     )
 endif()
 if(WITH_WT)
-    target_link_libraries(dcma_compile_settings INTERFACE
-        PkgConfig::WT)
+    target_include_directories(dcma_compile_settings INTERFACE
+        $<BUILD_INTERFACE:${WT_INCLUDE_DIRS}>)
 endif()
 if(WITH_GNU_GSL)
     target_include_directories(dcma_compile_settings INTERFACE
