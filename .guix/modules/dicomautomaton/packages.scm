@@ -9,7 +9,7 @@
 (define %repo-root
   (canonicalize-path
    (or (getenv "DCMA_GUIX_REPO_ROOT")
-       (getcwd))))
+       (error "DCMA_GUIX_REPO_ROOT must point to the DICOMautomaton repository root"))))
 
 (define (github-archive owner repo ref version hash)
   (origin
