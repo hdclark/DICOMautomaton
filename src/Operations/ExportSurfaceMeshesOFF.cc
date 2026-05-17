@@ -108,7 +108,7 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
 
     for(auto & smp_it : SMs){
         if(*smp_it == nullptr){
-            throw std::invalid_argument("Selected surface mesh is invalid. Cannot continue.");
+            throw std::invalid_argument("Selected surface mesh pointer is null. Cannot continue.");
         }
 
         auto FN = FilenameStr;
@@ -140,7 +140,9 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
             FO << f.size();
             for(const auto &idx : f){
                 if(idx >= N_verts){
-                    throw std::invalid_argument("Surface mesh face index is out of range. Cannot export to OFF.");
+                    throw std::invalid_argument("Surface mesh face index " + std::to_string(idx)
+                                              + " exceeds vertex count " + std::to_string(N_verts)
+                                              + ". Cannot export to OFF.");
                 }
                 FO << " " << idx;
             }
