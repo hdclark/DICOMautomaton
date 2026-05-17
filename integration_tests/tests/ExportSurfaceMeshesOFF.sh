@@ -11,7 +11,8 @@ set -o pipefail
     -p Variant=ascii \
     -p Filename="test.off"
 
-test -s "test.off" || { echo "Error: OFF export did not produce a non-empty test.off file." >&2; exit 1; }
+test -e "test.off" || { echo "Error: OFF export did not produce test.off file." >&2; exit 1; }
+test -s "test.off" || { echo "Error: OFF export produced an empty test.off file." >&2; exit 1; }
 head -n 1 "test.off" | grep -Eq '^OFF$' || { echo "Error: test.off is missing OFF header." >&2; exit 1; }
 
 

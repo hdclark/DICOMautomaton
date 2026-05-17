@@ -118,7 +118,7 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
         }
 
         // Serialize OFF directly to avoid known instability in WriteFVSMeshToOFF with some meshes.
-        std::ofstream FO(FN, std::ofstream::out | std::ofstream::trunc);
+        std::ofstream FO(FN, std::ofstream::trunc);
         if(!FO){
             throw std::runtime_error("Unable to open output file for writing. Cannot continue.");
         }
@@ -150,7 +150,7 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
         }
         FO.flush();
         if(!FO){
-            throw std::runtime_error("Unable to write surface mesh in OFF format. Cannot continue.");
+            throw std::runtime_error("Failed to flush surface mesh data to OFF file. Cannot continue.");
         }
 
         YLOGINFO("Surface mesh written to '" << FN << "'");
