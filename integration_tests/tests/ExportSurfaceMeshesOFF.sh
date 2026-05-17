@@ -11,6 +11,8 @@ set -o pipefail
     -p Variant=ascii \
     -p Filename="test.off"
 
+test -s "test.off"
+
 
 # Ensure the files can be read.
 "${DCMA_BIN}" \
@@ -18,4 +20,3 @@ set -o pipefail
   \
   -o TestConditions \
     -p Conditions='surface_mesh_count(1)'
-

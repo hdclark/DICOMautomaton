@@ -107,16 +107,51 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
 
     for(auto & smp_it : SMs){
+        if( (smp_it == SMs_all.end())
+        ||  (*smp_it == nullptr) ){
+            throw std::invalid_argument("Selected surface mesh is invalid. Cannot continue.");
+        }
+
         auto FN = FilenameStr;
         if( (1 < SMs.size()) 
         ||  std::filesystem::exists(FN) ){
             FN = Get_Unique_Sequential_Filename(suffixless_fullpath + "_", n_of_digit_pads, required_file_extension);
         }
 
-        std::fstream FO(FN, std::fstream::out | std::ios::binary);
-        if(!WriteFVSMeshToOFF( (*smp_it)->meshes, FO )){
+        // Serialize OFF directly to avoid known instability in WriteFVSMeshToOFF with some meshes.
+        std::ofstream FO(FN, std::ofstream::out | std::ofstream::trunc);
+        if(!FO){
+            throw std::runtime_error("Unable to open output file for writing. Cannot continue.");
+        }
+
+        const auto &mesh = (*smp_it)->meshes;
+        const auto N_verts = mesh.vertices.size();
+        const auto N_faces = mesh.faces.size();
+        FO << "OFF\n";
+        FO << N_verts << " " << N_faces << " 0\n";
+
+        for(const auto &v : mesh.vertices){
+            FO << v.x << " " << v.y << " " << v.z << "\n";
+        }
+
+        for(const auto &f : mesh.faces){
+            if(f.empty()){
+                throw std::invalid_argument("Surface mesh contains an empty face. Cannot export to OFF.");
+            }
+            FO << f.size();
+            for(const auto &idx : f){
+                if(idx >= N_verts){
+                    throw std::invalid_argument("Surface mesh face index is out of range. Cannot export to OFF.");
+                }
+                FO << " " << idx;
+            }
+            FO << "\n";
+        }
+        FO.flush();
+        if(!FO){
             throw std::runtime_error("Unable to write surface mesh in OFF format. Cannot continue.");
         }
+
         YLOGINFO("Surface mesh written to '" << FN << "'");
     }
 
