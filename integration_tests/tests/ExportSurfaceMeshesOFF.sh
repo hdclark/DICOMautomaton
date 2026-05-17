@@ -12,6 +12,7 @@ set -o pipefail
     -p Filename="test.off"
 
 test -s "test.off"
+head -n 1 "test.off" | grep -Eq '^OFF$'
 
 
 # Ensure the files can be read.

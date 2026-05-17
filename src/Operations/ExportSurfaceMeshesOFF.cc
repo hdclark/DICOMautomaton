@@ -107,8 +107,7 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
 
     for(auto & smp_it : SMs){
-        if( (smp_it == SMs_all.end())
-        ||  (*smp_it == nullptr) ){
+        if(*smp_it == nullptr){
             throw std::invalid_argument("Selected surface mesh is invalid. Cannot continue.");
         }
 
