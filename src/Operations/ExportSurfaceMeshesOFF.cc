@@ -12,6 +12,7 @@
 #include <set> 
 #include <stdexcept>
 #include <string>    
+#include <type_traits>
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <filesystem>
@@ -139,18 +140,25 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
             }
             FO << f.size();
             for(const auto &idx : f){
-                if(idx >= N_verts){
+                if constexpr (std::is_signed_v<std::decay_t<decltype(idx)>>){
+                    if(idx < 0){
+                        throw std::invalid_argument("Surface mesh face index " + std::to_string(idx)
+                                                  + " is negative. Cannot export to OFF.");
+                    }
+                }
+                const auto idx_u = static_cast<uint64_t>(idx);
+                if(idx_u >= N_verts){
                     throw std::invalid_argument("Surface mesh face index " + std::to_string(idx)
                                               + " exceeds vertex count " + std::to_string(N_verts)
                                               + ". Cannot export to OFF.");
                 }
-                FO << " " << idx;
+                FO << " " << idx_u;
             }
             FO << "\n";
         }
         FO.flush();
         if(!FO){
-            throw std::runtime_error("Failed to flush surface mesh data to OFF file. Cannot continue.");
+            throw std::runtime_error("Failed while writing or flushing surface mesh data to OFF file. Cannot continue.");
         }
 
         YLOGINFO("Surface mesh written to '" << FN << "'");
