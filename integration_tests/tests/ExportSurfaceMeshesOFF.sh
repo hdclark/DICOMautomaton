@@ -14,6 +14,7 @@ set -o pipefail
 test -e "test.off" || { echo "Error: OFF export did not produce test.off file." >&2; exit 1; }
 test -s "test.off" || { echo "Error: OFF export produced an empty test.off file." >&2; exit 1; }
 head -n 1 "test.off" | grep -Eq '^OFF$' || { echo "Error: test.off is missing OFF header." >&2; exit 1; }
+test "$(wc -l < "test.off")" -ge 3 || { echo "Error: test.off does not contain expected OFF body lines." >&2; exit 1; }
 
 
 # Ensure the files can be read.

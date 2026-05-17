@@ -118,7 +118,7 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
         }
 
         // Serialize OFF directly to avoid known instability in WriteFVSMeshToOFF with some meshes.
-        std::ofstream FO(FN, std::ofstream::trunc);
+        std::ofstream FO(FN, std::ofstream::binary | std::ofstream::trunc);
         if(!FO){
             throw std::runtime_error("Unable to open output file for writing. Cannot continue.");
         }
