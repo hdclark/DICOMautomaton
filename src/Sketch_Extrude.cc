@@ -614,6 +614,30 @@ static void append_extruded_end_caps(const Sketch &sketch,
     }
     if(cap_vertices_2d.size() < 3U) return;
 
+    const auto cap_surface_vertex_count = static_cast<uint64_t>(cap_vertices_2d.size());
+
+    double min_x = cap_vertices_2d.front().x;
+    double max_x = cap_vertices_2d.front().x;
+    double min_y = cap_vertices_2d.front().y;
+    double max_y = cap_vertices_2d.front().y;
+    for(const auto &point : cap_vertices_2d){
+        min_x = std::min(min_x, point.x);
+        max_x = std::max(max_x, point.x);
+        min_y = std::min(min_y, point.y);
+        max_y = std::max(max_y, point.y);
+    }
+    const auto span = std::max(max_x - min_x, max_y - min_y);
+    const auto padding = std::max(span, 1.0);
+    const auto super_base_index = static_cast<uint64_t>(cap_vertices_2d.size());
+    cap_vertices_2d.emplace_back(min_x - padding, min_y - padding);
+    cap_vertices_2d.emplace_back(max_x + padding, min_y - padding);
+    cap_vertices_2d.emplace_back(max_x + padding, max_y + padding);
+    cap_vertices_2d.emplace_back(min_x - padding, max_y + padding);
+    cap_edges_2d.push_back({ super_base_index + 0U, super_base_index + 1U });
+    cap_edges_2d.push_back({ super_base_index + 1U, super_base_index + 2U });
+    cap_edges_2d.push_back({ super_base_index + 2U, super_base_index + 3U });
+    cap_edges_2d.push_back({ super_base_index + 3U, super_base_index + 0U });
+
     YLOGDEBUG("Sending " << cap_vertices_2d.size() << " vertices and " << cap_edges_2d.size() 
                          << " edge constraints for constrained Delaunay triangulation");
     const auto planar_caps = Constrained_Delaunay_Triangulation_2<double, uint64_t>(cap_vertices_2d, cap_edges_2d);
@@ -623,14 +647,16 @@ static void append_extruded_end_caps(const Sketch &sketch,
     fv_surface_mesh<double, uint64_t> near_cap_mesh;
     fv_surface_mesh<double, uint64_t> far_cap_mesh;
     const uint64_t near_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : cap_vertices_2d){
+    for(std::size_t i = 0U; i < static_cast<std::size_t>(cap_surface_vertex_count); ++i){
+        const auto &point = cap_vertices_2d.at(i);
         const auto projected_point = to_projection(point);
         const auto scaled_near = sketch.lift(scale_projection_about(projected_point, scale_centre, near_scale));
         mesh.vertices.emplace_back(scaled_near + normal * near_offset);
         near_cap_mesh.vertices.emplace_back(scaled_near + normal * near_offset);
     }
     const uint64_t far_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : cap_vertices_2d){
+    for(std::size_t i = 0U; i < static_cast<std::size_t>(cap_surface_vertex_count); ++i){
+        const auto &point = cap_vertices_2d.at(i);
         const auto projected_point = to_projection(point);
         const auto scaled_far = sketch.lift(scale_projection_about(projected_point, scale_centre, far_scale));
         mesh.vertices.emplace_back(scaled_far + normal * far_offset);
@@ -650,6 +676,11 @@ static void append_extruded_end_caps(const Sketch &sketch,
             // In particular, quad (4-vertex) faces would produce internal
             // non-manifold geometry and must not be added to the surface mesh.
             YLOGWARN("Skipping face with " << face.size() << " vertices"); 
+            continue;
+        }
+        if((face.at(0) >= cap_surface_vertex_count)
+        || (face.at(1) >= cap_surface_vertex_count)
+        || (face.at(2) >= cap_surface_vertex_count)){
             continue;
         }
         const auto &a = cap_vertices_2d.at(face.at(0));
