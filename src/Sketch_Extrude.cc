@@ -25,7 +25,7 @@ namespace {
 constexpr double extrude_min_epsilon = 1.0E-9;
 constexpr double interior_probe_relative_epsilon = 1.0E-6;
 constexpr double interior_probe_absolute_epsilon = 1.0E-8;
-constexpr double cdt_superloop_minimum_padding = 1.0;
+constexpr double cdt_outer_rectangle_minimum_padding = 1.0;
 
 static void store_error(std::string *error_message,
                         const std::string &message){
@@ -595,7 +595,8 @@ static void append_extruded_end_caps(const Sketch &sketch,
 
     // Insert containing loops before nested holes/islands so the sequential
     // constraint insertion order is stable for deeply nested sketches.
-    std::stable_sort(std::begin(closed_loops), std::end(closed_loops), [](const auto &lhs, const auto &rhs){
+    std::stable_sort(std::begin(closed_loops), std::end(closed_loops), [](const normalized_loop_t &lhs,
+                                                                          const normalized_loop_t &rhs){
         if(lhs.depth != rhs.depth){
             return lhs.depth < rhs.depth;
         }
@@ -630,7 +631,7 @@ static void append_extruded_end_caps(const Sketch &sketch,
         max_y = std::max(max_y, point.y);
     }
     const auto span = std::max(max_x - min_x, max_y - min_y);
-    const auto padding = std::max(span, cdt_superloop_minimum_padding);
+    const auto padding = std::max(span, cdt_outer_rectangle_minimum_padding);
     const auto super_base_index = static_cast<uint64_t>(cap_vertices_2d.size());
     cap_vertices_2d.emplace_back(min_x - padding, min_y - padding);
     cap_vertices_2d.emplace_back(max_x + padding, min_y - padding);
@@ -673,6 +674,11 @@ static void append_extruded_end_caps(const Sketch &sketch,
         double area_sign;
     };
     std::vector<cap_face_candidate_t> cap_candidates;
+    const auto uses_only_surface_vertices = [cap_surface_vertex_count](const auto &face) -> bool {
+        return std::all_of(std::begin(face), std::end(face), [cap_surface_vertex_count](const auto vertex_index){
+            return (vertex_index < cap_surface_vertex_count);
+        });
+    };
     for(const auto &face : planar_caps.faces){
         if(face.size() != 3U){
             // Skip any non-triangular faces from the Delaunay triangulation.
@@ -681,9 +687,7 @@ static void append_extruded_end_caps(const Sketch &sketch,
             YLOGWARN("Skipping face with " << face.size() << " vertices"); 
             continue;
         }
-        if((face.at(0) >= cap_surface_vertex_count)
-        || (face.at(1) >= cap_surface_vertex_count)
-        || (face.at(2) >= cap_surface_vertex_count)){
+        if(!uses_only_surface_vertices(face)){
             continue;
         }
         const auto &a = cap_vertices_2d.at(face.at(0));
