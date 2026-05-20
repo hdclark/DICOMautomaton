@@ -41,7 +41,7 @@ static Sketch::plane_frame_t default_oblique_plane(){
     return out;
 }
 
-static const char* nested_extrusion_regression_sketch_data(){
+static const char* nested_extrusion_regression_sketch_text(){
     return R"(sketch_format_version 1
 plane_origin 0 0 0
 plane_row_unit 0 1 0
@@ -1324,13 +1324,13 @@ TEST_CASE("Sketch extrusion normalizes nested loop winding for constrained caps"
     CHECK( saw_inner_island );
 }
 
-TEST_CASE("Sketch extrusion triangulates nested sketch regression with outer loop first ordering"){
+TEST_CASE("Sketch extrusion triangulates complex nested sketch"){
     const auto sketch_path = std::filesystem::temp_directory_path()
                            / "dcma_sketch_extrude_nested_caps_regression.sketch";
     {
         std::ofstream fout(sketch_path);
         REQUIRE( fout.is_open() );
-        fout << nested_extrusion_regression_sketch_data();
+        fout << nested_extrusion_regression_sketch_text();
     }
 
     Sketch sketch;

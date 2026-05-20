@@ -26,6 +26,7 @@ constexpr double extrude_min_epsilon = 1.0E-9;
 constexpr double interior_probe_relative_epsilon = 1.0E-6;
 constexpr double interior_probe_absolute_epsilon = 1.0E-8;
 constexpr double cdt_outer_rectangle_minimum_padding = 1.0;
+constexpr double cdt_outer_rectangle_relative_padding = 0.1;
 
 static void store_error(std::string *error_message,
                         const std::string &message){
@@ -577,9 +578,9 @@ static void append_extruded_end_caps(const Sketch &sketch,
                                      double near_offset,
                                      double far_offset,
                                      double near_scale,
-                                      double far_scale,
-                                      fv_surface_mesh<double, uint64_t> &mesh,
-                                      std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes){
+                                     double far_scale,
+                                     fv_surface_mesh<double, uint64_t> &mesh,
+                                     std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes){
     std::vector<std::vector<vec2<double>>> raw_closed_loops;
     YLOGDEBUG("Preparing " << paths.size() << " paths for constrained Delaunay triangulation");
     for(const auto &path : paths){
@@ -618,7 +619,7 @@ static void append_extruded_end_caps(const Sketch &sketch,
     }
     if(cap_vertices_2d.size() < 3U) return;
 
-    const auto cap_surface_vertex_count = static_cast<uint64_t>(cap_vertices_2d.size());
+    const auto original_cap_vertex_count = static_cast<uint64_t>(cap_vertices_2d.size());
 
     double min_x = cap_vertices_2d.front().x;
     double max_x = cap_vertices_2d.front().x;
@@ -631,7 +632,8 @@ static void append_extruded_end_caps(const Sketch &sketch,
         max_y = std::max(max_y, point.y);
     }
     const auto span = std::max(max_x - min_x, max_y - min_y);
-    const auto padding = std::max(span, cdt_outer_rectangle_minimum_padding);
+    const auto padding = std::max(span * cdt_outer_rectangle_relative_padding,
+                                  cdt_outer_rectangle_minimum_padding);
     const auto super_base_index = static_cast<uint64_t>(cap_vertices_2d.size());
     cap_vertices_2d.emplace_back(min_x - padding, min_y - padding);
     cap_vertices_2d.emplace_back(max_x + padding, min_y - padding);
@@ -651,7 +653,7 @@ static void append_extruded_end_caps(const Sketch &sketch,
     fv_surface_mesh<double, uint64_t> near_cap_mesh;
     fv_surface_mesh<double, uint64_t> far_cap_mesh;
     const uint64_t near_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(std::size_t i = 0U; i < static_cast<std::size_t>(cap_surface_vertex_count); ++i){
+    for(std::size_t i = 0U; i < static_cast<std::size_t>(original_cap_vertex_count); ++i){
         const auto &point = cap_vertices_2d.at(i);
         const auto projected_point = to_projection(point);
         const auto scaled_near = sketch.lift(scale_projection_about(projected_point, scale_centre, near_scale));
@@ -659,7 +661,7 @@ static void append_extruded_end_caps(const Sketch &sketch,
         near_cap_mesh.vertices.emplace_back(scaled_near + normal * near_offset);
     }
     const uint64_t far_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(std::size_t i = 0U; i < static_cast<std::size_t>(cap_surface_vertex_count); ++i){
+    for(std::size_t i = 0U; i < static_cast<std::size_t>(original_cap_vertex_count); ++i){
         const auto &point = cap_vertices_2d.at(i);
         const auto projected_point = to_projection(point);
         const auto scaled_far = sketch.lift(scale_projection_about(projected_point, scale_centre, far_scale));
@@ -674,9 +676,9 @@ static void append_extruded_end_caps(const Sketch &sketch,
         double area_sign;
     };
     std::vector<cap_face_candidate_t> cap_candidates;
-    const auto uses_only_surface_vertices = [cap_surface_vertex_count](const auto &face) -> bool {
-        return std::all_of(std::begin(face), std::end(face), [cap_surface_vertex_count](const auto vertex_index){
-            return (vertex_index < cap_surface_vertex_count);
+    const auto uses_only_original_cap_vertices = [original_cap_vertex_count](const auto &face) -> bool {
+        return std::all_of(std::begin(face), std::end(face), [original_cap_vertex_count](const auto vertex_index){
+            return (vertex_index < original_cap_vertex_count);
         });
     };
     for(const auto &face : planar_caps.faces){
@@ -687,7 +689,7 @@ static void append_extruded_end_caps(const Sketch &sketch,
             YLOGWARN("Skipping face with " << face.size() << " vertices"); 
             continue;
         }
-        if(!uses_only_surface_vertices(face)){
+        if(!uses_only_original_cap_vertices(face)){
             continue;
         }
         const auto &a = cap_vertices_2d.at(face.at(0));
