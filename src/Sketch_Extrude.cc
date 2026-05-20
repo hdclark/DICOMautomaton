@@ -576,33 +576,43 @@ static void append_extruded_end_caps(const Sketch &sketch,
                                      double near_offset,
                                      double far_offset,
                                      double near_scale,
-                                     double far_scale,
-                                     fv_surface_mesh<double, uint64_t> &mesh,
-                                     std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes){
+                                      double far_scale,
+                                      fv_surface_mesh<double, uint64_t> &mesh,
+                                      std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes){
     std::vector<std::vector<vec2<double>>> raw_closed_loops;
-    std::vector<vec2<double>> cap_vertices_2d;
-    std::vector<std::vector<uint64_t>> cap_edges_2d;
     YLOGDEBUG("Preparing " << paths.size() << " paths for constrained Delaunay triangulation");
     for(const auto &path : paths){
         if(!path.closed || (path.points.size() < 3U)) continue;
         auto projected_loop = project_polyline_vec2(sketch, path.points);
         if(projected_loop.size() < 3U) continue;
         raw_closed_loops.push_back(projected_loop);
+    }
+    if(raw_closed_loops.empty()) return;
 
+    auto closed_loops = normalize_closed_loops(raw_closed_loops);
+    if(closed_loops.empty()) return;
+
+    std::stable_sort(std::begin(closed_loops), std::end(closed_loops), [](const auto &lhs, const auto &rhs){
+        if(lhs.depth != rhs.depth){
+            return lhs.depth < rhs.depth;
+        }
+        return std::abs(signed_polygon_area(lhs.points)) > std::abs(signed_polygon_area(rhs.points));
+    });
+
+    std::vector<vec2<double>> cap_vertices_2d;
+    std::vector<std::vector<uint64_t>> cap_edges_2d;
+    for(const auto &closed_loop : closed_loops){
         const auto base_index = static_cast<uint64_t>(cap_vertices_2d.size());
-        for(std::size_t i = 0U; i < projected_loop.size(); ++i){
-            cap_vertices_2d.push_back(projected_loop.at(i));
-            const auto next_i = (i + 1U) % projected_loop.size();
+        for(std::size_t i = 0U; i < closed_loop.points.size(); ++i){
+            cap_vertices_2d.push_back(closed_loop.points.at(i));
+            const auto next_i = (i + 1U) % closed_loop.points.size();
             cap_edges_2d.push_back(std::vector<uint64_t>{
                 base_index + static_cast<uint64_t>(i),
                 base_index + static_cast<uint64_t>(next_i)
             });
         }
     }
-    if(raw_closed_loops.empty() || (cap_vertices_2d.size() < 3U)) return;
-
-    const auto closed_loops = normalize_closed_loops(raw_closed_loops);
-    if(closed_loops.empty()) return;
+    if(cap_vertices_2d.size() < 3U) return;
 
     YLOGDEBUG("Sending " << cap_vertices_2d.size() << " vertices and " << cap_edges_2d.size() 
                          << " edge constraints for constrained Delaunay triangulation");
