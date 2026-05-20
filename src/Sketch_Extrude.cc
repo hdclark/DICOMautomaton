@@ -25,6 +25,8 @@ namespace {
 constexpr double extrude_min_epsilon = 1.0E-9;
 constexpr double interior_probe_relative_epsilon = 1.0E-6;
 constexpr double interior_probe_absolute_epsilon = 1.0E-8;
+constexpr double cdt_outer_rectangle_minimum_padding = 1.0;
+constexpr double cdt_outer_rectangle_relative_padding = 0.1;
 
 static void store_error(std::string *error_message,
                         const std::string &message){
@@ -580,29 +582,67 @@ static void append_extruded_end_caps(const Sketch &sketch,
                                      fv_surface_mesh<double, uint64_t> &mesh,
                                      std::vector<fv_surface_mesh<double, uint64_t>> *cap_meshes){
     std::vector<std::vector<vec2<double>>> raw_closed_loops;
-    std::vector<vec2<double>> cap_vertices_2d;
-    std::vector<std::vector<uint64_t>> cap_edges_2d;
     YLOGDEBUG("Preparing " << paths.size() << " paths for constrained Delaunay triangulation");
     for(const auto &path : paths){
         if(!path.closed || (path.points.size() < 3U)) continue;
         auto projected_loop = project_polyline_vec2(sketch, path.points);
         if(projected_loop.size() < 3U) continue;
         raw_closed_loops.push_back(projected_loop);
+    }
+    if(raw_closed_loops.empty()) return;
 
+    auto closed_loops = normalize_closed_loops(raw_closed_loops);
+    if(closed_loops.empty()) return;
+
+    // Insert containing loops before nested holes/islands so the sequential
+    // constraint insertion order is stable for deeply nested sketches.
+    std::stable_sort(std::begin(closed_loops), std::end(closed_loops), [](const normalized_loop_t &lhs,
+                                                                          const normalized_loop_t &rhs){
+        if(lhs.depth != rhs.depth){
+            return lhs.depth < rhs.depth;
+        }
+        return std::abs(signed_polygon_area(lhs.points)) > std::abs(signed_polygon_area(rhs.points));
+    });
+
+    std::vector<vec2<double>> cap_vertices_2d;
+    std::vector<std::vector<uint64_t>> cap_edges_2d;
+    for(const auto &closed_loop : closed_loops){
         const auto base_index = static_cast<uint64_t>(cap_vertices_2d.size());
-        for(std::size_t i = 0U; i < projected_loop.size(); ++i){
-            cap_vertices_2d.push_back(projected_loop.at(i));
-            const auto next_i = (i + 1U) % projected_loop.size();
+        for(std::size_t i = 0U; i < closed_loop.points.size(); ++i){
+            cap_vertices_2d.push_back(closed_loop.points.at(i));
+            const auto next_i = (i + 1U) % closed_loop.points.size();
             cap_edges_2d.push_back(std::vector<uint64_t>{
                 base_index + static_cast<uint64_t>(i),
                 base_index + static_cast<uint64_t>(next_i)
             });
         }
     }
-    if(raw_closed_loops.empty() || (cap_vertices_2d.size() < 3U)) return;
+    if(cap_vertices_2d.size() < 3U) return;
 
-    const auto closed_loops = normalize_closed_loops(raw_closed_loops);
-    if(closed_loops.empty()) return;
+    const auto original_cap_vertex_count = static_cast<uint64_t>(cap_vertices_2d.size());
+
+    double min_x = cap_vertices_2d.front().x;
+    double max_x = cap_vertices_2d.front().x;
+    double min_y = cap_vertices_2d.front().y;
+    double max_y = cap_vertices_2d.front().y;
+    for(const auto &point : cap_vertices_2d){
+        min_x = std::min(min_x, point.x);
+        max_x = std::max(max_x, point.x);
+        min_y = std::min(min_y, point.y);
+        max_y = std::max(max_y, point.y);
+    }
+    const auto span = std::max(max_x - min_x, max_y - min_y);
+    const auto padding = std::max(span * cdt_outer_rectangle_relative_padding,
+                                  cdt_outer_rectangle_minimum_padding);
+    const auto super_base_index = static_cast<uint64_t>(cap_vertices_2d.size());
+    cap_vertices_2d.emplace_back(min_x - padding, min_y - padding);
+    cap_vertices_2d.emplace_back(max_x + padding, min_y - padding);
+    cap_vertices_2d.emplace_back(max_x + padding, max_y + padding);
+    cap_vertices_2d.emplace_back(min_x - padding, max_y + padding);
+    cap_edges_2d.push_back({ super_base_index + 0U, super_base_index + 1U });
+    cap_edges_2d.push_back({ super_base_index + 1U, super_base_index + 2U });
+    cap_edges_2d.push_back({ super_base_index + 2U, super_base_index + 3U });
+    cap_edges_2d.push_back({ super_base_index + 3U, super_base_index + 0U });
 
     YLOGDEBUG("Sending " << cap_vertices_2d.size() << " vertices and " << cap_edges_2d.size() 
                          << " edge constraints for constrained Delaunay triangulation");
@@ -613,14 +653,16 @@ static void append_extruded_end_caps(const Sketch &sketch,
     fv_surface_mesh<double, uint64_t> near_cap_mesh;
     fv_surface_mesh<double, uint64_t> far_cap_mesh;
     const uint64_t near_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : cap_vertices_2d){
+    for(std::size_t i = 0U; i < static_cast<std::size_t>(original_cap_vertex_count); ++i){
+        const auto &point = cap_vertices_2d.at(i);
         const auto projected_point = to_projection(point);
         const auto scaled_near = sketch.lift(scale_projection_about(projected_point, scale_centre, near_scale));
         mesh.vertices.emplace_back(scaled_near + normal * near_offset);
         near_cap_mesh.vertices.emplace_back(scaled_near + normal * near_offset);
     }
     const uint64_t far_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : cap_vertices_2d){
+    for(std::size_t i = 0U; i < static_cast<std::size_t>(original_cap_vertex_count); ++i){
+        const auto &point = cap_vertices_2d.at(i);
         const auto projected_point = to_projection(point);
         const auto scaled_far = sketch.lift(scale_projection_about(projected_point, scale_centre, far_scale));
         mesh.vertices.emplace_back(scaled_far + normal * far_offset);
@@ -634,12 +676,20 @@ static void append_extruded_end_caps(const Sketch &sketch,
         double area_sign;
     };
     std::vector<cap_face_candidate_t> cap_candidates;
+    const auto uses_only_original_cap_vertices = [original_cap_vertex_count](const auto &face) -> bool {
+        return std::all_of(std::begin(face), std::end(face), [original_cap_vertex_count](const auto vertex_index){
+            return (vertex_index < original_cap_vertex_count);
+        });
+    };
     for(const auto &face : planar_caps.faces){
         if(face.size() != 3U){
             // Skip any non-triangular faces from the Delaunay triangulation.
             // In particular, quad (4-vertex) faces would produce internal
             // non-manifold geometry and must not be added to the surface mesh.
             YLOGWARN("Skipping face with " << face.size() << " vertices"); 
+            continue;
+        }
+        if(!uses_only_original_cap_vertices(face)){
             continue;
         }
         const auto &a = cap_vertices_2d.at(face.at(0));
