@@ -2008,6 +2008,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                          disp_img_it_t l_img_it) -> bool {
         if(!sketch.has_plane()){
             // Sketches now default to a generic plane so they can be edited without requiring a currently displayed image.
+            // The intended workflow is to sketch freely on that default plane and later adopt an image or mesh plane once a
+            // more specific embedding is known.
             sketch.set_plane(default_sketch_plane());
             return true;
         }
@@ -7285,6 +7287,10 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             auto &slot = current_sketch_slot();
             auto &sketch = slot.history.current();
+            const auto sketch_matches_display_image = [&](const Sketch &active_sketch) -> bool {
+                return active_sketch.has_plane()
+                    && ((disp_img_it == disp_img_it_t()) || sketch_is_compatible_with_image(active_sketch, disp_img_it));
+            };
             const auto canvas_plane = sketch.has_plane() ? sketch.plane() : default_sketch_plane();
             const auto sketch_canvas_selection_tolerance = [](const image_mouse_pos_s &mouse_pos) -> double {
                 return std::max<double>(4.0 / std::max<double>(mouse_pos.pixel_scale, 1.0E-3f), 0.25);
@@ -7376,7 +7382,7 @@ if( view_toggles.view_vector_sketching_enabled
             &&  image_mouse_pos.DICOM_to_pixels ){
                 auto &slot = current_sketch_slot();
                 auto &sketch = slot.history.current();
-                const bool sketch_compatible = sketch.has_plane();
+                const bool sketch_compatible = sketch_matches_display_image(sketch);
 
                 if( image_mouse_pos.mouse_hovering_image
                 &&  sketch_compatible ){
@@ -8137,9 +8143,7 @@ if( view_toggles.view_vector_sketching_enabled
 
                 auto &slot = current_sketch_slot();
                 auto &sketch = slot.history.current();
-                const bool sketch_compatible = (disp_img_it != disp_img_it_t())
-                                            && sketch.has_plane()
-                                            && sketch_is_compatible_with_image(sketch, disp_img_it);
+                const bool sketch_compatible = sketch_matches_display_image(sketch);
                 if(sketch.has_plane() && (disp_img_it != disp_img_it_t()) && !sketch_compatible){
                     ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f),
                                        "This sketch belongs to a different image plane.");
