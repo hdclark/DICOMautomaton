@@ -1158,6 +1158,14 @@ TEST_CASE("Sketch can derive an orthonormal frame from a generic plane"){
     CHECK( frame.normal().Dot(generic_plane.N_0.unit()) == doctest::Approx(1.0).epsilon(1.0E-6) );
     CHECK( std::abs(frame.row_unit.Dot(frame.col_unit)) <= 1.0E-6 );
     CHECK( frame.to_plane().Get_Signed_Distance_To_Point(frame.origin) == doctest::Approx(0.0).epsilon(1.0E-6) );
+
+    const auto fallback_frame = Sketch::plane_frame_t::from_plane(generic_plane);
+    CHECK( fallback_frame.normal().Dot(generic_plane.N_0.unit()) == doctest::Approx(1.0).epsilon(1.0E-6) );
+    CHECK( std::abs(fallback_frame.row_unit.Dot(fallback_frame.col_unit)) <= 1.0E-6 );
+
+    const auto rejected_hint_frame = Sketch::plane_frame_t::from_plane(generic_plane, generic_plane.N_0);
+    CHECK( rejected_hint_frame.normal().Dot(generic_plane.N_0.unit()) == doctest::Approx(1.0).epsilon(1.0E-6) );
+    CHECK( std::abs(rejected_hint_frame.row_unit.Dot(rejected_hint_frame.col_unit)) <= 1.0E-6 );
 }
 
 TEST_CASE("Sketch can add projected support geometry and pin it in place"){

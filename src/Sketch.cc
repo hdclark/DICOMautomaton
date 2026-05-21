@@ -220,7 +220,7 @@ Sketch::plane_frame_t::from_plane(const ::plane<double> &plane,
     plane_frame_t out;
     out.origin = plane.R_0;
     const auto normal = plane.N_0.unit();
-    auto choose_row = [&](vec3<double> candidate) -> vec3<double> {
+    auto try_orthogonal_unit = [&](vec3<double> candidate) -> vec3<double> {
         candidate = candidate - normal * candidate.Dot(normal);
         if(candidate.sq_length() <= std::numeric_limits<double>::epsilon()){
             return {};
@@ -229,13 +229,13 @@ Sketch::plane_frame_t::from_plane(const ::plane<double> &plane,
     };
 
     if(row_hint){
-        out.row_unit = choose_row(row_hint.value());
+        out.row_unit = try_orthogonal_unit(row_hint.value());
     }
     if(out.row_unit.sq_length() <= std::numeric_limits<double>::epsilon()){
         for(const auto &candidate : { vec3<double>(1.0, 0.0, 0.0),
                                       vec3<double>(0.0, 1.0, 0.0),
                                       vec3<double>(0.0, 0.0, 1.0) }){
-            out.row_unit = choose_row(candidate);
+            out.row_unit = try_orthogonal_unit(candidate);
             if(out.row_unit.sq_length() > std::numeric_limits<double>::epsilon()){
                 break;
             }
@@ -1670,10 +1670,12 @@ Sketch::add_projected_support_polyline(const std::vector<vec3<double>> &points,
     if(points.empty()) return out;
 
     out.vertices.reserve(points.size());
+    const auto edge_primitive_count = (1U < points.size()) ? (closed ? points.size() : (points.size() - 1U)) : 0U;
+    const auto vertex_primitive_count = add_vertex_primitives ? points.size() : 0U;
     if(add_vertex_primitives){
-        out.primitives.reserve(points.size() + (closed ? points.size() : (points.size() - 1U)));
-    }else if(1U < points.size()){
-        out.primitives.reserve((closed ? points.size() : (points.size() - 1U)));
+        out.primitives.reserve(vertex_primitive_count + edge_primitive_count);
+    }else if(0U < edge_primitive_count){
+        out.primitives.reserve(edge_primitive_count);
     }
     out.constraints.reserve(points.size());
 

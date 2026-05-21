@@ -1986,6 +1986,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     const auto try_get_current_sketch_plane = [&](disp_img_it_t l_img_it) -> std::optional<Sketch::plane_frame_t> {
         if(l_img_it == disp_img_it_t()) return {};
+        // Preserve the image row direction as the in-plane hint so adopted sketch frames remain aligned with the
+        // display image orientation instead of an arbitrary orthonormal basis.
         return Sketch::plane_frame_t::from_plane(l_img_it->image_plane(), l_img_it->row_unit);
     };
 
@@ -2005,6 +2007,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto ensure_sketch_plane = [&](Sketch &sketch,
                                          disp_img_it_t l_img_it) -> bool {
         if(!sketch.has_plane()){
+            // Sketches now default to a generic plane so they can be edited without requiring a currently displayed image.
             sketch.set_plane(default_sketch_plane());
             return true;
         }
@@ -14620,6 +14623,8 @@ if( view_toggles.view_vector_sketching_enabled
                             const auto &c = mesh.vertices.at(face.at(2));
                             const auto normal = (b - a).Cross(c - a).unit();
                             const auto centroid = (a + b + c) / 3.0;
+                            // Use the first face edge as the in-plane hint so the adopted sketch frame stays tangent to
+                            // the hovered triangle while remaining stable across repeated hovers and clicks.
                             sketch_mesh_face_adoption.hovered_plane = Sketch::plane_frame_t::from_plane(plane<double>(normal, centroid), b - a);
                             sketch_mesh_face_adoption.hovered_face_vertices.assign({ a, b, c });
 
