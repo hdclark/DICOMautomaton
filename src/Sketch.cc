@@ -209,6 +209,47 @@ Sketch::plane_frame_t::normal() const{
     return row_unit.Cross(col_unit).unit();
 }
 
+::plane<double>
+Sketch::plane_frame_t::to_plane() const{
+    return ::plane<double>(normal(), origin);
+}
+
+Sketch::plane_frame_t
+Sketch::plane_frame_t::from_plane(const ::plane<double> &plane,
+                                  const std::optional<vec3<double>> &row_hint){
+    plane_frame_t out;
+    out.origin = plane.R_0;
+    const auto normal = plane.N_0.unit();
+    auto choose_row = [&](vec3<double> candidate) -> vec3<double> {
+        candidate = candidate - normal * candidate.Dot(normal);
+        if(candidate.sq_length() <= std::numeric_limits<double>::epsilon()){
+            return {};
+        }
+        return candidate.unit();
+    };
+
+    if(row_hint){
+        out.row_unit = choose_row(row_hint.value());
+    }
+    if(out.row_unit.sq_length() <= std::numeric_limits<double>::epsilon()){
+        for(const auto &candidate : { vec3<double>(1.0, 0.0, 0.0),
+                                      vec3<double>(0.0, 1.0, 0.0),
+                                      vec3<double>(0.0, 0.0, 1.0) }){
+            out.row_unit = choose_row(candidate);
+            if(out.row_unit.sq_length() > std::numeric_limits<double>::epsilon()){
+                break;
+            }
+        }
+    }
+    if(out.row_unit.sq_length() <= std::numeric_limits<double>::epsilon()){
+        throw std::logic_error("Unable to derive sketch plane basis from plane");
+    }
+
+    out.col_unit = normal.Cross(out.row_unit).unit();
+    out.row_unit = out.col_unit.Cross(normal).unit();
+    return out;
+}
+
 bool
 Sketch::bounding_box_t::is_valid() const{
     return std::isfinite(min.u) && std::isfinite(min.v)
@@ -517,10 +558,21 @@ Sketch::set_plane(const plane_frame_t &frame){
     refresh_all_derived_geometry();
 }
 
+void
+Sketch::set_plane(const ::plane<double> &plane,
+                  const std::optional<vec3<double>> &row_hint){
+    set_plane(plane_frame_t::from_plane(plane, row_hint));
+}
+
 const Sketch::plane_frame_t&
 Sketch::plane() const{
     if(!has_plane_) throw std::logic_error("Sketch plane has not been initialized");
     return plane_;
+}
+
+::plane<double>
+Sketch::supporting_plane() const{
+    return plane().to_plane();
 }
 
 Sketch::projection_t
@@ -1605,6 +1657,49 @@ Sketch::collapse_vertices(vertex_index_t keep_idx, vertex_index_t remove_idx){
 
     refresh_all_derived_geometry();
     return true;
+}
+
+Sketch::support_geometry_result_t
+Sketch::add_projected_support_polyline(const std::vector<vec3<double>> &points,
+                                       bool closed,
+                                       bool add_vertex_primitives){
+    if(!has_plane()){
+        throw std::logic_error("Sketch plane has not been initialized");
+    }
+    support_geometry_result_t out;
+    if(points.empty()) return out;
+
+    out.vertices.reserve(points.size());
+    if(add_vertex_primitives){
+        out.primitives.reserve(points.size() + (closed ? points.size() : (points.size() - 1U)));
+    }else if(1U < points.size()){
+        out.primitives.reserve((closed ? points.size() : (points.size() - 1U)));
+    }
+    out.constraints.reserve(points.size());
+
+    for(const auto &point : points){
+        const auto projected = lift(project(point));
+        const auto vertex_idx = append_vertex(projected);
+        out.vertices.emplace_back(vertex_idx);
+        if(add_vertex_primitives){
+            out.primitives.emplace_back(add_vertex_primitive(vertex_idx, geometry_tag_t::support));
+        }
+        out.constraints.emplace_back(add_pin_constraint(vertex_idx));
+    }
+
+    if(1U < out.vertices.size()){
+        for(std::size_t i = 1U; i < out.vertices.size(); ++i){
+            out.primitives.emplace_back(add_line(out.vertices.at(i - 1U),
+                                                 out.vertices.at(i),
+                                                 geometry_tag_t::support));
+        }
+        if(closed && (2U < out.vertices.size())){
+            out.primitives.emplace_back(add_line(out.vertices.back(),
+                                                 out.vertices.front(),
+                                                 geometry_tag_t::support));
+        }
+    }
+    return out;
 }
 
 bool

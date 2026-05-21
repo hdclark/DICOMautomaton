@@ -1148,6 +1148,41 @@ TEST_CASE("Sketch extrusion preserves oblique sketch plane embedding"){
     CHECK( saw_far_cap );
 }
 
+TEST_CASE("Sketch can derive an orthonormal frame from a generic plane"){
+    const plane<double> generic_plane(vec3<double>(0.0, 0.0, 1.0), vec3<double>(5.0, -2.0, 9.0));
+    const auto frame = Sketch::plane_frame_t::from_plane(generic_plane, vec3<double>(0.0, 2.0, 1.0));
+
+    CHECK( frame.origin.x == doctest::Approx(5.0) );
+    CHECK( frame.origin.y == doctest::Approx(-2.0) );
+    CHECK( frame.origin.z == doctest::Approx(9.0) );
+    CHECK( frame.normal().Dot(generic_plane.N_0.unit()) == doctest::Approx(1.0).epsilon(1.0E-6) );
+    CHECK( std::abs(frame.row_unit.Dot(frame.col_unit)) <= 1.0E-6 );
+    CHECK( frame.to_plane().Get_Signed_Distance_To_Point(frame.origin) == doctest::Approx(0.0).epsilon(1.0E-6) );
+}
+
+TEST_CASE("Sketch can add projected support geometry and pin it in place"){
+    Sketch sketch;
+    sketch.set_plane(default_oblique_plane());
+
+    const auto result = sketch.add_projected_support_polyline({
+        vec3<double>(10.0, -3.0, 5.0),
+        vec3<double>(13.0, -2.0, 8.0),
+        vec3<double>(11.0,  2.0, 9.0),
+    }, true);
+
+    REQUIRE( result.vertices.size() == 3U );
+    REQUIRE( result.constraints.size() == 3U );
+    REQUIRE( result.primitives.size() == 6U );
+
+    const auto constrained_vertices = sketch.fully_constrained_vertices();
+    for(const auto vertex_idx : result.vertices){
+        CHECK( constrained_vertices.count(vertex_idx) == 1U );
+        const auto projected = sketch.project(sketch.vertex(vertex_idx));
+        const auto lifted = sketch.lift(projected);
+        CHECK( sketch.vertex(vertex_idx).distance(lifted) <= 1.0E-6 );
+    }
+}
+
 TEST_CASE("Sketch extrusion normalizes nested loop winding for constrained caps"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());

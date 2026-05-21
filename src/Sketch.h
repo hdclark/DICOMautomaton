@@ -59,6 +59,15 @@ public:
         vec3<double> col_unit;
 
         vec3<double> normal() const;
+        ::plane<double> to_plane() const;
+        static plane_frame_t from_plane(const ::plane<double> &plane,
+                                        const std::optional<vec3<double>> &row_hint = {});
+    };
+
+    struct support_geometry_result_t {
+        std::vector<vertex_index_t> vertices;
+        std::vector<primitive_index_t> primitives;
+        std::vector<constraint_index_t> constraints;
     };
 
     struct projection_t {
@@ -274,7 +283,10 @@ public:
 
     bool has_plane() const;
     void set_plane(const plane_frame_t &frame);
+    void set_plane(const ::plane<double> &plane,
+                   const std::optional<vec3<double>> &row_hint = {});
     const plane_frame_t& plane() const;
+    ::plane<double> supporting_plane() const;
 
     projection_t project(const vec3<double> &point) const;
     vec3<double> lift(const projection_t &point) const;
@@ -333,6 +345,9 @@ public:
     std::size_t delete_unreferenced_vertices();
     std::optional<vertex_index_t> insert_vertex(primitive_index_t idx, const vec3<double> &point);
     bool collapse_vertices(vertex_index_t keep_idx, vertex_index_t remove_idx);
+    support_geometry_result_t add_projected_support_polyline(const std::vector<vec3<double>> &points,
+                                                             bool closed = false,
+                                                             bool add_vertex_primitives = true);
     bool add_fillet(primitive_index_t line_a_idx, primitive_index_t line_b_idx, double radius, std::string *error_message = nullptr);
     bool swap_arc_orientation(primitive_index_t arc_idx);
     void clear_vertices();
