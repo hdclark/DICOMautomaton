@@ -9012,19 +9012,21 @@ bool SDL_Viewer(Drover &DICOM_data,
                 sketch_canvas_view.framing_initialized = true;
             }
 
+            constexpr float kSketchCanvasMinExtent = 180.0f;
+            constexpr double kSketchCanvasMargin = 20.0;
             ImGui::SetNextWindowSize(ImVec2(650.0f, 650.0f), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(10.0f, 40.0f), ImGuiCond_FirstUseEver);
             ImGui::Begin("Sketch", &view_toggles.view_vector_sketching_enabled, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
             ImGuiIO &io = ImGui::GetIO();
             const auto canvas_origin = ImGui::GetCursorScreenPos();
             auto canvas_extent = ImGui::GetContentRegionAvail();
-            canvas_extent.x = std::max(canvas_extent.x, 180.0f);
-            canvas_extent.y = std::max(canvas_extent.y, 180.0f);
+            canvas_extent.x = std::max(canvas_extent.x, kSketchCanvasMinExtent);
+            canvas_extent.y = std::max(canvas_extent.y, kSketchCanvasMinExtent);
             ImGui::InvisibleButton("##sketch_canvas", canvas_extent, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonMiddle | ImGuiButtonFlags_MouseButtonRight);
             const bool canvas_hovered = ImGui::IsItemHovered();
             const bool canvas_active = ImGui::IsItemActive();
-            const double scale = std::max(1.0, std::min((static_cast<double>(canvas_extent.x) - 20.0) / (bounds_width / sketch_canvas_view.zoom),
-                                                        (static_cast<double>(canvas_extent.y) - 20.0) / (bounds_height / sketch_canvas_view.zoom)));
+            const double scale = std::max(1.0, std::min((static_cast<double>(canvas_extent.x) - kSketchCanvasMargin) / (bounds_width / sketch_canvas_view.zoom),
+                                                        (static_cast<double>(canvas_extent.y) - kSketchCanvasMargin) / (bounds_height / sketch_canvas_view.zoom)));
             if(canvas_hovered && (std::abs(io.MouseWheel) > 0.0f)){
                 const auto zoom_scale = std::pow(1.10, static_cast<double>(io.MouseWheel));
                 sketch_canvas_view.zoom = std::clamp(sketch_canvas_view.zoom * zoom_scale, 0.1, 100.0);
@@ -14640,8 +14642,10 @@ if( view_toggles.view_vector_sketching_enabled
                                 face_max.u = std::max(face_max.u, p.u);
                                 face_max.v = std::max(face_max.v, p.v);
                             }
-                            const auto pad_u = std::max(1.0, (face_max.u - face_min.u) * 0.15);
-                            const auto pad_v = std::max(1.0, (face_max.v - face_min.v) * 0.15);
+                            constexpr double kHoveredFaceMinPadding = 1.0;
+                            constexpr double kHoveredFacePaddingScale = 0.15;
+                            const auto pad_u = std::max(kHoveredFaceMinPadding, (face_max.u - face_min.u) * kHoveredFacePaddingScale);
+                            const auto pad_v = std::max(kHoveredFaceMinPadding, (face_max.v - face_min.v) * kHoveredFacePaddingScale);
                             face_min.u -= pad_u;
                             face_min.v -= pad_v;
                             face_max.u += pad_u;

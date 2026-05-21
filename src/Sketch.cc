@@ -242,7 +242,11 @@ Sketch::plane_frame_t::from_plane(const ::plane<double> &plane,
         }
     }
     if(out.row_unit.sq_length() <= std::numeric_limits<double>::epsilon()){
-        throw std::logic_error("Unable to derive sketch plane basis from plane");
+        throw std::logic_error("Unable to derive sketch plane basis from plane normal "
+                             + std::to_string(normal.x) + ", "
+                             + std::to_string(normal.y) + ", "
+                             + std::to_string(normal.z)
+                             + (row_hint ? " with supplied row hint" : " without a row hint"));
     }
 
     out.col_unit = normal.Cross(out.row_unit).unit();
@@ -1664,7 +1668,7 @@ Sketch::add_projected_support_polyline(const std::vector<vec3<double>> &points,
                                        bool closed,
                                        bool add_vertex_primitives){
     if(!has_plane()){
-        throw std::logic_error("Sketch plane has not been initialized");
+        throw std::logic_error("Sketch plane has not been initialized; call set_plane() before adding projected support geometry");
     }
     support_geometry_result_t out;
     if(points.empty()) return out;
