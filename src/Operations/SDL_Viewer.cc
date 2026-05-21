@@ -7481,7 +7481,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     ImGui::Text("Editable sketch state");
                     if(!slot.history.current().has_plane()){
-                        if(ImGui::Button("Initialize Default Plane")){
+                        if(ImGui::Button("Initialize Sketch Plane")){
                             edit_current_sketch([&](Sketch &editable_sketch){
                                 editable_sketch.set_plane(default_sketch_plane());
                             });
@@ -14697,9 +14697,11 @@ if( view_toggles.view_vector_sketching_enabled
                                             sketch_mesh_face_adoption.hovered_plane->row_unit.Dot(vertex - sketch_mesh_face_adoption.hovered_plane->origin),
                                             sketch_mesh_face_adoption.hovered_plane->col_unit.Dot(vertex - sketch_mesh_face_adoption.hovered_plane->origin)
                                         };
-                                        if(std::abs(hovered_plane.Get_Signed_Distance_To_Point(vertex)) > sketch_mesh_face_adoption.coplanar_eps
-                                        || projected.u < face_min.u || projected.u > face_max.u
-                                        || projected.v < face_min.v || projected.v > face_max.v){
+                                        const bool is_coplanar = (std::abs(hovered_plane.Get_Signed_Distance_To_Point(vertex))
+                                                               <= sketch_mesh_face_adoption.coplanar_eps);
+                                        const bool in_bounds = (face_min.u <= projected.u) && (projected.u <= face_max.u)
+                                                            && (face_min.v <= projected.v) && (projected.v <= face_max.v);
+                                        if(!is_coplanar || !in_bounds){
                                             candidate_valid = false;
                                             break;
                                         }
