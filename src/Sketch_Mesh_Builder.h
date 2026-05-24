@@ -67,7 +67,9 @@ public:
     // Append a default leaf node (empty sketch, clear procedure).
     void append_default_node();
 
-    // Delete a leaf node.  If the root is deleted, a new default root is created.
+    // Delete the node at idx from the linear sequence. Any later nodes shift
+    // down by one position and become descendants of their new immediate predecessor.
+    // If deleting the root leaves the sequence empty, a new default root is created.
     // Returns the new active node index.
     std::size_t delete_leaf_node(std::size_t idx);
 
