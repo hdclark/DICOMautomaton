@@ -306,7 +306,11 @@ bool Sketch_Mesh_Builder::write_to(std::ostream &os) const {
         // Write mesh (if present).
         if(nodes_[i].mesh.has_value()){
             os << "mesh_begin\n";
-            WriteFVSMeshToOBJ(nodes_[i].mesh.value(), os);
+            if(!WriteFVSMeshToOBJ(nodes_[i].mesh.value(), os)){
+                os.precision(defaultprecision);
+                os.setstate(std::ios::failbit);
+                return false;
+            }
             os << "mesh_end\n";
         }else{
             os << "no_mesh\n";
