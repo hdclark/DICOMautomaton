@@ -91,6 +91,9 @@ static double compute_transformed_variance(const thin_plate_spline& tps,
 
 // Creates a grid-based point cloud with N^3 points
 static point_set<double> create_grid_point_cloud(int64_t N_per_axis){
+    if(N_per_axis <= 1){
+        throw std::invalid_argument("N_per_axis must be greater than 1");
+    }
     point_set<double> ps;
     for(int64_t i = 0; i < N_per_axis; ++i){
         for(int64_t j = 0; j < N_per_axis; ++j){

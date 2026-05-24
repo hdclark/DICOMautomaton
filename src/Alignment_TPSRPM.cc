@@ -364,10 +364,6 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
     thin_plate_spline t(moving_n, params.kernel_dimension);
 
-    // Compute the centroid for the stationary point cloud.
-    // Stationary point outliers will be assumed to have this location.
-    const auto com_stat = stationary_n.Centroid();
-
     // Estimate determinstic annealing parameters.
     //
     // Find the largest 'square distance' between (all) points and the average separation of nearest-neighbour points
@@ -1039,7 +1035,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         {
             Stats::Running_Variance<double> var_x, var_y, var_z;
             for(int64_t i = 0; i < N_move_points; ++i){
-                const auto P_moving = moving_n.points[i];                const auto P_moved = t.transform(P_moving);
+                const auto P_moving = moving_n.points[i];
+                const auto P_moved = t.transform(P_moving);
                 var_x.Digest(P_moved.x);
                 var_y.Digest(P_moved.y);
                 var_z.Digest(P_moved.z);
