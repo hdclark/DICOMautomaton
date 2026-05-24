@@ -193,7 +193,8 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
         {
             auto extrude_sketch = current.sketch;
             for(std::size_t i = 0; i < extrude_sketch.primitive_count(); ){
-                if(extrude_sketch.primitive(i)->tag == Sketch::geometry_tag_t::support){
+                auto *primitive = extrude_sketch.primitive(i);
+                if(primitive != nullptr && primitive->tag == Sketch::geometry_tag_t::support){
                     extrude_sketch.delete_primitive(i);
                 }else{
                     ++i;
@@ -230,7 +231,8 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
             // (the mesh will contain intersecting geometry that downstream tools can resolve).
             auto extrude_sketch = current.sketch;
             for(std::size_t i = 0; i < extrude_sketch.primitive_count(); ){
-                if(extrude_sketch.primitive(i)->tag == Sketch::geometry_tag_t::support){
+                auto *primitive = extrude_sketch.primitive(i);
+                if(primitive != nullptr && primitive->tag == Sketch::geometry_tag_t::support){
                     extrude_sketch.delete_primitive(i);
                 }else{
                     ++i;

@@ -1878,11 +1878,13 @@ Sketch::read_from(std::istream &is, Sketch &out){
 
     std::string line;
     bool plane_set = false;
+    bool found_end = false;
     while(std::getline(is, line)){
         std::istringstream iss(line);
         std::string keyword;
         iss >> keyword;
         if(keyword == "sketch_end"){
+            found_end = true;
             break;
         }else if(keyword == "sketch_format_version"){
             int version = 0;
@@ -2064,7 +2066,7 @@ Sketch::read_from(std::istream &is, Sketch &out){
         }
     }
 
-    if(!plane_set){
+    if(!plane_set || !found_end){
         out.clear();
         return false;
     }

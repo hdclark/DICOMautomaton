@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include "Sketch.h"
@@ -24,6 +25,24 @@ static Sketch make_circle_sketch(double cx, double cy, double r){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
     sketch.add_circle(vec3<double>(cx, cy, 0.0), vec3<double>(cx + r, cy, 0.0), Sketch::geometry_tag_t::normal);
+    return sketch;
+}
+
+static Sketch make_sparse_circle_sketch(){
+    std::stringstream ss;
+    ss << "sketch_format_version 1\n"
+       << "plane_origin 0 0 0\n"
+       << "plane_row_unit 1 0 0\n"
+       << "plane_col_unit 0 1 0\n"
+       << "vertex 0 0 0 0\n"
+       << "vertex 1 5 0 0\n"
+       << "primitive circle 3 normal 0 1\n"
+       << "sketch_end\n";
+
+    Sketch sketch;
+    if(!Sketch::read_from(ss, sketch)){
+        throw std::runtime_error("Unable to parse sparse circle sketch test fixture");
+    }
     return sketch;
 }
 
@@ -111,6 +130,30 @@ TEST_CASE("Sketch_Mesh_Builder set_active_node_index clamps"){
     builder.append_default_node();
     builder.set_active_node_index(0U);
     CHECK(builder.active_node_index() == 0U);
+}
+
+TEST_CASE("Sketch_Mesh_Builder compute_all handles sparse primitive slots"){
+    const auto sparse_sketch = make_sparse_circle_sketch();
+    REQUIRE(sparse_sketch.primitive_count() == 4U);
+    REQUIRE(sparse_sketch.primitive(0U) == nullptr);
+    REQUIRE(sparse_sketch.primitive(3U) != nullptr);
+
+    Sketch_Mesh_Builder builder;
+    builder.node(0).sketch = sparse_sketch;
+    builder.node(0).procedure.kind = sketch_procedure_kind_t::extrusion;
+    builder.node(0).procedure.extrusion_options.into_frame_length = 1.0;
+    builder.node(0).procedure.extrusion_options.out_of_frame_length = 1.0;
+
+    builder.append_default_node();
+    builder.node(1).sketch = sparse_sketch;
+    builder.node(1).procedure.kind = sketch_procedure_kind_t::through_hole;
+    builder.node(1).procedure.extrusion_options.into_frame_length = 1.0;
+    builder.node(1).procedure.extrusion_options.out_of_frame_length = 1.0;
+
+    std::string error_message;
+    REQUIRE(builder.compute_all(&error_message));
+    CHECK(builder.node(0).mesh.has_value());
+    CHECK(builder.node(1).mesh.has_value());
 }
 
 // ---------------------------------------------------------------------------

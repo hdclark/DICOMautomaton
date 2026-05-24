@@ -705,6 +705,17 @@ TEST_CASE("Sketch files round-trip through disk serialization"){
     std::filesystem::remove(path);
 }
 
+TEST_CASE("Sketch stream parsing requires sketch_end"){
+    std::stringstream ss;
+    ss << "sketch_format_version 1\n"
+       << "plane_origin 0 0 0\n"
+       << "plane_row_unit 1 0 0\n"
+       << "plane_col_unit 0 1 0\n";
+
+    Sketch loaded;
+    CHECK_FALSE(Sketch::read_from(ss, loaded));
+}
+
 TEST_CASE("Sketch parallel constraints preserve reversed line orientation"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());

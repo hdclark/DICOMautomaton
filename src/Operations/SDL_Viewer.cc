@@ -7366,17 +7366,29 @@ bool SDL_Viewer(Drover &DICOM_data,
                     const double view_max_u = sketch_canvas_view.centre.u + half_w;
                     const double view_min_v = sketch_canvas_view.centre.v - half_h;
                     const double view_max_v = sketch_canvas_view.centre.v + half_h;
+                    const auto estimate_grid_lines = [](double min_coord, double max_coord, double spacing) -> std::size_t {
+                        if(!(std::isfinite(min_coord) && std::isfinite(max_coord) && std::isfinite(spacing)) || !(spacing > 0.0)){
+                            return 0U;
+                        }
+                        return static_cast<std::size_t>(std::floor((max_coord - min_coord) / spacing)) + 1U;
+                    };
+                    constexpr std::size_t kMaxGridLines = 50U;
+                    double effective_grid_spacing = sketch_grid_spacing;
+                    while(estimate_grid_lines(view_min_u, view_max_u, effective_grid_spacing)
+                        + estimate_grid_lines(view_min_v, view_max_v, effective_grid_spacing) > kMaxGridLines){
+                        effective_grid_spacing *= 2.0;
+                    }
                     // Vertical grid lines.
-                    const double first_u = std::ceil(view_min_u / sketch_grid_spacing) * sketch_grid_spacing;
-                    for(double u = first_u; u <= view_max_u; u += sketch_grid_spacing){
+                    const double first_u = std::ceil(view_min_u / effective_grid_spacing) * effective_grid_spacing;
+                    for(double u = first_u; u <= view_max_u; u += effective_grid_spacing){
                         const auto sx = canvas_origin.x + canvas_extent.x * 0.5f + static_cast<float>((u - sketch_canvas_view.centre.u) * scale);
                         if(sx >= canvas_origin.x && sx <= canvas_origin.x + canvas_extent.x){
                             imgs_window_draw_list->AddLine(ImVec2(sx, canvas_origin.y), ImVec2(sx, canvas_origin.y + canvas_extent.y), grid_colour, 1.0f);
                         }
                     }
                     // Horizontal grid lines.
-                    const double first_v = std::ceil(view_min_v / sketch_grid_spacing) * sketch_grid_spacing;
-                    for(double v = first_v; v <= view_max_v; v += sketch_grid_spacing){
+                    const double first_v = std::ceil(view_min_v / effective_grid_spacing) * effective_grid_spacing;
+                    for(double v = first_v; v <= view_max_v; v += effective_grid_spacing){
                         const auto sy = canvas_origin.y + canvas_extent.y * 0.5f - static_cast<float>((v - sketch_canvas_view.centre.v) * scale);
                         if(sy >= canvas_origin.y && sy <= canvas_origin.y + canvas_extent.y){
                             imgs_window_draw_list->AddLine(ImVec2(canvas_origin.x, sy), ImVec2(canvas_origin.x + canvas_extent.x, sy), grid_colour, 1.0f);
