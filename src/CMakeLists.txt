@@ -63,6 +63,9 @@ set_target_properties(  Alignment_Rigid_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            Alignment_TPSRPM_obj OBJECT Alignment_TPSRPM.cc )
 set_target_properties(  Alignment_TPSRPM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Alignment_TPSRPM_Tests_obj OBJECT Alignment_TPSRPM_Tests.cc )
+set_target_properties(  Alignment_TPSRPM_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Alignment_Rigid_Tests_obj OBJECT Alignment_Rigid_Tests.cc )
 set_target_properties(  Alignment_Rigid_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -480,6 +483,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
+    $<TARGET_OBJECTS:Alignment_TPSRPM_Tests_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
     $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
     $<TARGET_OBJECTS:Alignment_Demons_obj>
@@ -604,6 +608,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Alignment_Rigid_obj>
         $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
         $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
+        $<TARGET_OBJECTS:Alignment_TPSRPM_Tests_obj>
         $<TARGET_OBJECTS:Alignment_Field_obj>
         $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
         $<TARGET_OBJECTS:Alignment_Demons_obj>
