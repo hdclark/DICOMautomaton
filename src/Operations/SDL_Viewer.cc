@@ -86,6 +86,7 @@
 #include "../Thread_Pool.h"
 #include "../String_Parsing.h"
 #include "../Sketch.h"
+#include "../Sketch_Mesh_Builder.h"
 #include "../Dialogs.h"
 #include "../Alignment_Rigid.h"
 #include "../Documentation.h"
@@ -1855,6 +1856,18 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::string sketch_file_status;
     std::vector<std::string> sketch_log_entries;
     bool sketch_log_scroll_to_bottom = false;
+
+    // Sketch grid state.
+    bool sketch_show_grid = true;
+    double sketch_grid_spacing = 10.0; // mm
+    bool sketch_show_axes = true;
+
+    // Sketch Mesh Builder state.
+    std::vector<Sketch_Mesh_Builder> sketch_mesh_builders(1U);
+    int sketch_mesh_builder_num = 0;
+    std::array<char, 4096> sketch_builder_save_path = {};
+    std::array<char, 4096> sketch_builder_load_path = {};
+    std::string sketch_builder_status;
 
     // Polyominoes state.
     opengl_texture_handle_t polyomino_texture;
@@ -7272,18 +7285,23 @@ bool SDL_Viewer(Drover &DICOM_data,
                 incorporate_projection(sketch_image_geometry->bounds.max);
             }
             if(!std::isfinite(bounds_min.u) || !std::isfinite(bounds_max.u)){
-                bounds_min = Sketch::projection_t{ -50.0, -50.0 };
-                bounds_max = Sketch::projection_t{  50.0,  50.0 };
+                bounds_min = Sketch::projection_t{ -75.0, -75.0 };
+                bounds_max = Sketch::projection_t{  75.0,  75.0 };
             }
             auto bounds_width = std::max(10.0, bounds_max.u - bounds_min.u);
             auto bounds_height = std::max(10.0, bounds_max.v - bounds_min.v);
             const auto bounds_centre = Sketch::projection_t{ 0.5 * (bounds_min.u + bounds_max.u),
                                                               0.5 * (bounds_min.v + bounds_max.v) };
+            // Default: fit 150mm horizontally. Only auto-zoom out when adopting geometry.
+            constexpr double kDefaultHorizontalSpan = 150.0;
             if(!sketch_canvas_view.framing_initialized){
                 sketch_canvas_view.centre = bounds_centre;
                 sketch_canvas_view.zoom = 1.0;
                 sketch_canvas_view.framing_initialized = true;
             }
+            // Ensure content fits: if the bounds exceed the default span, zoom out.
+            bounds_width = std::max(kDefaultHorizontalSpan, bounds_width);
+            bounds_height = std::max(kDefaultHorizontalSpan, bounds_height);
 
             std::optional<image_mouse_pos_s> image_mouse_pos_opt;
             std::optional<bool> canvas_hovered_opt;
@@ -7346,15 +7364,62 @@ bool SDL_Viewer(Drover &DICOM_data,
                 imgs_window_draw_list->AddRectFilled(canvas_origin, ImVec2(canvas_origin.x + canvas_extent.x, canvas_origin.y + canvas_extent.y), ImColor(0.05f, 0.07f, 0.10f, 1.0f));
                 imgs_window_draw_list->AddRect(canvas_origin, ImVec2(canvas_origin.x + canvas_extent.x, canvas_origin.y + canvas_extent.y), ImColor(0.35f, 0.45f, 0.55f, 1.0f));
 
+                // Draw grid lines (if enabled).
+                if(sketch_show_grid && sketch_grid_spacing > 0.1){
+                    const ImU32 grid_colour = ImColor(0.15f, 0.18f, 0.22f, 0.5f);
+                    const double half_w = 0.5 * (static_cast<double>(canvas_extent.x)) / scale;
+                    const double half_h = 0.5 * (static_cast<double>(canvas_extent.y)) / scale;
+                    const double view_min_u = sketch_canvas_view.centre.u - half_w;
+                    const double view_max_u = sketch_canvas_view.centre.u + half_w;
+                    const double view_min_v = sketch_canvas_view.centre.v - half_h;
+                    const double view_max_v = sketch_canvas_view.centre.v + half_h;
+                    // Vertical grid lines.
+                    const double first_u = std::ceil(view_min_u / sketch_grid_spacing) * sketch_grid_spacing;
+                    for(double u = first_u; u <= view_max_u; u += sketch_grid_spacing){
+                        const auto sx = canvas_origin.x + canvas_extent.x * 0.5f + static_cast<float>((u - sketch_canvas_view.centre.u) * scale);
+                        if(sx >= canvas_origin.x && sx <= canvas_origin.x + canvas_extent.x){
+                            imgs_window_draw_list->AddLine(ImVec2(sx, canvas_origin.y), ImVec2(sx, canvas_origin.y + canvas_extent.y), grid_colour, 1.0f);
+                        }
+                    }
+                    // Horizontal grid lines.
+                    const double first_v = std::ceil(view_min_v / sketch_grid_spacing) * sketch_grid_spacing;
+                    for(double v = first_v; v <= view_max_v; v += sketch_grid_spacing){
+                        const auto sy = canvas_origin.y + canvas_extent.y * 0.5f - static_cast<float>((v - sketch_canvas_view.centre.v) * scale);
+                        if(sy >= canvas_origin.y && sy <= canvas_origin.y + canvas_extent.y){
+                            imgs_window_draw_list->AddLine(ImVec2(canvas_origin.x, sy), ImVec2(canvas_origin.x + canvas_extent.x, sy), grid_colour, 1.0f);
+                        }
+                    }
+                }
+
+                // Draw origin and axes (if enabled).
+                if(sketch_show_axes){
+                    const auto origin_px = canvas_origin.x + canvas_extent.x * 0.5f + static_cast<float>((0.0 - sketch_canvas_view.centre.u) * scale);
+                    const auto origin_py = canvas_origin.y + canvas_extent.y * 0.5f - static_cast<float>((0.0 - sketch_canvas_view.centre.v) * scale);
+                    const ImU32 x_axis_colour = ImColor(0.5f, 0.2f, 0.2f, 0.6f);
+                    const ImU32 y_axis_colour = ImColor(0.2f, 0.5f, 0.2f, 0.6f);
+                    const ImU32 origin_colour = ImColor(0.6f, 0.6f, 0.3f, 0.7f);
+                    // X axis (horizontal through origin).
+                    if(origin_py >= canvas_origin.y && origin_py <= canvas_origin.y + canvas_extent.y){
+                        imgs_window_draw_list->AddLine(ImVec2(canvas_origin.x, origin_py), ImVec2(canvas_origin.x + canvas_extent.x, origin_py), x_axis_colour, 1.0f);
+                    }
+                    // Y axis (vertical through origin).
+                    if(origin_px >= canvas_origin.x && origin_px <= canvas_origin.x + canvas_extent.x){
+                        imgs_window_draw_list->AddLine(ImVec2(origin_px, canvas_origin.y), ImVec2(origin_px, canvas_origin.y + canvas_extent.y), y_axis_colour, 1.0f);
+                    }
+                    // Origin marker.
+                    if(origin_px >= canvas_origin.x && origin_px <= canvas_origin.x + canvas_extent.x
+                    && origin_py >= canvas_origin.y && origin_py <= canvas_origin.y + canvas_extent.y){
+                        imgs_window_draw_list->AddCircleFilled(ImVec2(origin_px, origin_py), 3.0f, origin_colour, 12);
+                    }
+                }
+
                 if( view_toggles.view_vector_sketching_enabled
                 &&  image_mouse_pos_opt
                 &&  image_mouse_pos_opt.value().DICOM_to_pixels ){
                     auto &slot = current_sketch_slot();
                     auto &sketch = slot.history.current();
-                    const bool sketch_compatible = sketch_matches_display_image(sketch);
 
-                    if( image_mouse_pos_opt.value().mouse_hovering_image
-                    &&  sketch_compatible ){
+                    if( image_mouse_pos_opt.value().mouse_hovering_image ){
                         const auto tol = sketch_canvas_selection_tolerance(image_mouse_pos_opt.value());
                         if(const auto hovered_vertex = sketch.nearest_primitive_vertex(image_mouse_pos_opt.value().dicom_pos, tol); hovered_vertex){
                             sketch_hovered_primitive = hovered_vertex->first;
@@ -7370,7 +7435,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         sketch_hovered_constraint = {};
                     }
 
-                    if(sketch_compatible){
+                    {
                         const auto effective_hovered_primitive = sketch_hovered_primitive ? sketch_hovered_primitive
                                                                                           : sketch_editor_hovered_primitive;
                         const auto effective_hovered_vertex = sketch_hovered_vertex ? sketch_hovered_vertex
@@ -8060,53 +8125,23 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::SetNextWindowPos(ImVec2(680, 400), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Vector Sketching", &view_toggles.view_vector_sketching_enabled, ImGuiWindowFlags_AlwaysAutoResize);
 
-                int new_sketch_slot_num = sketch_slot_num;
-                const int max_sketch_slot_num = std::max<int>(static_cast<int>(sketch_slots.size()) - 1, 0);
-                if(ImGui::SliderInt("Sketch Number", &new_sketch_slot_num, 0, max_sketch_slot_num)){
-                    sketch_slot_num = new_sketch_slot_num;
-                    ensure_sketch_slots(static_cast<std::size_t>(std::max(sketch_slot_num, 0)));
-                    clear_sketch_interaction_state();
-                    current_sketch_slot().selection.clear();
-                    current_sketch_slot().clear_vertex_selection();
-                }
-                if(ImGui::Button("New Sketch")){
-                    sketch_slots.emplace_back();
-                    sketch_slot_num = static_cast<int>(sketch_slots.size() - 1U);
-                    clear_sketch_interaction_state();
-                    current_sketch_slot().selection.clear();
-                    current_sketch_slot().clear_vertex_selection();
-                    sketch_last_unresolved_constraints = {};
-                    sketch_file_status.clear();
-                    append_sketch_log("Created sketch slot " + std::to_string(sketch_slot_num));
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Delete Current Sketch")){
-                    if(sketch_slots.size() <= 1U){
-                        reset_sketch_slot(current_sketch_slot());
-                    }else{
-                        const auto current_slot_it = std::next(std::begin(sketch_slots),
-                                                               static_cast<std::ptrdiff_t>(std::max(sketch_slot_num, 0)));
-                        sketch_slots.erase(current_slot_it);
-                        sketch_slot_num = std::clamp(sketch_slot_num, 0, static_cast<int>(sketch_slots.size() - 1U));
-                    }
-                    clear_sketch_interaction_state();
-                    current_sketch_slot().selection.clear();
-                    current_sketch_slot().clear_vertex_selection();
-                    sketch_last_unresolved_constraints = {};
-                    append_sketch_log("Deleted the current sketch slot");
-                }
-                ImGui::SameLine();
                 if(ImGui::Button("Inspect Sketch")){
                     view_sketch_editor_enabled = true;
                 }
 
+                // Grid controls.
+                ImGui::SetNextItemOpen(false, ImGuiCond_FirstUseEver);
+                if(ImGui::CollapsingHeader("Grid")){
+                    ImGui::Checkbox("Show Grid", &sketch_show_grid);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Show Axes", &sketch_show_axes);
+                    ImGui::SetNextItemWidth(120.0f);
+                    ImGui::InputDouble("Grid spacing (mm)", &sketch_grid_spacing, 1.0, 5.0, "%.1f");
+                    sketch_grid_spacing = std::clamp(sketch_grid_spacing, 0.1, 1000.0);
+                }
+
                 auto &slot = current_sketch_slot();
                 auto &sketch = slot.history.current();
-                const bool sketch_compatible = sketch_matches_display_image(sketch);
-                if(sketch.has_plane() && (disp_img_it != disp_img_it_t()) && !sketch_compatible){
-                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f),
-                                       "This sketch belongs to a different image plane.");
-                }
                 ImGui::SetNextItemOpen(true, ImGuiCond_FirstUseEver);
                 if(ImGui::CollapsingHeader("Adopt Geometry")){
                     ImGui::Checkbox("Add image boundary as support geometry", &sketch_add_image_boundary_on_plane_adopt);
@@ -8778,87 +8813,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 ImGui::SetNextItemOpen(false, ImGuiCond_FirstUseEver);
-                if(ImGui::CollapsingHeader("Extrude to Surface Mesh")){
-                    ImGui::TextWrapped("Into/out-of-frame lengths may be negative as long as the combined cap span remains positive.");
-                    ImGui::TextWrapped("Positive angles expand the extrusion, negative angles narrow it, and 0 leaves the cap size unchanged.");
-                    ImGui::SetNextItemWidth(150.0f);
-                    ImGui::InputDouble("Into frame (mm)", &sketch_extrude_into_frame, 0.5, 5.0, "%.3f");
-                    ImGui::SetNextItemWidth(150.0f);
-                    ImGui::InputDouble("Out of frame (mm)", &sketch_extrude_out_of_frame, 0.5, 5.0, "%.3f");
-                    ImGui::SetNextItemWidth(150.0f);
-                    ImGui::InputDouble("Into frame angle (deg)", &sketch_extrude_into_frame_angle, 0.5, 5.0, "%.3f");
-                    ImGui::SetNextItemWidth(150.0f);
-                    ImGui::InputDouble("Out of frame angle (deg)", &sketch_extrude_out_of_frame_angle, 0.5, 5.0, "%.3f");
-                    ImGui::SetNextItemWidth(150.0f);
-                    ImGui::InputDouble("Max discretization error (mm)", &sketch_extrude_max_discretization_error, 0.01, 0.1, "%.3f");
-                    sketch_extrude_max_discretization_error = std::max(0.001, sketch_extrude_max_discretization_error);
-                    ImGui::Checkbox("Export debug cap meshes", &sketch_export_extrusion_caps);
-                    if(ImGui::Button("Extrude")){
-                        try{
-                            const auto append_surface_mesh = [&](fv_surface_mesh<double, uint64_t> &&surface_mesh,
-                                                                 const std::string &mesh_label,
-                                                                 const std::string &description) -> void {
-                                metadata_map_t mesh_metadata = (disp_img_it == disp_img_it_t()) ? metadata_map_t() : disp_img_it->metadata;
-                                mesh_metadata = coalesce_metadata_for_basic_mesh(mesh_metadata, meta_evolve::iterate);
-                                surface_mesh.metadata = std::move(mesh_metadata);
-                                surface_mesh.metadata["MeshLabel"] = mesh_label;
-                                surface_mesh.metadata["NormalizedMeshLabel"] = mesh_label;
-                                surface_mesh.metadata["Description"] = description;
-                                DICOM_data.smesh_data.emplace_back(std::make_shared<Surface_Mesh>());
-                                DICOM_data.smesh_data.back()->meshes = std::move(surface_mesh);
-                            };
-
-                            auto extrude_sketch = slot.history.current();
-                            // Remove support primitives and unreferenced vertices before extruding.
-                            for(std::size_t i = 0; i < extrude_sketch.primitive_count(); ){
-                                if(extrude_sketch.primitive(i)->tag == Sketch::geometry_tag_t::support){
-                                    extrude_sketch.delete_primitive(i);
-                                }else{
-                                    ++i;
-                                }
-                            }
-                            extrude_sketch.delete_unreferenced_vertices();
-
-                            Sketch::extrusion_options_t extrusion_options;
-                            extrusion_options.into_frame_length = sketch_extrude_into_frame;
-                            extrusion_options.out_of_frame_length = sketch_extrude_out_of_frame;
-                            extrusion_options.into_frame_angle_degrees = sketch_extrude_into_frame_angle;
-                            extrusion_options.out_of_frame_angle_degrees = sketch_extrude_out_of_frame_angle;
-                            extrusion_options.max_discretization_error = sketch_extrude_max_discretization_error;
-                            fv_surface_mesh<double, uint64_t> extruded_mesh;
-                            std::vector<fv_surface_mesh<double, uint64_t>> cap_meshes;
-                            std::string error_message;
-                            const auto mesh_label = "Sketch Extrusion " + std::to_string(sketch_slot_num);
-                            if(extrude_sketch.build_extruded_surface_mesh(extrusion_options,
-                                                                                 extruded_mesh,
-                                                                                 sketch_export_extrusion_caps ? &cap_meshes : nullptr,
-                                                                                 &error_message)){
-                                append_surface_mesh(std::move(extruded_mesh),
-                                                    mesh_label,
-                                                    "Extruded vector sketch surface mesh");
-                                if(sketch_export_extrusion_caps){
-                                    for(std::size_t i = 0U; i < cap_meshes.size(); ++i){
-                                        const auto cap_label = mesh_label + ((i == 0U) ? " Near Cap" : " Far Cap");
-                                        append_surface_mesh(std::move(cap_meshes.at(i)),
-                                                            cap_label,
-                                                            "Extruded vector sketch debug cap surface mesh");
-                                    }
-                                }
-                                sketch_file_status = "Inserted a surface mesh from sketch slot " + std::to_string(sketch_slot_num);
-                            }else{
-                                sketch_file_status = error_message;
-                            }
-                        }catch(const std::exception &e){
-                            YLOGWARN("Sketch extrusion UI handler caught exception: '" << e.what() << "'");
-                            sketch_file_status = std::string("Sketch extrusion failed: ") + e.what();
-                        }catch(...){
-                            YLOGWARN("Sketch extrusion UI handler caught an unknown exception");
-                            sketch_file_status = "Sketch extrusion failed with an unknown exception";
-                        }
-                        append_sketch_log(sketch_file_status);
-                    }
-                }
-                ImGui::SetNextItemOpen(false, ImGuiCond_FirstUseEver);
                 if(ImGui::CollapsingHeader("Log")){
                     if(ImGui::Button("Clear Log")){
                         sketch_log_entries.clear();
@@ -8873,6 +8827,230 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                         ImGui::EndChild();
                     }
+                }
+
+                ImGui::End();
+            }
+
+            // Sketch Mesh Builder window.
+            if(view_toggles.view_vector_sketching_enabled){
+                ImGui::SetNextWindowSize(ImVec2(480, 500), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(690, 40), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Sketch Mesh Builder", &view_toggles.view_vector_sketching_enabled, ImGuiWindowFlags_AlwaysAutoResize);
+
+                auto &slot = current_sketch_slot();
+
+                // Builder selection slider.
+                {
+                    int new_builder_num = sketch_mesh_builder_num;
+                    const int max_builder_num = std::max<int>(static_cast<int>(sketch_mesh_builders.size()) - 1, 0);
+                    if(ImGui::SliderInt("Builder", &new_builder_num, 0, max_builder_num)){
+                        sketch_mesh_builder_num = std::clamp(new_builder_num, 0, max_builder_num);
+                    }
+                    if(ImGui::Button("Add Builder")){
+                        sketch_mesh_builders.emplace_back();
+                        sketch_mesh_builder_num = static_cast<int>(sketch_mesh_builders.size()) - 1;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Delete Builder")){
+                        if(sketch_mesh_builders.size() <= 1U){
+                            sketch_mesh_builders.clear();
+                            sketch_mesh_builders.emplace_back();
+                            sketch_mesh_builder_num = 0;
+                        }else{
+                            const auto it = std::next(std::begin(sketch_mesh_builders),
+                                                      static_cast<std::ptrdiff_t>(std::clamp(sketch_mesh_builder_num, 0, static_cast<int>(sketch_mesh_builders.size()) - 1)));
+                            sketch_mesh_builders.erase(it);
+                            sketch_mesh_builder_num = std::clamp(sketch_mesh_builder_num, 0, static_cast<int>(sketch_mesh_builders.size()) - 1);
+                        }
+                    }
+                }
+                auto &builder = sketch_mesh_builders.at(static_cast<std::size_t>(std::clamp(sketch_mesh_builder_num, 0, static_cast<int>(sketch_mesh_builders.size()) - 1)));
+
+                ImGui::Separator();
+                ImGui::Text("Nodes: %zu   Active: %zu", builder.node_count(), builder.active_node_index());
+
+                // Node list.
+                if(ImGui::BeginChild("##builder_nodes", ImVec2(0.0f, 150.0f), true)){
+                    for(std::size_t i = 0U; i < builder.node_count(); ++i){
+                        const auto &n = builder.node(i);
+                        const bool is_active = (i == builder.active_node_index());
+                        const std::string label = std::string(is_active ? "> " : "  ")
+                                                + "Node " + std::to_string(i)
+                                                + " [" + sketch_procedure_kind_to_string(n.procedure.kind) + "]"
+                                                + (n.mesh.has_value() ? " (mesh)" : "")
+                                                + "###node_" + std::to_string(i);
+                        if(ImGui::Selectable(label.c_str(), is_active)){
+                            builder.set_active_node_index(i);
+                            // Open the sketch in the Vector Sketching window.
+                            slot.history.current() = builder.active_node().sketch;
+                            clear_sketch_interaction_state();
+                            slot.selection.clear();
+                            slot.clear_vertex_selection();
+                            sketch_canvas_view.framing_initialized = false;
+                        }
+                    }
+                    ImGui::EndChild();
+                }
+
+                // Node management buttons.
+                if(ImGui::Button("Add Node")){
+                    builder.append_default_node();
+                    slot.history.current() = builder.active_node().sketch;
+                    clear_sketch_interaction_state();
+                    slot.selection.clear();
+                    slot.clear_vertex_selection();
+                    sketch_canvas_view.framing_initialized = false;
+                    append_sketch_log("Added node " + std::to_string(builder.active_node_index()));
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Delete Node")){
+                    const auto old_idx = builder.active_node_index();
+                    builder.delete_leaf_node(builder.active_node_index());
+                    slot.history.current() = builder.active_node().sketch;
+                    clear_sketch_interaction_state();
+                    slot.selection.clear();
+                    slot.clear_vertex_selection();
+                    sketch_canvas_view.framing_initialized = false;
+                    append_sketch_log("Deleted node " + std::to_string(old_idx));
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Save Sketch to Node")){
+                    builder.active_node().sketch = slot.history.current();
+                    append_sketch_log("Saved sketch to node " + std::to_string(builder.active_node_index()));
+                }
+
+                // Procedure selection.
+                ImGui::Separator();
+                {
+                    auto &active = builder.active_node();
+                    int proc_idx = static_cast<int>(active.procedure.kind);
+                    const char *proc_items[] = { "clear", "noop", "extrusion", "through_hole" };
+                    if(ImGui::Combo("Procedure", &proc_idx, proc_items, 4)){
+                        active.procedure.kind = static_cast<sketch_procedure_kind_t>(proc_idx);
+                    }
+                }
+
+                // Extrusion parameters.
+                ImGui::SetNextItemOpen(false, ImGuiCond_FirstUseEver);
+                if(ImGui::CollapsingHeader("Extrude to Surface Mesh")){
+                    auto &active = builder.active_node();
+                    auto &eopts = active.procedure.extrusion_options;
+                    ImGui::TextWrapped("Into/out-of-frame lengths may be negative as long as the combined cap span remains positive.");
+                    ImGui::TextWrapped("Positive angles expand the extrusion, negative angles narrow it, and 0 leaves the cap size unchanged.");
+                    ImGui::SetNextItemWidth(150.0f);
+                    ImGui::InputDouble("Into frame (mm)", &eopts.into_frame_length, 0.5, 5.0, "%.3f");
+                    ImGui::SetNextItemWidth(150.0f);
+                    ImGui::InputDouble("Out of frame (mm)", &eopts.out_of_frame_length, 0.5, 5.0, "%.3f");
+                    ImGui::SetNextItemWidth(150.0f);
+                    ImGui::InputDouble("Into frame angle (deg)", &eopts.into_frame_angle_degrees, 0.5, 5.0, "%.3f");
+                    ImGui::SetNextItemWidth(150.0f);
+                    ImGui::InputDouble("Out of frame angle (deg)", &eopts.out_of_frame_angle_degrees, 0.5, 5.0, "%.3f");
+                    ImGui::SetNextItemWidth(150.0f);
+                    ImGui::InputDouble("Max discretization error (mm)", &eopts.max_discretization_error, 0.01, 0.1, "%.3f");
+                    eopts.max_discretization_error = std::max(0.001, eopts.max_discretization_error);
+
+                    // Set the procedure kind to extrusion when the user modifies extrusion params.
+                    if(active.procedure.kind != sketch_procedure_kind_t::extrusion
+                    && active.procedure.kind != sketch_procedure_kind_t::through_hole){
+                        if(ImGui::Button("Set Procedure to Extrusion")){
+                            active.procedure.kind = sketch_procedure_kind_t::extrusion;
+                        }
+                    }
+                }
+
+                // Compute buttons.
+                ImGui::Separator();
+                if(ImGui::Button("Compute Node")){
+                    // Save the current sketch to the active node first.
+                    builder.active_node().sketch = slot.history.current();
+                    std::string err;
+                    if(builder.compute_node(builder.active_node_index(), &err)){
+                        sketch_builder_status = "Computed node " + std::to_string(builder.active_node_index());
+                    }else{
+                        sketch_builder_status = "Compute failed: " + err;
+                    }
+                    append_sketch_log(sketch_builder_status);
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Compute All")){
+                    // Save the current sketch to the active node first.
+                    builder.active_node().sketch = slot.history.current();
+                    std::string err;
+                    if(builder.compute_all(&err)){
+                        sketch_builder_status = "Computed all " + std::to_string(builder.node_count()) + " nodes";
+                    }else{
+                        sketch_builder_status = "Compute all failed: " + err;
+                    }
+                    append_sketch_log(sketch_builder_status);
+                }
+
+                // Export active node mesh to Drover.
+                if(ImGui::Button("Export Mesh to Drover")){
+                    const auto &active = builder.active_node();
+                    if(active.mesh.has_value()){
+                        try{
+                            auto mesh_copy = active.mesh.value();
+                            metadata_map_t mesh_metadata;
+                            {
+                                std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+                                if(drover_lock){
+                                    mesh_metadata = (disp_img_it == disp_img_it_t()) ? metadata_map_t() : disp_img_it->metadata;
+                                    mesh_metadata = coalesce_metadata_for_basic_mesh(mesh_metadata, meta_evolve::iterate);
+                                    mesh_copy.metadata = std::move(mesh_metadata);
+                                    mesh_copy.metadata["MeshLabel"] = "Builder Mesh " + std::to_string(sketch_mesh_builder_num);
+                                    mesh_copy.metadata["NormalizedMeshLabel"] = "Builder Mesh";
+                                    mesh_copy.metadata["Description"] = "Mesh from Sketch Mesh Builder";
+                                    DICOM_data.smesh_data.emplace_back(std::make_shared<Surface_Mesh>());
+                                    DICOM_data.smesh_data.back()->meshes = std::move(mesh_copy);
+                                }
+                            }
+                            sketch_builder_status = "Exported mesh from node " + std::to_string(builder.active_node_index());
+                        }catch(const std::exception &e){
+                            sketch_builder_status = std::string("Export failed: ") + e.what();
+                        }
+                        append_sketch_log(sketch_builder_status);
+                    }else{
+                        sketch_builder_status = "No mesh in active node to export";
+                        append_sketch_log(sketch_builder_status);
+                    }
+                }
+
+                // Save/Load builder.
+                ImGui::Separator();
+                ImGui::SetNextItemOpen(false, ImGuiCond_FirstUseEver);
+                if(ImGui::CollapsingHeader("Save / Load Builder")){
+                    ImGui::InputText("Save path##builder", sketch_builder_save_path.data(), sketch_builder_save_path.size());
+                    if(ImGui::Button("Save Builder")){
+                        std::string err;
+                        if(builder.save_to_file(std::filesystem::path(sketch_builder_save_path.data()), &err)){
+                            sketch_builder_status = "Saved builder to " + std::string(sketch_builder_save_path.data());
+                        }else{
+                            sketch_builder_status = "Save failed: " + err;
+                        }
+                        append_sketch_log(sketch_builder_status);
+                    }
+                    ImGui::InputText("Load path##builder", sketch_builder_load_path.data(), sketch_builder_load_path.size());
+                    if(ImGui::Button("Load Builder")){
+                        std::string err;
+                        Sketch_Mesh_Builder loaded;
+                        if(Sketch_Mesh_Builder::load_from_file(std::filesystem::path(sketch_builder_load_path.data()), loaded, &err)){
+                            builder = std::move(loaded);
+                            slot.history.current() = builder.active_node().sketch;
+                            clear_sketch_interaction_state();
+                            slot.selection.clear();
+                            slot.clear_vertex_selection();
+                            sketch_canvas_view.framing_initialized = false;
+                            sketch_builder_status = "Loaded builder from " + std::string(sketch_builder_load_path.data());
+                        }else{
+                            sketch_builder_status = "Load failed: " + err;
+                        }
+                        append_sketch_log(sketch_builder_status);
+                    }
+                }
+
+                if(!sketch_builder_status.empty()){
+                    ImGui::TextWrapped("%s", sketch_builder_status.c_str());
                 }
 
                 ImGui::End();
