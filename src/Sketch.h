@@ -375,6 +375,10 @@ public:
     bool save_to_file(const std::filesystem::path &path, std::string *error_message = nullptr) const;
     static bool load_from_file(const std::filesystem::path &path, Sketch &out, std::string *error_message = nullptr);
 
+    // Stream-based I/O (used by Sketch_Mesh_Builder and other aggregation classes).
+    bool write_to(std::ostream &os) const;
+    static bool read_from(std::istream &is, Sketch &out);
+
     // Called by the constraint solver (sketch_constraints namespace) to restore
     // pinned vertices after each refinement pass.
     void enforce_pinned_vertices();

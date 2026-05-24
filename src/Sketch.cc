@@ -1807,6 +1807,273 @@ Sketch::describe_constraint(constraint_index_t idx) const{
 }
 
 bool
+Sketch::write_to(std::ostream &os) const{
+    const auto defaultprecision = os.precision();
+    os.precision(std::numeric_limits<double>::max_digits10 + 1);
+
+    os << "sketch_format_version 1\n";
+
+    const auto &p = plane();
+    os << "plane_origin " << p.origin.x << " " << p.origin.y << " " << p.origin.z << "\n";
+    os << "plane_row_unit " << p.row_unit.x << " " << p.row_unit.y << " " << p.row_unit.z << "\n";
+    os << "plane_col_unit " << p.col_unit.x << " " << p.col_unit.y << " " << p.col_unit.z << "\n";
+
+    for(std::size_t i = 0U; i < vertices_.size(); ++i){
+        const auto &v = vertices_.at(i);
+        os << "vertex " << i << " " << v.x << " " << v.y << " " << v.z << "\n";
+    }
+
+    for(std::size_t i = 0U; i < primitives_.size(); ++i){
+        const auto *prim_ptr = primitives_.at(i).get();
+        if(prim_ptr == nullptr) continue;
+        const auto tag_str = geometry_tag_to_string(prim_ptr->tag);
+        if(const auto *vp = dynamic_cast<const vertex_primitive_t*>(prim_ptr); vp != nullptr){
+            os << "primitive vertex " << i << " " << tag_str << " " << vp->vertex << "\n";
+        }else if(const auto *lp = dynamic_cast<const line_primitive_t*>(prim_ptr); lp != nullptr){
+            os << "primitive line " << i << " " << tag_str << " " << lp->vertices[0] << " " << lp->vertices[1] << "\n";
+        }else if(const auto *cp = dynamic_cast<const circle_primitive_t*>(prim_ptr); cp != nullptr){
+            os << "primitive circle " << i << " " << tag_str << " " << cp->center << " " << cp->radius_point << "\n";
+        }else if(const auto *ap = dynamic_cast<const arc_primitive_t*>(prim_ptr); ap != nullptr){
+            os << "primitive arc " << i << " " << tag_str << " " << ap->center << " " << ap->start << " " << ap->stop << "\n";
+        }else if(const auto *bp = dynamic_cast<const bezier_primitive_t*>(prim_ptr); bp != nullptr){
+            os << "primitive bezier " << i << " " << tag_str;
+            for(const auto &v : bp->control_vertices) os << " " << v;
+            os << "\n";
+        }
+    }
+
+    for(std::size_t i = 0U; i < constraints_.size(); ++i){
+        const auto *c = constraints_.at(i).get();
+        if(c == nullptr) continue;
+        if(const auto *hc = dynamic_cast<const horizontal_constraint_t*>(c); hc != nullptr){
+            os << "constraint horizontal " << i << " " << (hc->enabled ? "enabled" : "disabled") << " " << hc->line << "\n";
+        }else if(const auto *vc = dynamic_cast<const vertical_constraint_t*>(c); vc != nullptr){
+            os << "constraint vertical " << i << " " << (vc->enabled ? "enabled" : "disabled") << " " << vc->line << "\n";
+        }else if(const auto *dc = dynamic_cast<const distance_constraint_t*>(c); dc != nullptr){
+            os << "constraint distance " << i << " " << (dc->enabled ? "enabled" : "disabled") << " " << dc->primitive << " " << dc->target_distance << "\n";
+        }else if(const auto *pc = dynamic_cast<const parallel_constraint_t*>(c); pc != nullptr){
+            os << "constraint parallel " << i << " " << (pc->enabled ? "enabled" : "disabled") << " " << pc->line_a << " " << pc->line_b << "\n";
+        }else if(const auto *ppc = dynamic_cast<const perpendicular_constraint_t*>(c); ppc != nullptr){
+            os << "constraint perpendicular " << i << " " << (ppc->enabled ? "enabled" : "disabled") << " " << ppc->line_a << " " << ppc->line_b << "\n";
+        }else if(const auto *pic = dynamic_cast<const pin_constraint_t*>(c); pic != nullptr){
+            os << "constraint pin " << i << " " << (pic->enabled ? "enabled" : "disabled") << " " << pic->vertex << " "
+                 << pic->pinned_position.x << " " << pic->pinned_position.y << " " << pic->pinned_position.z << "\n";
+        }else if(const auto *tc = dynamic_cast<const tangent_constraint_t*>(c); tc != nullptr){
+            os << "constraint tangent " << i << " " << (tc->enabled ? "enabled" : "disabled") << " " << tc->primitive_a << " " << tc->primitive_b << "\n";
+        }else if(const auto *mc = dynamic_cast<const mirror_constraint_t*>(c); mc != nullptr){
+            os << "constraint mirror " << i << " " << (mc->enabled ? "enabled" : "disabled") << " " << mc->line << " " << mc->vertex_a << " " << mc->vertex_b << "\n";
+        }else if(const auto *oc = dynamic_cast<const overlap_constraint_t*>(c); oc != nullptr){
+            os << "constraint overlap " << i << " " << (oc->enabled ? "enabled" : "disabled") << " " << oc->vertex_a << " " << oc->vertex_b << "\n";
+        }
+    }
+
+    os << "sketch_end\n";
+    os.precision(defaultprecision);
+    return os.good();
+}
+
+bool
+Sketch::read_from(std::istream &is, Sketch &out){
+    out.clear();
+
+    std::string line;
+    bool plane_set = false;
+    while(std::getline(is, line)){
+        std::istringstream iss(line);
+        std::string keyword;
+        iss >> keyword;
+        if(keyword == "sketch_end"){
+            break;
+        }else if(keyword == "sketch_format_version"){
+            int version = 0;
+            iss >> version;
+            if(version != 1) return false;
+        }else if(keyword == "plane_origin"){
+            double x, y, z;
+            if(iss >> x >> y >> z){
+                out.plane_.origin = vec3<double>(x, y, z);
+            }
+        }else if(keyword == "plane_row_unit"){
+            double x, y, z;
+            if(iss >> x >> y >> z){
+                out.plane_.row_unit = vec3<double>(x, y, z);
+            }
+        }else if(keyword == "plane_col_unit"){
+            double x, y, z;
+            if(iss >> x >> y >> z){
+                out.plane_.col_unit = vec3<double>(x, y, z);
+                plane_set = true;
+            }
+        }else if(keyword == "vertex"){
+            std::size_t idx = 0U;
+            double x, y, z;
+            if(iss >> idx >> x >> y >> z){
+                if(idx >= out.vertices_.size()){
+                    out.vertices_.resize(idx + 1U);
+                }
+                out.vertices_.at(idx) = vec3<double>(x, y, z);
+            }
+        }else if(keyword == "primitive"){
+            std::string prim_type;
+            std::size_t idx = 0U;
+            std::string tag_str;
+            iss >> prim_type >> idx >> tag_str;
+            geometry_tag_t tag = geometry_tag_t::normal;
+            parse_geometry_tag(tag_str, tag);
+
+            auto make_primitive = [&](auto p) -> void {
+                if(idx >= out.primitives_.size()){
+                    out.primitives_.resize(idx + 1U);
+                }
+                out.primitives_.at(idx) = std::move(p);
+            };
+
+            if(prim_type == "vertex"){
+                std::size_t vertex = 0U;
+                if(iss >> vertex){
+                    auto p = std::make_unique<vertex_primitive_t>();
+                    p->tag = tag;
+                    p->vertex = vertex;
+                    make_primitive(std::move(p));
+                }
+            }else if(prim_type == "line"){
+                std::size_t v0, v1;
+                if(iss >> v0 >> v1){
+                    auto p = std::make_unique<line_primitive_t>();
+                    p->tag = tag;
+                    p->vertices = { v0, v1 };
+                    make_primitive(std::move(p));
+                }
+            }else if(prim_type == "circle"){
+                std::size_t center, radius_point;
+                if(iss >> center >> radius_point){
+                    auto p = std::make_unique<circle_primitive_t>();
+                    p->tag = tag;
+                    p->center = center;
+                    p->radius_point = radius_point;
+                    make_primitive(std::move(p));
+                }
+            }else if(prim_type == "arc"){
+                std::size_t center, start, stop;
+                if(iss >> center >> start >> stop){
+                    auto p = std::make_unique<arc_primitive_t>();
+                    p->tag = tag;
+                    p->center = center;
+                    p->start = start;
+                    p->stop = stop;
+                    make_primitive(std::move(p));
+                }
+            }else if(prim_type == "bezier"){
+                std::array<std::size_t, 4> cvs = {};
+                if(iss >> cvs[0] >> cvs[1] >> cvs[2] >> cvs[3]){
+                    auto p = std::make_unique<bezier_primitive_t>();
+                    p->tag = tag;
+                    p->control_vertices = cvs;
+                    make_primitive(std::move(p));
+                }
+            }
+        }else if(keyword == "constraint"){
+            std::string constraint_type;
+            std::size_t idx = 0U;
+            std::string enabled_str;
+            iss >> constraint_type >> idx >> enabled_str;
+            bool enabled = (enabled_str == "enabled");
+
+            auto make_constraint = [&](auto c) -> void {
+                if(idx >= out.constraints_.size()){
+                    out.constraints_.resize(idx + 1U);
+                }
+                c->enabled = enabled;
+                out.constraints_.at(idx) = std::move(c);
+            };
+
+            if(constraint_type == "horizontal"){
+                std::size_t line = 0U;
+                if(iss >> line){
+                    auto c = std::make_unique<horizontal_constraint_t>();
+                    c->line = line;
+                    make_constraint(std::move(c));
+                }
+            }else if(constraint_type == "vertical"){
+                std::size_t line = 0U;
+                if(iss >> line){
+                    auto c = std::make_unique<vertical_constraint_t>();
+                    c->line = line;
+                    make_constraint(std::move(c));
+                }
+            }else if(constraint_type == "distance"){
+                std::size_t primitive_idx = 0U;
+                double target_distance = 0.0;
+                if(iss >> primitive_idx >> target_distance){
+                    auto c = std::make_unique<distance_constraint_t>();
+                    c->primitive = primitive_idx;
+                    c->target_distance = target_distance;
+                    make_constraint(std::move(c));
+                }
+            }else if(constraint_type == "parallel"){
+                std::size_t line_a, line_b;
+                if(iss >> line_a >> line_b){
+                    auto c = std::make_unique<parallel_constraint_t>();
+                    c->line_a = line_a;
+                    c->line_b = line_b;
+                    make_constraint(std::move(c));
+                }
+            }else if(constraint_type == "perpendicular"){
+                std::size_t line_a, line_b;
+                if(iss >> line_a >> line_b){
+                    auto c = std::make_unique<perpendicular_constraint_t>();
+                    c->line_a = line_a;
+                    c->line_b = line_b;
+                    make_constraint(std::move(c));
+                }
+            }else if(constraint_type == "pin"){
+                std::size_t vertex_idx = 0U;
+                double x, y, z;
+                if(iss >> vertex_idx >> x >> y >> z){
+                    auto c = std::make_unique<pin_constraint_t>();
+                    c->vertex = vertex_idx;
+                    c->pinned_position = vec3<double>(x, y, z);
+                    make_constraint(std::move(c));
+                }
+            }else if(constraint_type == "tangent"){
+                std::size_t pa, pb;
+                if(iss >> pa >> pb){
+                    auto c = std::make_unique<tangent_constraint_t>();
+                    c->primitive_a = pa;
+                    c->primitive_b = pb;
+                    make_constraint(std::move(c));
+                }
+            }else if(constraint_type == "mirror"){
+                std::size_t line, va, vb;
+                if(iss >> line >> va >> vb){
+                    auto c = std::make_unique<mirror_constraint_t>();
+                    c->line = line;
+                    c->vertex_a = va;
+                    c->vertex_b = vb;
+                    make_constraint(std::move(c));
+                }
+            }else if(constraint_type == "overlap"){
+                std::size_t va, vb;
+                if(iss >> va >> vb){
+                    auto c = std::make_unique<overlap_constraint_t>();
+                    c->vertex_a = va;
+                    c->vertex_b = vb;
+                    make_constraint(std::move(c));
+                }
+            }
+        }
+    }
+
+    if(!plane_set){
+        out.clear();
+        return false;
+    }
+    out.has_plane_ = true;
+    out.refresh_all_derived_geometry();
+    return true;
+}
+
+bool
 Sketch::save_to_file(const std::filesystem::path &path, std::string *error_message) const{
     try{
         std::ofstream fout(path);
@@ -1814,66 +2081,10 @@ Sketch::save_to_file(const std::filesystem::path &path, std::string *error_messa
             store_error(error_message, "Unable to open file for writing");
             return false;
         }
-        const auto defaultprecision = fout.precision();
-        fout.precision(std::numeric_limits<double>::max_digits10 + 1);
-
-        fout << "sketch_format_version 1\n";
-
-        const auto &p = plane();
-        fout << "plane_origin " << p.origin.x << " " << p.origin.y << " " << p.origin.z << "\n";
-        fout << "plane_row_unit " << p.row_unit.x << " " << p.row_unit.y << " " << p.row_unit.z << "\n";
-        fout << "plane_col_unit " << p.col_unit.x << " " << p.col_unit.y << " " << p.col_unit.z << "\n";
-
-        for(std::size_t i = 0U; i < vertices_.size(); ++i){
-            const auto &v = vertices_.at(i);
-            fout << "vertex " << i << " " << v.x << " " << v.y << " " << v.z << "\n";
+        if(!write_to(fout)){
+            store_error(error_message, "Unable to write sketch data");
+            return false;
         }
-
-        for(std::size_t i = 0U; i < primitives_.size(); ++i){
-            const auto *prim_ptr = primitives_.at(i).get();
-            if(prim_ptr == nullptr) continue;
-            const auto tag_str = geometry_tag_to_string(prim_ptr->tag);
-            if(const auto *vp = dynamic_cast<const vertex_primitive_t*>(prim_ptr); vp != nullptr){
-                fout << "primitive vertex " << i << " " << tag_str << " " << vp->vertex << "\n";
-            }else if(const auto *lp = dynamic_cast<const line_primitive_t*>(prim_ptr); lp != nullptr){
-                fout << "primitive line " << i << " " << tag_str << " " << lp->vertices[0] << " " << lp->vertices[1] << "\n";
-            }else if(const auto *cp = dynamic_cast<const circle_primitive_t*>(prim_ptr); cp != nullptr){
-                fout << "primitive circle " << i << " " << tag_str << " " << cp->center << " " << cp->radius_point << "\n";
-            }else if(const auto *ap = dynamic_cast<const arc_primitive_t*>(prim_ptr); ap != nullptr){
-                fout << "primitive arc " << i << " " << tag_str << " " << ap->center << " " << ap->start << " " << ap->stop << "\n";
-            }else if(const auto *bp = dynamic_cast<const bezier_primitive_t*>(prim_ptr); bp != nullptr){
-                fout << "primitive bezier " << i << " " << tag_str;
-                for(const auto &v : bp->control_vertices) fout << " " << v;
-                fout << "\n";
-            }
-        }
-
-        for(std::size_t i = 0U; i < constraints_.size(); ++i){
-            const auto *c = constraints_.at(i).get();
-            if(c == nullptr) continue;
-            if(const auto *hc = dynamic_cast<const horizontal_constraint_t*>(c); hc != nullptr){
-                fout << "constraint horizontal " << i << " " << (hc->enabled ? "enabled" : "disabled") << " " << hc->line << "\n";
-            }else if(const auto *vc = dynamic_cast<const vertical_constraint_t*>(c); vc != nullptr){
-                fout << "constraint vertical " << i << " " << (vc->enabled ? "enabled" : "disabled") << " " << vc->line << "\n";
-            }else if(const auto *dc = dynamic_cast<const distance_constraint_t*>(c); dc != nullptr){
-                fout << "constraint distance " << i << " " << (dc->enabled ? "enabled" : "disabled") << " " << dc->primitive << " " << dc->target_distance << "\n";
-            }else if(const auto *pc = dynamic_cast<const parallel_constraint_t*>(c); pc != nullptr){
-                fout << "constraint parallel " << i << " " << (pc->enabled ? "enabled" : "disabled") << " " << pc->line_a << " " << pc->line_b << "\n";
-            }else if(const auto *ppc = dynamic_cast<const perpendicular_constraint_t*>(c); ppc != nullptr){
-                fout << "constraint perpendicular " << i << " " << (ppc->enabled ? "enabled" : "disabled") << " " << ppc->line_a << " " << ppc->line_b << "\n";
-            }else if(const auto *pic = dynamic_cast<const pin_constraint_t*>(c); pic != nullptr){
-                fout << "constraint pin " << i << " " << (pic->enabled ? "enabled" : "disabled") << " " << pic->vertex << " "
-                     << pic->pinned_position.x << " " << pic->pinned_position.y << " " << pic->pinned_position.z << "\n";
-            }else if(const auto *tc = dynamic_cast<const tangent_constraint_t*>(c); tc != nullptr){
-                fout << "constraint tangent " << i << " " << (tc->enabled ? "enabled" : "disabled") << " " << tc->primitive_a << " " << tc->primitive_b << "\n";
-            }else if(const auto *mc = dynamic_cast<const mirror_constraint_t*>(c); mc != nullptr){
-                fout << "constraint mirror " << i << " " << (mc->enabled ? "enabled" : "disabled") << " " << mc->line << " " << mc->vertex_a << " " << mc->vertex_b << "\n";
-            }else if(const auto *oc = dynamic_cast<const overlap_constraint_t*>(c); oc != nullptr){
-                fout << "constraint overlap " << i << " " << (oc->enabled ? "enabled" : "disabled") << " " << oc->vertex_a << " " << oc->vertex_b << "\n";
-            }
-        }
-
-        fout.precision(defaultprecision);
         fout.close();
         return true;
     }catch(const std::exception &e){
@@ -1891,203 +2102,11 @@ Sketch::load_from_file(const std::filesystem::path &path, Sketch &out, std::stri
             store_error(error_message, "Unable to open file for reading");
             return false;
         }
-
-        std::string line;
-        bool plane_set = false;
-        while(std::getline(fin, line)){
-            std::istringstream iss(line);
-            std::string keyword;
-            iss >> keyword;
-            if(keyword == "sketch_format_version"){
-                int version = 0;
-                iss >> version;
-                if(version != 1){
-                    store_error(error_message, "Unsupported sketch format version");
-                    return false;
-                }
-            }else if(keyword == "plane_origin"){
-                double x, y, z;
-                if(iss >> x >> y >> z){
-                    out.plane_.origin = vec3<double>(x, y, z);
-                }
-            }else if(keyword == "plane_row_unit"){
-                double x, y, z;
-                if(iss >> x >> y >> z){
-                    out.plane_.row_unit = vec3<double>(x, y, z);
-                }
-            }else if(keyword == "plane_col_unit"){
-                double x, y, z;
-                if(iss >> x >> y >> z){
-                    out.plane_.col_unit = vec3<double>(x, y, z);
-                    plane_set = true;
-                }
-            }else if(keyword == "vertex"){
-                std::size_t idx = 0U;
-                double x, y, z;
-                if(iss >> idx >> x >> y >> z){
-                    if(idx >= out.vertices_.size()){
-                        out.vertices_.resize(idx + 1U);
-                    }
-                    out.vertices_.at(idx) = vec3<double>(x, y, z);
-                }
-            }else if(keyword == "primitive"){
-                std::string prim_type;
-                std::size_t idx = 0U;
-                std::string tag_str;
-                iss >> prim_type >> idx >> tag_str;
-                geometry_tag_t tag = geometry_tag_t::normal;
-                parse_geometry_tag(tag_str, tag);
-
-                auto make_primitive = [&](auto p) -> void {
-                    if(idx >= out.primitives_.size()){
-                        out.primitives_.resize(idx + 1U);
-                    }
-                    out.primitives_.at(idx) = std::move(p);
-                };
-
-                if(prim_type == "vertex"){
-                    std::size_t vertex = 0U;
-                    if(iss >> vertex){
-                        auto p = std::make_unique<vertex_primitive_t>();
-                        p->tag = tag;
-                        p->vertex = vertex;
-                        make_primitive(std::move(p));
-                    }
-                }else if(prim_type == "line"){
-                    std::size_t v0, v1;
-                    if(iss >> v0 >> v1){
-                        auto p = std::make_unique<line_primitive_t>();
-                        p->tag = tag;
-                        p->vertices = { v0, v1 };
-                        make_primitive(std::move(p));
-                    }
-                }else if(prim_type == "circle"){
-                    std::size_t center, radius_point;
-                    if(iss >> center >> radius_point){
-                        auto p = std::make_unique<circle_primitive_t>();
-                        p->tag = tag;
-                        p->center = center;
-                        p->radius_point = radius_point;
-                        make_primitive(std::move(p));
-                    }
-                }else if(prim_type == "arc"){
-                    std::size_t center, start, stop;
-                    if(iss >> center >> start >> stop){
-                        auto p = std::make_unique<arc_primitive_t>();
-                        p->tag = tag;
-                        p->center = center;
-                        p->start = start;
-                        p->stop = stop;
-                        make_primitive(std::move(p));
-                    }
-                }else if(prim_type == "bezier"){
-                    std::array<std::size_t, 4> cvs = {};
-                    if(iss >> cvs[0] >> cvs[1] >> cvs[2] >> cvs[3]){
-                        auto p = std::make_unique<bezier_primitive_t>();
-                        p->tag = tag;
-                        p->control_vertices = cvs;
-                        make_primitive(std::move(p));
-                    }
-                }
-            }else if(keyword == "constraint"){
-                std::string constraint_type;
-                std::size_t idx = 0U;
-                std::string enabled_str;
-                iss >> constraint_type >> idx >> enabled_str;
-                bool enabled = (enabled_str == "enabled");
-
-                auto make_constraint = [&](auto c) -> void {
-                    if(idx >= out.constraints_.size()){
-                        out.constraints_.resize(idx + 1U);
-                    }
-                    c->enabled = enabled;
-                    out.constraints_.at(idx) = std::move(c);
-                };
-
-                if(constraint_type == "horizontal"){
-                    std::size_t line = 0U;
-                    if(iss >> line){
-                        auto c = std::make_unique<horizontal_constraint_t>();
-                        c->line = line;
-                        make_constraint(std::move(c));
-                    }
-                }else if(constraint_type == "vertical"){
-                    std::size_t line = 0U;
-                    if(iss >> line){
-                        auto c = std::make_unique<vertical_constraint_t>();
-                        c->line = line;
-                        make_constraint(std::move(c));
-                    }
-                }else if(constraint_type == "distance"){
-                    std::size_t primitive_idx = 0U;
-                    double target_distance = 0.0;
-                    if(iss >> primitive_idx >> target_distance){
-                        auto c = std::make_unique<distance_constraint_t>();
-                        c->primitive = primitive_idx;
-                        c->target_distance = target_distance;
-                        make_constraint(std::move(c));
-                    }
-                }else if(constraint_type == "parallel"){
-                    std::size_t line_a, line_b;
-                    if(iss >> line_a >> line_b){
-                        auto c = std::make_unique<parallel_constraint_t>();
-                        c->line_a = line_a;
-                        c->line_b = line_b;
-                        make_constraint(std::move(c));
-                    }
-                }else if(constraint_type == "perpendicular"){
-                    std::size_t line_a, line_b;
-                    if(iss >> line_a >> line_b){
-                        auto c = std::make_unique<perpendicular_constraint_t>();
-                        c->line_a = line_a;
-                        c->line_b = line_b;
-                        make_constraint(std::move(c));
-                    }
-                }else if(constraint_type == "pin"){
-                    std::size_t vertex_idx = 0U;
-                    double x, y, z;
-                    if(iss >> vertex_idx >> x >> y >> z){
-                        auto c = std::make_unique<pin_constraint_t>();
-                        c->vertex = vertex_idx;
-                        c->pinned_position = vec3<double>(x, y, z);
-                        make_constraint(std::move(c));
-                    }
-                }else if(constraint_type == "tangent"){
-                    std::size_t pa, pb;
-                    if(iss >> pa >> pb){
-                        auto c = std::make_unique<tangent_constraint_t>();
-                        c->primitive_a = pa;
-                        c->primitive_b = pb;
-                        make_constraint(std::move(c));
-                    }
-                }else if(constraint_type == "mirror"){
-                    std::size_t line, va, vb;
-                    if(iss >> line >> va >> vb){
-                        auto c = std::make_unique<mirror_constraint_t>();
-                        c->line = line;
-                        c->vertex_a = va;
-                        c->vertex_b = vb;
-                        make_constraint(std::move(c));
-                    }
-                }else if(constraint_type == "overlap"){
-                    std::size_t va, vb;
-                    if(iss >> va >> vb){
-                        auto c = std::make_unique<overlap_constraint_t>();
-                        c->vertex_a = va;
-                        c->vertex_b = vb;
-                        make_constraint(std::move(c));
-                    }
-                }
-            }
-        }
-
-        if(!plane_set){
-            store_error(error_message, "Sketch file does not contain a valid plane definition");
+        if(!read_from(fin, out)){
+            store_error(error_message, "Unable to parse sketch data");
             out.clear();
             return false;
         }
-        out.has_plane_ = true;
-        out.refresh_all_derived_geometry();
         return true;
     }catch(const std::exception &e){
         store_error(error_message, std::string("Exception while loading sketch: ") + e.what());

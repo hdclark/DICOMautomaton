@@ -116,6 +116,12 @@ set_target_properties(  Sketch_Fillets_obj PROPERTIES POSITION_INDEPENDENT_CODE 
 add_library(            Sketch_Tests_obj OBJECT Sketch_Tests.cc )
 set_target_properties(  Sketch_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Sketch_Mesh_Builder_obj OBJECT Sketch_Mesh_Builder.cc )
+set_target_properties(  Sketch_Mesh_Builder_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Sketch_Mesh_Builder_Tests_obj OBJECT Sketch_Mesh_Builder_Tests.cc )
+set_target_properties(  Sketch_Mesh_Builder_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Metadata_obj OBJECT Metadata.cc )
 set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -503,6 +509,8 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Sketch_Constraints_obj>
     $<TARGET_OBJECTS:Sketch_Fillets_obj>
     $<TARGET_OBJECTS:Sketch_Tests_obj>
+    $<TARGET_OBJECTS:Sketch_Mesh_Builder_obj>
+    $<TARGET_OBJECTS:Sketch_Mesh_Builder_Tests_obj>
     $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:CSG_SDF_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
@@ -627,6 +635,8 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Sketch_Constraints_obj>
         $<TARGET_OBJECTS:Sketch_Fillets_obj>
         $<TARGET_OBJECTS:Sketch_Tests_obj>
+        $<TARGET_OBJECTS:Sketch_Mesh_Builder_obj>
+        $<TARGET_OBJECTS:Sketch_Mesh_Builder_Tests_obj>
         $<TARGET_OBJECTS:Metadata_obj>
         $<TARGET_OBJECTS:CSG_SDF_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
