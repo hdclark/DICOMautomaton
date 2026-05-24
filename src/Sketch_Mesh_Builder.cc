@@ -362,37 +362,28 @@ bool Sketch_Mesh_Builder::read_from(std::istream &is, Sketch_Mesh_Builder &out){
                         return false;
                     }
                 }else if(inner_keyword == "procedure_begin"){
-                    // Push back the line so read_from sees procedure_begin.
-                    // We already consumed it, so we need to handle differently.
-                    // Sketch_Procedure::read_from expects to find procedure_begin first.
-                    // Workaround: create a temporary stream with the line prepended.
-                    // Actually, let's just parse inline since we already consumed the begin marker.
-                    // Re-read: read_from looks for procedure_begin in its own loop, so we must
-                    // provide a stream that still has it. Instead, just parse inline.
-                    Sketch_Procedure proc;
-                    proc.kind = sketch_procedure_kind_t::clear;
+                    // Reconstruct the full procedure block, including the already-consumed
+                    // "procedure_begin" marker, so the canonical parser can validate it.
+                    std::stringstream proc_ss;
+                    proc_ss << "procedure_begin\n";
+
+                    bool found_procedure_end = false;
                     while(std::getline(is, line)){
+                        proc_ss << line << "\n";
+
                         std::istringstream piss(line);
                         std::string pkw;
                         piss >> pkw;
-                        if(pkw == "procedure_end") break;
-                        if(pkw == "procedure_kind"){
-                            std::string kind_str;
-                            if(piss >> kind_str) string_to_sketch_procedure_kind(kind_str, proc.kind);
-                        }else if(pkw == "extrusion_into_frame_length"){
-                            piss >> proc.extrusion_options.into_frame_length;
-                        }else if(pkw == "extrusion_out_of_frame_length"){
-                            piss >> proc.extrusion_options.out_of_frame_length;
-                        }else if(pkw == "extrusion_into_frame_angle_degrees"){
-                            piss >> proc.extrusion_options.into_frame_angle_degrees;
-                        }else if(pkw == "extrusion_out_of_frame_angle_degrees"){
-                            piss >> proc.extrusion_options.out_of_frame_angle_degrees;
-                        }else if(pkw == "extrusion_curve_segments"){
-                            piss >> proc.extrusion_options.curve_segments;
-                        }else if(pkw == "extrusion_max_discretization_error"){
-                            piss >> proc.extrusion_options.max_discretization_error;
+                        if(pkw == "procedure_end"){
+                            found_procedure_end = true;
+                            break;
                         }
                     }
+
+                    if(!found_procedure_end) return false;
+
+                    Sketch_Procedure proc;
+                    if(!Sketch_Procedure::read_from(proc_ss, proc)) return false;
                     node.procedure = proc;
                 }else if(inner_keyword == "mesh_begin"){
                     // Collect lines until mesh_end, then parse as OBJ.
