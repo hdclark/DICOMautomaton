@@ -1843,12 +1843,6 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool sketch_solve_on_edit = true;
     bool sketch_constrain_to_image_frame = false; // Can slow down mouse interaction with sketches
     double sketch_snap_distance = 5.0;
-    double sketch_extrude_into_frame = 10.0;
-    double sketch_extrude_out_of_frame = 10.0;
-    double sketch_extrude_into_frame_angle = 0.0;
-    double sketch_extrude_out_of_frame_angle = 0.0;
-    bool sketch_export_extrusion_caps = false;
-    double sketch_extrude_max_discretization_error = 0.1;
     double sketch_fillet_radius = 5.0;
     bool view_sketch_editor_enabled = false;
     std::array<char, 4096> sketch_save_path = {};
@@ -7198,12 +7192,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &sketch_constraint_indicator,
                                             &sketch_is_compatible_with_image,
                                             &sketch_add_image_boundary_on_plane_adopt,
-                                            &sketch_extrude_into_frame,
-                                            &sketch_extrude_out_of_frame,
-                                            &sketch_extrude_into_frame_angle,
-                                            &sketch_extrude_out_of_frame_angle,
-                                            &sketch_extrude_max_discretization_error,
-                                            &sketch_export_extrusion_caps,
                                             &sketch_log_entries,
                                             &sketch_log_scroll_to_bottom,
                                             &sketch_file_status,
@@ -7223,7 +7211,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &solve_sketch_after_edit,
                                             &apply_sketch_edit,
                                             &clamp_point_to_current_sketch_bounds,
-                                            &ensure_sketch_plane ]() -> void {
+                                            &ensure_sketch_plane,
+                                            &sketch_show_grid,
+                                            &sketch_grid_spacing,
+                                            &sketch_show_axes,
+                                            &sketch_mesh_builders,
+                                            &sketch_mesh_builder_num,
+                                            &sketch_builder_save_path,
+                                            &sketch_builder_load_path,
+                                            &sketch_builder_status,
+                                            &coalesce_metadata_for_basic_mesh ]() -> void {
             if(pending_sketch_plane_adoption){
                 adopt_sketch_plane(pending_sketch_plane_adoption->plane,
                                    pending_sketch_plane_adoption->support_loops,
@@ -7258,10 +7255,6 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             auto &slot = current_sketch_slot();
             auto &sketch = slot.history.current();
-            const auto sketch_matches_display_image = [&](const Sketch &active_sketch) -> bool {
-                return active_sketch.has_plane()
-                    && ((disp_img_it == disp_img_it_t()) || sketch_is_compatible_with_image(active_sketch, disp_img_it));
-            };
             const auto canvas_plane = sketch.has_plane() ? sketch.plane() : default_sketch_plane();
             const auto sketch_canvas_selection_tolerance = [](const image_mouse_pos_s &mouse_pos) -> double {
                 return std::max<double>(4.0 / std::max<double>(mouse_pos.pixel_scale, 1.0E-3f), 0.25);
