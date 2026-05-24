@@ -358,7 +358,9 @@ bool Sketch_Mesh_Builder::read_from(std::istream &is, Sketch_Mesh_Builder &out){
                 if(inner_keyword == "node_end"){
                     break;
                 }else if(inner_keyword == "sketch_begin"){
-                    Sketch::read_from(is, node.sketch);
+                    if(!Sketch::read_from(is, node.sketch)){
+                        return false;
+                    }
                 }else if(inner_keyword == "procedure_begin"){
                     // Push back the line so read_from sees procedure_begin.
                     // We already consumed it, so we need to handle differently.
