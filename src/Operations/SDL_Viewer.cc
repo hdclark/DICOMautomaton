@@ -1808,6 +1808,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct sketch_canvas_view_t {
         Sketch::projection_t centre = {};
         double zoom = 1.0;
+        double framed_width = 150.0;
+        double framed_height = 150.0;
         bool framing_initialized = false;
     } sketch_canvas_view;
     struct sketch_image_geometry_state_t {
@@ -1854,6 +1856,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Sketch grid state.
     bool sketch_show_grid = true;
     double sketch_grid_spacing = 10.0; // mm
+    double sketch_effective_grid_spacing = sketch_grid_spacing; // mm
     bool sketch_show_axes = true;
 
     // Sketch Mesh Builder state.
@@ -2105,7 +2108,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             sketch_last_unresolved_constraints = {};
         }
-        sketch_canvas_view.framing_initialized = false;
         append_sketch_summary_log(editable_sketch);
     };
     const auto apply_sketch_edit = [&](disp_img_it_t l_img_it, auto &&fn) -> Sketch& {
@@ -7285,16 +7287,17 @@ bool SDL_Viewer(Drover &DICOM_data,
             auto bounds_height = std::max(10.0, bounds_max.v - bounds_min.v);
             const auto bounds_centre = Sketch::projection_t{ 0.5 * (bounds_min.u + bounds_max.u),
                                                               0.5 * (bounds_min.v + bounds_max.v) };
-            // Default: fit 150mm horizontally. Only auto-zoom out when adopting geometry.
+            // Default: auto-frame once (or after adopting geometry) with a minimum 150mm span.
             constexpr double kDefaultHorizontalSpan = 150.0;
+            constexpr double kSketchCanvasMinVisibleSpan = 0.001;
+            constexpr double kSketchCanvasMaxVisibleSpan = 10000.0;
             if(!sketch_canvas_view.framing_initialized){
                 sketch_canvas_view.centre = bounds_centre;
                 sketch_canvas_view.zoom = 1.0;
+                sketch_canvas_view.framed_width = std::max(kDefaultHorizontalSpan, bounds_width);
+                sketch_canvas_view.framed_height = std::max(kDefaultHorizontalSpan, bounds_height);
                 sketch_canvas_view.framing_initialized = true;
             }
-            // Ensure content fits: if the bounds exceed the default span, zoom out.
-            bounds_width = std::max(kDefaultHorizontalSpan, bounds_width);
-            bounds_height = std::max(kDefaultHorizontalSpan, bounds_height);
 
             std::optional<image_mouse_pos_s> image_mouse_pos_opt;
             std::optional<bool> canvas_hovered_opt;
@@ -7315,12 +7318,31 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::InvisibleButton("##sketch_canvas", canvas_extent, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonMiddle | ImGuiButtonFlags_MouseButtonRight);
                 canvas_hovered_opt = ImGui::IsItemHovered();
                 canvas_active_opt = ImGui::IsItemActive();
-                const double scale = std::max(1.0, std::min((static_cast<double>(canvas_extent.x) - kSketchCanvasMargin) / (bounds_width / sketch_canvas_view.zoom),
-                                                            (static_cast<double>(canvas_extent.y) - kSketchCanvasMargin) / (bounds_height / sketch_canvas_view.zoom)));
+                const double available_width = std::max(static_cast<double>(canvas_extent.x) - kSketchCanvasMargin, 1.0);
+                const double available_height = std::max(static_cast<double>(canvas_extent.y) - kSketchCanvasMargin, 1.0);
+                const double fit_scale = std::max(1.0E-9,
+                                                  std::min(available_width / std::max(sketch_canvas_view.framed_width, kSketchCanvasMinVisibleSpan),
+                                                           available_height / std::max(sketch_canvas_view.framed_height, kSketchCanvasMinVisibleSpan)));
+                const double min_scale = std::max(1.0E-9,
+                                                  std::min(available_width / kSketchCanvasMaxVisibleSpan,
+                                                           available_height / kSketchCanvasMaxVisibleSpan));
+                const double max_scale = std::max(min_scale,
+                                                  std::max(available_width / kSketchCanvasMinVisibleSpan,
+                                                           available_height / kSketchCanvasMinVisibleSpan));
+                const auto clamp_sketch_zoom = [&](double requested_zoom) -> double {
+                    if(!(std::isfinite(requested_zoom) && (requested_zoom > 0.0))){
+                        requested_zoom = 1.0;
+                    }
+                    const double requested_scale = fit_scale * requested_zoom;
+                    const double clamped_scale = std::clamp(requested_scale, min_scale, max_scale);
+                    return clamped_scale / fit_scale;
+                };
+                sketch_canvas_view.zoom = clamp_sketch_zoom(sketch_canvas_view.zoom);
                 if(canvas_hovered_opt && canvas_hovered_opt.value() && (std::abs(io.MouseWheel) > 0.0f)){
                     const auto zoom_scale = std::pow(1.10, static_cast<double>(io.MouseWheel));
-                    sketch_canvas_view.zoom = std::clamp(sketch_canvas_view.zoom * zoom_scale, 0.1, 100.0);
+                    sketch_canvas_view.zoom = clamp_sketch_zoom(sketch_canvas_view.zoom * zoom_scale);
                 }
+                const double scale = fit_scale * sketch_canvas_view.zoom;
                 if(canvas_active_opt && canvas_active_opt.value() && ImGui::IsMouseDragging(ImGuiMouseButton_Middle)){
                     const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Middle);
                     sketch_canvas_view.centre.u -= static_cast<double>(delta.x) / scale;
@@ -7357,38 +7379,39 @@ bool SDL_Viewer(Drover &DICOM_data,
                 imgs_window_draw_list->AddRectFilled(canvas_origin, ImVec2(canvas_origin.x + canvas_extent.x, canvas_origin.y + canvas_extent.y), ImColor(0.05f, 0.07f, 0.10f, 1.0f));
                 imgs_window_draw_list->AddRect(canvas_origin, ImVec2(canvas_origin.x + canvas_extent.x, canvas_origin.y + canvas_extent.y), ImColor(0.35f, 0.45f, 0.55f, 1.0f));
 
+                const double half_w = 0.5 * (static_cast<double>(canvas_extent.x)) / scale;
+                const double half_h = 0.5 * (static_cast<double>(canvas_extent.y)) / scale;
+                const double view_min_u = sketch_canvas_view.centre.u - half_w;
+                const double view_max_u = sketch_canvas_view.centre.u + half_w;
+                const double view_min_v = sketch_canvas_view.centre.v - half_h;
+                const double view_max_v = sketch_canvas_view.centre.v + half_h;
+                const auto estimate_grid_lines = [](double min_coord, double max_coord, double spacing) -> std::size_t {
+                    if(!(std::isfinite(min_coord) && std::isfinite(max_coord) && std::isfinite(spacing)) || !(spacing > 0.0)){
+                        return 0U;
+                    }
+                    return static_cast<std::size_t>(std::floor((max_coord - min_coord) / spacing)) + 1U;
+                };
+                constexpr std::size_t kMaxGridLines = 50U;
+                sketch_effective_grid_spacing = sketch_grid_spacing;
+                while(estimate_grid_lines(view_min_u, view_max_u, sketch_effective_grid_spacing)
+                    + estimate_grid_lines(view_min_v, view_max_v, sketch_effective_grid_spacing) > kMaxGridLines){
+                    sketch_effective_grid_spacing *= 2.0;
+                }
+
                 // Draw grid lines (if enabled).
                 if(sketch_show_grid && sketch_grid_spacing >= 0.1){
                     const ImU32 grid_colour = ImColor(0.15f, 0.18f, 0.22f, 0.5f);
-                    const double half_w = 0.5 * (static_cast<double>(canvas_extent.x)) / scale;
-                    const double half_h = 0.5 * (static_cast<double>(canvas_extent.y)) / scale;
-                    const double view_min_u = sketch_canvas_view.centre.u - half_w;
-                    const double view_max_u = sketch_canvas_view.centre.u + half_w;
-                    const double view_min_v = sketch_canvas_view.centre.v - half_h;
-                    const double view_max_v = sketch_canvas_view.centre.v + half_h;
-                    const auto estimate_grid_lines = [](double min_coord, double max_coord, double spacing) -> std::size_t {
-                        if(!(std::isfinite(min_coord) && std::isfinite(max_coord) && std::isfinite(spacing)) || !(spacing > 0.0)){
-                            return 0U;
-                        }
-                        return static_cast<std::size_t>(std::floor((max_coord - min_coord) / spacing)) + 1U;
-                    };
-                    constexpr std::size_t kMaxGridLines = 50U;
-                    double effective_grid_spacing = sketch_grid_spacing;
-                    while(estimate_grid_lines(view_min_u, view_max_u, effective_grid_spacing)
-                        + estimate_grid_lines(view_min_v, view_max_v, effective_grid_spacing) > kMaxGridLines){
-                        effective_grid_spacing *= 2.0;
-                    }
                     // Vertical grid lines.
-                    const double first_u = std::ceil(view_min_u / effective_grid_spacing) * effective_grid_spacing;
-                    for(double u = first_u; u <= view_max_u; u += effective_grid_spacing){
+                    const double first_u = std::ceil(view_min_u / sketch_effective_grid_spacing) * sketch_effective_grid_spacing;
+                    for(double u = first_u; u <= view_max_u; u += sketch_effective_grid_spacing){
                         const auto sx = canvas_origin.x + canvas_extent.x * 0.5f + static_cast<float>((u - sketch_canvas_view.centre.u) * scale);
                         if(sx >= canvas_origin.x && sx <= canvas_origin.x + canvas_extent.x){
                             imgs_window_draw_list->AddLine(ImVec2(sx, canvas_origin.y), ImVec2(sx, canvas_origin.y + canvas_extent.y), grid_colour, 1.0f);
                         }
                     }
                     // Horizontal grid lines.
-                    const double first_v = std::ceil(view_min_v / effective_grid_spacing) * effective_grid_spacing;
-                    for(double v = first_v; v <= view_max_v; v += effective_grid_spacing){
+                    const double first_v = std::ceil(view_min_v / sketch_effective_grid_spacing) * sketch_effective_grid_spacing;
+                    for(double v = first_v; v <= view_max_v; v += sketch_effective_grid_spacing){
                         const auto sy = canvas_origin.y + canvas_extent.y * 0.5f - static_cast<float>((v - sketch_canvas_view.centre.v) * scale);
                         if(sy >= canvas_origin.y && sy <= canvas_origin.y + canvas_extent.y){
                             imgs_window_draw_list->AddLine(ImVec2(canvas_origin.x, sy), ImVec2(canvas_origin.x + canvas_extent.x, sy), grid_colour, 1.0f);
@@ -8141,8 +8164,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::SameLine();
                     ImGui::Checkbox("Show Axes", &sketch_show_axes);
                     ImGui::SetNextItemWidth(120.0f);
-                    ImGui::InputDouble("Grid spacing (mm)", &sketch_grid_spacing, 1.0, 5.0, "%.1f");
+                    ImGui::InputDouble("Minimum grid spacing (mm)", &sketch_grid_spacing, 1.0, 5.0, "%.1f");
                     sketch_grid_spacing = std::clamp(sketch_grid_spacing, 0.1, 1000.0);
+                    ImGui::Text("Displayed spacing (mm): %.3f", sketch_effective_grid_spacing);
                 }
 
                 auto &slot = current_sketch_slot();
@@ -8892,7 +8916,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                             clear_sketch_interaction_state();
                             slot.selection.clear();
                             slot.clear_vertex_selection();
-                            sketch_canvas_view.framing_initialized = false;
                         }
                     }
                     ImGui::EndChild();
@@ -8905,7 +8928,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                     clear_sketch_interaction_state();
                     slot.selection.clear();
                     slot.clear_vertex_selection();
-                    sketch_canvas_view.framing_initialized = false;
                     append_sketch_log("Added node " + std::to_string(builder.active_node_index()));
                 }
                 ImGui::SameLine();
@@ -8916,7 +8938,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                     clear_sketch_interaction_state();
                     slot.selection.clear();
                     slot.clear_vertex_selection();
-                    sketch_canvas_view.framing_initialized = false;
                     append_sketch_log("Deleted node " + std::to_string(old_idx));
                 }
                 ImGui::SameLine();
@@ -9045,7 +9066,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                             clear_sketch_interaction_state();
                             slot.selection.clear();
                             slot.clear_vertex_selection();
-                            sketch_canvas_view.framing_initialized = false;
                             sketch_builder_status = "Loaded builder from " + std::string(sketch_builder_load_path.data());
                         }else{
                             sketch_builder_status = "Load failed: " + err;
