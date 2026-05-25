@@ -174,7 +174,16 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
                 }
                 extrude_sketch.delete_unreferenced_vertices();
                 fv_surface_mesh<double, uint64_t> mesh;
-                if(!extrude_sketch.build_extruded_surface_mesh(current.procedure.extrusion_options, mesh, nullptr, error_message)){
+                std::string build_error_message;
+                if(!extrude_sketch.build_extruded_surface_mesh(current.procedure.extrusion_options,
+                                                               mesh,
+                                                               nullptr,
+                                                               &build_error_message)){
+                    if(build_error_message == "does not contain any extrudable primitives"){
+                        current.mesh = fv_surface_mesh<double, uint64_t>();
+                        return true;
+                    }
+                    if(error_message) *error_message = build_error_message;
                     return false;
                 }
                 current.mesh = std::move(mesh);
