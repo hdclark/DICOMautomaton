@@ -7358,7 +7358,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 imgs_window_draw_list->AddRect(canvas_origin, ImVec2(canvas_origin.x + canvas_extent.x, canvas_origin.y + canvas_extent.y), ImColor(0.35f, 0.45f, 0.55f, 1.0f));
 
                 // Draw grid lines (if enabled).
-                if(sketch_show_grid && sketch_grid_spacing > 0.1){
+                if(sketch_show_grid && sketch_grid_spacing >= 0.1){
                     const ImU32 grid_colour = ImColor(0.15f, 0.18f, 0.22f, 0.5f);
                     const double half_w = 0.5 * (static_cast<double>(canvas_extent.x)) / scale;
                     const double half_h = 0.5 * (static_cast<double>(canvas_extent.y)) / scale;
