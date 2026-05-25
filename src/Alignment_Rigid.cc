@@ -496,16 +496,19 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
                        int64_t max_icp_iters,
                        double f_rel_tol ){
 
+    if( moving.points.empty() ){
+        throw std::invalid_argument("Moving point set does not contain any points");
+    }
+    if( stationary.points.empty() ){
+        throw std::invalid_argument("Stationary point set does not contain any points");
+    }
+
     // The WIP transformation.
     affine_transform<double> t;
 
     // The transformation that resulted in the lowest cost estimate so far.
     affine_transform<double> t_best;
     double f_best = std::numeric_limits<double>::infinity();
-
-    // Compute the centroid for both point clouds.
-    const auto centroid_s = stationary.Centroid();
-    const auto centroid_m = moving.Centroid();
 
     point_set<double> working(moving);
     point_set<double> corresp(moving);
@@ -520,10 +523,20 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
     // sufficient.
     //
     // Default:
-    t = AlignViaPCA(moving, stationary).value();
+    {
+        auto t_seed = AlignViaPCA(moving, stationary);
+        if(!t_seed){
+            t_seed = AlignViaCentroid(moving, stationary);
+        }
+        if(!t_seed){
+            return std::nullopt;
+        }
+        t = t_seed.value();
+    }
     //
     // Fallback:
     //t = AlignViaCentroid(moving, stationary).value();
+    t_best = t;
 
     double f_prev = std::numeric_limits<double>::quiet_NaN();
     for(int64_t icp_iter = 0; icp_iter < max_icp_iters; ++icp_iter){
@@ -532,7 +545,6 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
 
         // Apply the current transformation to the working points.
         t.apply_to(working);
-        const auto centroid_w = working.Centroid();
 
         // Exhaustively determine the correspondence between stationary and working points under the current
         // transformation. Note that multiple working points may correspond to the same stationary point.
@@ -558,99 +570,20 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
 
         ///////////////////////////////////
 
-        // Using the correspondence, estimate the linear transformation that will maximize alignment between
-        // centroid-shifted point clouds.
+        // Using the correspondence, estimate the rigid transformation that aligns the original moving points to the
+        // currently-estimated correspondence set.
         //
-        // Note: the transformation we seek here ignores translations by explicitly subtracting the centroid from each
-        // point cloud. Translations will be added into the full transformation later. 
-        const auto N_rows = 3;
-        const auto N_cols = N_working_points;
-        Eigen::MatrixXd S(N_rows, N_cols);
-        Eigen::MatrixXd M(N_rows, N_cols);
-
-        for(size_t i = 0; i < N_working_points; ++i){
-            // Note: Find the transform using the original point clouds (with a centroid shift) and the updated
-            // correspondence information.
-
-            S(0, i) = corresp.points[i].x - centroid_s.x; // The desired point location.
-            S(1, i) = corresp.points[i].y - centroid_s.y;
-            S(2, i) = corresp.points[i].z - centroid_s.z;
-
-            M(0, i) = moving.points[i].x - centroid_w.x; // The actual point location.
-            M(1, i) = moving.points[i].y - centroid_w.y;
-            M(2, i) = moving.points[i].z - centroid_w.z;
-        }
-        auto ST = S.transpose();
-        auto MST = M * ST;
-
-        //Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeThinU | Eigen::ComputeThinV);
-        Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
-        auto U = SVD.matrixU();
-        const auto& V = SVD.matrixV();
-
-        // Use the SVD result directly.
-        //
-        // Note that spatial inversions are permitted this way.
-        //auto A = U * V.transpose();
-
-        // Attempt to restrict to rotations only.    NOTE: Does not appear to work?
-        //Eigen::Matrix3d PI;
-        //PI << 1.0 , 0.0 , 0.0,
-        //      0.0 , 1.0 , 0.0,
-        //      0.0 , 0.0 , ( U * V.transpose() ).determinant();
-        //auto A = U * PI * V.transpose();
-
-        // Restrict the solution to rotations only. (Refer to the 'Kabsch algorithm' for more info.)
-        Eigen::Matrix3d PI;
-        PI << 1.0 , 0.0 , 0.0
-            , 0.0 , 1.0 , 0.0
-            , 0.0 , 0.0 , ( V * U.transpose() ).determinant();
-        auto A = V * PI * U.transpose();
-
-/*
-        // Apply the linear transformation to a point directly.
-        auto Apply_Rotation = [&](const vec3<double> &v) -> vec3<double> {
-            Eigen::Vector3f e_vec3(v.x, v.y, v.z);
-            auto new_v = A * e_vec3;
-            return vec3<double>( new_v(0), new_v(1), new_v(2) );
-        };
-*/
-
-        // Transfer the transformation into a full Affine transformation.
-        t = affine_transform<double>();
-
-        // Rotation and scaling components.
-        t.coeff(0,0) = A(0,0);
-        t.coeff(1,0) = A(1,0);
-        t.coeff(2,0) = A(2,0);
-                   
-        t.coeff(0,1) = A(0,1);
-        t.coeff(1,1) = A(1,1);
-        t.coeff(2,1) = A(2,1);
-                   
-        t.coeff(0,2) = A(0,2);
-        t.coeff(1,2) = A(1,2);
-        t.coeff(2,2) = A(2,2);
-
-        // The complete transformation we have found for bringing the moving points $P_{M}$ into alignment with the
-        // stationary points is:
-        //
-        //   $centroid_{S} + A * \left( P_{M} - centroid_{M} \right)$.
-        //
-        // Rearranging, an Affine transformation of the form $A * P_{M} + b$ can be written as:
-        //
-        //   $A * P_{M} + \left( centroid_{S} - A * centroid_{M} \right)$.
-        // 
-        // Specifically, the transformed moving point cloud centroid component needs to be pre-subtracted for each
-        // vector $P_{M}$ to anticipate not having an explicit centroid subtraction step prior to applying the
-        // scale/rotation matrix.
+        // Note: This is the absolute-transform variant of ICP: correspondence is estimated in transformed space, but
+        // the transform solve is performed against the original moving points and the current correspondence.
         {
-            Eigen::Vector3d e_centroid(centroid_m.x, centroid_m.y, centroid_m.z);
-            auto A_e_centroid = A * e_centroid; 
-
-            t.coeff(0,3) = centroid_s.x - A_e_centroid(0);
-            t.coeff(1,3) = centroid_s.y - A_e_centroid(1);
-            t.coeff(2,3) = centroid_s.z - A_e_centroid(2);
+            AlignViaOrthogonalProcrustesParams params;
+            params.permit_mirroring = false;         // Restrict to rotations only (Kabsch).
+            params.permit_isotropic_scaling = false; // Preserve cloud scale.
+            auto t_est = AlignViaOrthogonalProcrustes(params, moving, corresp);
+            if(!t_est){
+                return std::nullopt;
+            }
+            t = t_est.value();
         }
 
         // Evaluate whether the current transformation is sufficient. If so, terminate the loop.
@@ -673,9 +606,11 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
         if( std::isfinite(f_rel_tol) 
         &&  std::isfinite(f_curr)
         &&  std::isfinite(f_prev) ){
-            const auto f_rel = std::fabs( (f_prev - f_curr) / f_prev );
-            YLOGDEBUG("The relative change in global distance compared to the last iteration is " << f_rel);
-            if(f_rel < f_rel_tol) break;
+            if(std::abs(f_prev) > std::numeric_limits<double>::epsilon()){
+                const auto f_rel = std::fabs( (f_prev - f_curr) / f_prev );
+                YLOGDEBUG("The relative change in global distance compared to the last iteration is " << f_rel);
+                if(f_rel < f_rel_tol) break;
+            }
         }
         f_prev = f_curr;
     }
@@ -696,5 +631,4 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
     return t;
 }
 #endif // DCMA_USE_EIGEN
-
 
