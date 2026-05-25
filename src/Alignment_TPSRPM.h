@@ -130,6 +130,12 @@ struct AlignViaTPSRPMParams {
     // Note: The double-sided error handling algorithm also seems to be more sensitive to kernel dimension.
     bool double_sided_outliers = false;
 
+    // Floor value used to stabilize row-sum dependent weighting terms.
+    //
+    // When the correspondence row sum is near zero (for example, when a moving point is an outlier), this threshold
+    // prevents numerical blow-up in reciprocal weights.
+    double row_sum_weight_threshold = 1e-6;
+
     // Whether to permit outlier detection. A major strength of the TPS-RPM algorithm is semi-automatic outlier
     // detection and handling. Disabling outlier detection keeps the correspondence determination aspect of the TPS-RPM
     // algorithm. These parameters control whether correspondence matrix elements used to indicate a point is an outlier
@@ -191,4 +197,3 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                const point_set<double> & moving,
                const point_set<double> & stationary );
 #endif // DCMA_USE_EIGEN
-

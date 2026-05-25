@@ -424,6 +424,10 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     ||  (L_2_start < 0.0) ){
         throw std::invalid_argument("Regularization parameters are invalid. Cannot continue.");
     }
+    if( !std::isfinite(params.row_sum_weight_threshold)
+    ||  (params.row_sum_weight_threshold <= 0.0) ){
+        throw std::invalid_argument("Row-sum weight threshold parameter is invalid. Cannot continue.");
+    }
     YLOGDEBUG("T_start, T_step, and T_end are " << T_start << ", " << params.T_step << ", " << T_end);
 
     // Ensure any forced correpondences are valid and unique.
@@ -893,7 +897,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const double row_sum = row_sum_rs.Current_Sum();
 
             if(params.double_sided_outliers){
-                double row_sum_inv = 1.0 / row_sum;
+                const double row_sum_clamped = std::max(row_sum, params.row_sum_weight_threshold);
+                double row_sum_inv = 1.0 / row_sum_clamped;
                 if(!std::isfinite(row_sum_inv)){
                     row_sum_inv = std::sqrt( std::numeric_limits<double>::max() );
                 }
@@ -906,8 +911,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             // Compute weighted average of stationary points.
             // When row_sum is near zero (no good correspondences), fall back to the current
             // transformed position to prevent collapse.
-            const double weight_threshold = 1e-6;
-            if(row_sum > weight_threshold){
+            if(row_sum > params.row_sum_weight_threshold){
                 Stats::Running_Sum<double> c_x;
                 Stats::Running_Sum<double> c_y;
                 Stats::Running_Sum<double> c_z;
@@ -1220,33 +1224,107 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 }
 */
 
-    // Denormalize: convert the TPS from normalized space back to original coordinates.
-    //
-    // The internal TPS `t` operates in normalized space. To create a TPS that operates in the
-    // original coordinate space, we evaluate the normalized TPS on all normalized moving points,
-    // denormalize the results, and then solve a standard TPS from the original moving points to
-    // the denormalized target positions.
+    // Denormalize analytically: convert the TPS from normalized space back to original coordinates
+    // without solving a second TPS system.
     {
-        point_set<double> denorm_targets;
+        thin_plate_spline t_denorm(moving, params.kernel_dimension);
+
+        const double c_m_x = centroid_moving.x;
+        const double c_m_y = centroid_moving.y;
+        const double c_m_z = centroid_moving.z;
+
+        const double c_s_x = centroid_stationary.x;
+        const double c_s_y = centroid_stationary.y;
+        const double c_s_z = centroid_stationary.z;
+
+        Stats::Running_Sum<double> weighted_sqnorm_x;
+        Stats::Running_Sum<double> weighted_sqnorm_y;
+        Stats::Running_Sum<double> weighted_sqnorm_z;
         for(int64_t i = 0; i < N_move_points; ++i){
-            const auto p_norm = moving_n.points[i];
-            const auto t_norm = t.transform(p_norm);
-            denorm_targets.points.emplace_back(vec3<double>(
-                t_norm.x * norm_scale + centroid_stationary.x,
-                t_norm.y * norm_scale + centroid_stationary.y,
-                t_norm.z * norm_scale + centroid_stationary.z
-            ));
+            const auto &p = moving.points[i];
+            const double sq_norm = (p.x * p.x) + (p.y * p.y) + (p.z * p.z);
+
+            const double w_norm_x = W_A(i, 0);
+            const double w_norm_y = W_A(i, 1);
+            const double w_norm_z = W_A(i, 2);
+
+            if(params.kernel_dimension == 2){
+                t_denorm.W_A.coeff(i, 0) = w_norm_x / norm_scale;
+                t_denorm.W_A.coeff(i, 1) = w_norm_y / norm_scale;
+                t_denorm.W_A.coeff(i, 2) = w_norm_z / norm_scale;
+            }else if(params.kernel_dimension == 3){
+                t_denorm.W_A.coeff(i, 0) = w_norm_x;
+                t_denorm.W_A.coeff(i, 1) = w_norm_y;
+                t_denorm.W_A.coeff(i, 2) = w_norm_z;
+            }else{
+                point_set<double> denorm_targets;
+                for(int64_t j = 0; j < N_move_points; ++j){
+                    const auto p_norm = moving_n.points[j];
+                    const auto t_norm = t.transform(p_norm);
+                    denorm_targets.points.emplace_back(vec3<double>(
+                        t_norm.x * norm_scale + centroid_stationary.x,
+                        t_norm.y * norm_scale + centroid_stationary.y,
+                        t_norm.z * norm_scale + centroid_stationary.z
+                    ));
+                }
+
+                AlignViaTPSParams tps_params;
+                tps_params.kernel_dimension = params.kernel_dimension;
+                tps_params.lambda = params.lambda_start;
+                tps_params.solution_method = (params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse)
+                                             ? AlignViaTPSParams::SolutionMethod::PseudoInverse
+                                             : AlignViaTPSParams::SolutionMethod::LDLT;
+                return AlignViaTPS(tps_params, moving, denorm_targets);
+            }
+
+            weighted_sqnorm_x.Digest(w_norm_x * sq_norm);
+            weighted_sqnorm_y.Digest(w_norm_y * sq_norm);
+            weighted_sqnorm_z.Digest(w_norm_z * sq_norm);
         }
 
-        AlignViaTPSParams tps_params;
-        tps_params.kernel_dimension = params.kernel_dimension;
-        tps_params.lambda = 1e-6; // Small lambda for numerical stability.
-        tps_params.solution_method = (params.solution_method == AlignViaTPSRPMParams::SolutionMethod::PseudoInverse)
-                                     ? AlignViaTPSParams::SolutionMethod::PseudoInverse
-                                     : AlignViaTPSParams::SolutionMethod::LDLT;
-        return AlignViaTPS(tps_params, moving, denorm_targets);
+        t_denorm.W_A.coeff(N_move_points + 1, 0) = W_A(N_move_points + 1, 0);
+        t_denorm.W_A.coeff(N_move_points + 2, 0) = W_A(N_move_points + 2, 0);
+        t_denorm.W_A.coeff(N_move_points + 3, 0) = W_A(N_move_points + 3, 0);
+        t_denorm.W_A.coeff(N_move_points + 1, 1) = W_A(N_move_points + 1, 1);
+        t_denorm.W_A.coeff(N_move_points + 2, 1) = W_A(N_move_points + 2, 1);
+        t_denorm.W_A.coeff(N_move_points + 3, 1) = W_A(N_move_points + 3, 1);
+        t_denorm.W_A.coeff(N_move_points + 1, 2) = W_A(N_move_points + 1, 2);
+        t_denorm.W_A.coeff(N_move_points + 2, 2) = W_A(N_move_points + 2, 2);
+        t_denorm.W_A.coeff(N_move_points + 3, 2) = W_A(N_move_points + 3, 2);
+
+        double t0_x = c_s_x
+                    + norm_scale * W_A(N_move_points + 0, 0)
+                    - W_A(N_move_points + 1, 0) * c_m_x
+                    - W_A(N_move_points + 2, 0) * c_m_y
+                    - W_A(N_move_points + 3, 0) * c_m_z;
+        double t0_y = c_s_y
+                    + norm_scale * W_A(N_move_points + 0, 1)
+                    - W_A(N_move_points + 1, 1) * c_m_x
+                    - W_A(N_move_points + 2, 1) * c_m_y
+                    - W_A(N_move_points + 3, 1) * c_m_z;
+        double t0_z = c_s_z
+                    + norm_scale * W_A(N_move_points + 0, 2)
+                    - W_A(N_move_points + 1, 2) * c_m_x
+                    - W_A(N_move_points + 2, 2) * c_m_y
+                    - W_A(N_move_points + 3, 2) * c_m_z;
+
+        if(params.kernel_dimension == 2){
+            const double log_scale_sq_over_scale = std::log(norm_scale * norm_scale) / norm_scale;
+            t0_x -= log_scale_sq_over_scale * weighted_sqnorm_x.Current_Sum();
+            t0_y -= log_scale_sq_over_scale * weighted_sqnorm_y.Current_Sum();
+            t0_z -= log_scale_sq_over_scale * weighted_sqnorm_z.Current_Sum();
+        }
+
+        t_denorm.W_A.coeff(N_move_points + 0, 0) = t0_x;
+        t_denorm.W_A.coeff(N_move_points + 0, 1) = t0_y;
+        t_denorm.W_A.coeff(N_move_points + 0, 2) = t0_z;
+
+        if(!std::isfinite(t0_x) || !std::isfinite(t0_y) || !std::isfinite(t0_z)){
+            throw std::runtime_error("Failed to denormalize TPS mapping function.");
+        }
+
+        return t_denorm;
     }
 }
 #endif // DCMA_USE_EIGEN
-
 

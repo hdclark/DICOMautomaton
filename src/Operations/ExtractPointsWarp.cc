@@ -369,6 +369,18 @@ OperationDoc OpArgDocExtractPointsWarp(){
 
 #ifdef DCMA_USE_EIGEN
     out.args.emplace_back();
+    out.args.back().name = "TPSRPMWeightThreshold";
+    out.args.back().desc = "Parameter controlling the minimum row-sum used when computing correspondence-based weights."
+                           " This stabilizes the TPS update when points are likely outliers and row sums approach zero."
+                           " Larger values increase numerical robustness but can reduce the effect of weak correspondences."
+                           " Note that this parameter is used with the TPS-RPM method, but *not* in the TPS method.";
+    out.args.back().default_val = "1E-6";
+    out.args.back().expected = true;
+    out.args.back().examples = { "1E-8", "1E-6", "1E-4", "0.001" };
+#endif
+
+#ifdef DCMA_USE_EIGEN
+    out.args.emplace_back();
     out.args.back().name = "TPSRPMSeedWithCentroidShift";
     out.args.back().desc = "Controls whether a centroid-based registration is used to seed the registration."
                            " Typically this is not needed, since high temperatures give the system enough freedom"
@@ -515,6 +527,7 @@ bool ExtractPointsWarp(Drover &DICOM_data,
     const auto TPSRPMStepsPerT = std::stol( OptArgs.getValueStr("TPSRPMStepsPerT").value() );
     const auto TPSRPMSinkhornMaxSteps = std::stol( OptArgs.getValueStr("TPSRPMSinkhornMaxSteps").value() );
     const auto TPSRPMSinkhornTolerance = std::stod( OptArgs.getValueStr("TPSRPMSinkhornTolerance").value() );
+    const auto TPSRPMWeightThreshold = std::stod( OptArgs.getValueStr("TPSRPMWeightThreshold").value() );
     const auto TPSRPMSeedWithCentroidShiftStr = OptArgs.getValueStr("TPSRPMSeedWithCentroidShift").value();
     const auto TPSRPMHardContraintsStr = OptArgs.getValueStr("TPSRPMHardConstraints").value();
     const auto TPSRPMPermitMovingOutliersStr = OptArgs.getValueStr("TPSRPMPermitMovingOutliers").value();
@@ -661,6 +674,7 @@ bool ExtractPointsWarp(Drover &DICOM_data,
             params.N_iters_at_fixed_T       = TPSRPMStepsPerT;
             params.N_Sinkhorn_iters         = TPSRPMSinkhornMaxSteps;
             params.Sinkhorn_tolerance       = TPSRPMSinkhornTolerance;
+            params.row_sum_weight_threshold = TPSRPMWeightThreshold;
             params.seed_with_centroid_shift = TPSRPMSeedWithCentroidShift;
             params.forced_correspondence    = TPSRPMHardContraints;
             params.permit_move_outliers     = TPSRPMPermitMovingOutliers;
