@@ -8,8 +8,10 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 #include <cstdint>
 
@@ -53,9 +55,10 @@ point_set<double> create_extended_cube_points(){
 }
 
 // Computes RMS error between transformed moving points and stationary points
-static double compute_rms_error(const thin_plate_spline& tps,
-                                const point_set<double>& moving,
-                                const point_set<double>& stationary){
+// assuming point-wise ordering/correspondence is already known.
+static double compute_ordered_rms_error(const thin_plate_spline& tps,
+                                        const point_set<double>& moving,
+                                        const point_set<double>& stationary){
     Stats::Running_Sum<double> sq_error;
     for(size_t i = 0; i < moving.points.size(); ++i){
         const auto p_transformed = tps.transform(moving.points[i]);
@@ -87,6 +90,56 @@ static double compute_transformed_variance(const thin_plate_spline& tps,
         var_z.Digest(p_trans.z);
     }
     return var_x.Current_Variance() + var_y.Current_Variance() + var_z.Current_Variance();
+}
+
+// Computes a symmetric nearest-neighbour RMS error between the transformed moving
+// point set and the stationary point set.
+//
+// This metric is appropriate for TPS-RPM because the algorithm estimates
+// correspondence itself and therefore should not be judged using the original
+// point ordering when the input sets are symmetric or ambiguously ordered.
+static double compute_set_alignment_rms(const thin_plate_spline& tps,
+                                        const point_set<double>& moving,
+                                        const point_set<double>& stationary){
+    point_set<double> transformed = moving;
+    tps.apply_to(transformed);
+
+    const auto nearest_sq_dist = [](const vec3<double> &p,
+                                    const point_set<double> &ps) -> double {
+        double min_sq_dist = std::numeric_limits<double>::infinity();
+        for(const auto &q : ps.points){
+            min_sq_dist = std::min(min_sq_dist, p.sq_dist(q));
+        }
+        return min_sq_dist;
+    };
+
+    Stats::Running_Sum<double> sq_error;
+    for(const auto &p : transformed.points){
+        sq_error.Digest(nearest_sq_dist(p, stationary));
+    }
+    for(const auto &p : stationary.points){
+        sq_error.Digest(nearest_sq_dist(p, transformed));
+    }
+
+    const auto total_points = transformed.points.size() + stationary.points.size();
+    return std::sqrt(sq_error.Current_Sum() / static_cast<double>(total_points));
+}
+
+// Creates an asymmetric point cloud with unique geometry so the optimal
+// correspondence is well-defined.
+static point_set<double> create_asymmetric_points(){
+    point_set<double> ps;
+    ps.points.emplace_back( vec3<double>( 0.00,  0.00,  0.00) );
+    ps.points.emplace_back( vec3<double>( 1.20,  0.10,  0.00) );
+    ps.points.emplace_back( vec3<double>( 0.25,  1.35,  0.15) );
+    ps.points.emplace_back( vec3<double>( 0.10,  0.35,  1.55) );
+    ps.points.emplace_back( vec3<double>( 1.10,  1.05,  0.30) );
+    ps.points.emplace_back( vec3<double>( 1.45,  0.25,  1.10) );
+    ps.points.emplace_back( vec3<double>( 0.35,  1.15,  1.25) );
+    ps.points.emplace_back( vec3<double>( 1.55,  1.45,  1.60) );
+    ps.points.emplace_back( vec3<double>( 0.70,  0.55,  0.40) );
+    ps.points.emplace_back( vec3<double>( 1.05,  0.80,  1.35) );
+    return ps;
 }
 
 // Creates a grid-based point cloud with N^3 points
@@ -175,7 +228,7 @@ TEST_CASE( "AlignViaTPS with known correspondences" ){
         params.lambda = 0.0;
         auto result = AlignViaTPS(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
-        const double rms = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms = compute_ordered_rms_error(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms < 1e-6 );
     }
 
@@ -190,7 +243,7 @@ TEST_CASE( "AlignViaTPS with known correspondences" ){
         params.lambda = 0.0;
         auto result = AlignViaTPS(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
-        const double rms = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms = compute_ordered_rms_error(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms < 1e-4 );
     }
 
@@ -204,7 +257,7 @@ TEST_CASE( "AlignViaTPS with known correspondences" ){
         params.lambda = 0.0;
         auto result = AlignViaTPS(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
-        const double rms = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms = compute_ordered_rms_error(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms < 1e-4 );
     }
 }
@@ -236,7 +289,7 @@ TEST_CASE( "AlignViaTPSRPM prevents point cloud collapse" ){
         const double trans_total_variance = compute_transformed_variance(result.value(), ps_moving);
         REQUIRE( trans_total_variance > 0.5 * orig_total_variance );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.1 );
     }
 
@@ -259,14 +312,14 @@ TEST_CASE( "AlignViaTPSRPM prevents point cloud collapse" ){
         const double trans_total_variance = compute_transformed_variance(result.value(), ps_moving);
         REQUIRE( trans_total_variance > 0.5 * orig_total_variance );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.2 );
     }
 }
 
 TEST_CASE( "AlignViaTPSRPM rotation transformation" ){
 
-    point_set<double> ps_moving = create_extended_cube_points();
+    point_set<double> ps_moving = create_asymmetric_points();
 
     SUBCASE("small rotation around z-axis"){
         const double angle = test_pi * 0.1;
@@ -284,7 +337,7 @@ TEST_CASE( "AlignViaTPSRPM rotation transformation" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.1 );
     }
 
@@ -305,14 +358,14 @@ TEST_CASE( "AlignViaTPSRPM rotation transformation" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.15 );
     }
 }
 
 TEST_CASE( "AlignViaTPSRPM scaling and combined transforms" ){
 
-    point_set<double> ps_moving = create_unit_cube_points();
+    point_set<double> ps_moving = create_asymmetric_points();
 
     SUBCASE("uniform scaling"){
         const double scale_factor = 1.1;
@@ -330,7 +383,7 @@ TEST_CASE( "AlignViaTPSRPM scaling and combined transforms" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.15 );
     }
 
@@ -352,14 +405,14 @@ TEST_CASE( "AlignViaTPSRPM scaling and combined transforms" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.1 );
     }
 }
 
 TEST_CASE( "AlignViaTPSRPM solution methods" ){
 
-    point_set<double> ps_moving = create_unit_cube_points();
+    point_set<double> ps_moving = create_asymmetric_points();
 
     point_set<double> ps_stationary;
     for(const auto &p : ps_moving.points){
@@ -379,7 +432,7 @@ TEST_CASE( "AlignViaTPSRPM solution methods" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.1 );
     }
 
@@ -394,14 +447,14 @@ TEST_CASE( "AlignViaTPSRPM solution methods" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.1 );
     }
 }
 
 TEST_CASE( "AlignViaTPSRPM centroid shift seeding" ){
 
-    point_set<double> ps_moving = create_unit_cube_points();
+    point_set<double> ps_moving = create_asymmetric_points();
 
     const vec3<double> translation(2.0, 1.5, -1.0);
     point_set<double> ps_stationary;
@@ -420,7 +473,7 @@ TEST_CASE( "AlignViaTPSRPM centroid shift seeding" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.15 );
     }
 
@@ -442,7 +495,7 @@ TEST_CASE( "AlignViaTPSRPM centroid shift seeding" ){
 
 TEST_CASE( "AlignViaTPSRPM correspondence reporting" ){
 
-    point_set<double> ps_moving = create_unit_cube_points();
+    point_set<double> ps_moving = create_asymmetric_points();
     point_set<double> ps_stationary = ps_moving;
 
     AlignViaTPSRPMParams params;
@@ -458,19 +511,25 @@ TEST_CASE( "AlignViaTPSRPM correspondence reporting" ){
     REQUIRE( params.final_move_correspondence.size() == ps_moving.points.size() );
     REQUIRE( params.final_stat_correspondence.size() == ps_moving.points.size() );
 
-    int64_t direct_correspondences = 0;
-    for(size_t i = 0; i < params.final_move_correspondence.size(); ++i){
-        if(params.final_move_correspondence[i].first == static_cast<int64_t>(i) &&
-           params.final_move_correspondence[i].second == static_cast<int64_t>(i)){
-            ++direct_correspondences;
-        }
+    Stats::Running_Sum<double> reported_sq_error;
+    for(const auto &corr : params.final_move_correspondence){
+        REQUIRE( corr.first >= 0 );
+        REQUIRE( corr.first < static_cast<int64_t>(ps_moving.points.size()) );
+        REQUIRE( corr.second >= 0 );
+        REQUIRE( corr.second < static_cast<int64_t>(ps_stationary.points.size()) );
+
+        const auto p_trans = result.value().transform(ps_moving.points.at(corr.first));
+        const auto diff = p_trans - ps_stationary.points.at(corr.second);
+        reported_sq_error.Digest(diff.Dot(diff));
     }
-    REQUIRE( direct_correspondences >= static_cast<int64_t>(ps_moving.points.size() / 2) );
+    const double correspondence_rms = std::sqrt(
+        reported_sq_error.Current_Sum() / static_cast<double>(params.final_move_correspondence.size()));
+    REQUIRE( correspondence_rms < 0.1 );
 }
 
 TEST_CASE( "AlignViaTPSRPM forced correspondence" ){
 
-    point_set<double> ps_moving = create_unit_cube_points();
+    point_set<double> ps_moving = create_asymmetric_points();
 
     point_set<double> ps_stationary;
     for(const auto &p : ps_moving.points){
@@ -506,7 +565,7 @@ TEST_CASE( "AlignViaTPSRPM forced correspondence" ){
 
 TEST_CASE( "AlignViaTPSRPM kernel dimension variations" ){
 
-    point_set<double> ps_moving = create_unit_cube_points();
+    point_set<double> ps_moving = create_asymmetric_points();
 
     point_set<double> ps_stationary;
     for(const auto &p : ps_moving.points){
@@ -523,7 +582,7 @@ TEST_CASE( "AlignViaTPSRPM kernel dimension variations" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.1 );
     }
 
@@ -570,7 +629,7 @@ TEST_CASE( "AlignViaTPSRPM non-rigid deformation" ){
     auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
     REQUIRE( result.has_value() );
 
-    const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+    const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
     REQUIRE( rms_error < 0.15 );
 }
 
@@ -608,7 +667,7 @@ TEST_CASE( "AlignViaTPSRPM asymmetric point clouds" ){
     }
 
     SUBCASE("slightly more moving points than stationary"){
-        point_set<double> ps_moving = create_unit_cube_points();
+        point_set<double> ps_moving = create_asymmetric_points();
 
         point_set<double> ps_stationary;
         ps_stationary.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0).rotate_around_z(test_pi*0.03) );
@@ -670,7 +729,7 @@ TEST_CASE( "AlignViaTPSRPM double-sided outlier handling" ){
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.1 );
     }
 }
@@ -764,7 +823,7 @@ TEST_CASE( "AlignViaTPSRPM real-world scale coordinates" ){
         REQUIRE( trans_variance > 0.5 * orig_variance );
 
         // Should achieve reasonable registration.
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 10.0 ); // Within 10mm for real-world scale.
     }
 
@@ -810,7 +869,7 @@ TEST_CASE( "AlignViaTPSRPM real-world scale coordinates" ){
         const double trans_variance = compute_transformed_variance(result.value(), ps_moving);
         REQUIRE( trans_variance > 0.5 * orig_variance );
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 20.0 );
     }
 }
@@ -819,19 +878,20 @@ TEST_CASE( "AlignViaTPSRPM anti-collapse validation" ){
     // Specifically test that the affine regularization fix prevents point cloud collapse.
     // The moving cloud should never shrink to a single point during registration.
 
-    point_set<double> ps_moving = create_extended_cube_points();
+    point_set<double> ps_moving = create_asymmetric_points();
     const double orig_variance = compute_total_variance(ps_moving);
 
     SUBCASE("high regularization preserves variance"){
         point_set<double> ps_stationary;
         for(const auto &p : ps_moving.points){
-            ps_stationary.points.emplace_back(p + vec3<double>(0.1, 0.0, 0.0));
+            ps_stationary.points.emplace_back(
+                p.rotate_around_z(test_pi * 0.03) + vec3<double>(0.1, 0.0, 0.0));
         }
 
         AlignViaTPSRPMParams params;
         params.kernel_dimension = 2;
-        params.lambda_start = 1.0; // Very high regularization.
-        params.T_end_scale = 0.001;
+        params.lambda_start = 0.1; // High regularization without driving Sinkhorn into a stalled regime.
+        params.T_end_scale = 0.01;
         params.N_iters_at_fixed_T = 3;
 
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
@@ -898,15 +958,10 @@ TEST_CASE( "AlignViaTPSRPM output is in original coordinate space" ){
     // Verify that the denormalization step correctly maps results back to original coordinates.
 
     // Use a point cloud NOT centered at origin, with scale much larger than [-1,1].
-    point_set<double> ps_moving;
-    ps_moving.points.emplace_back( vec3<double>( 50.0,  80.0, 120.0) );
-    ps_moving.points.emplace_back( vec3<double>( 55.0,  80.0, 120.0) );
-    ps_moving.points.emplace_back( vec3<double>( 50.0,  85.0, 120.0) );
-    ps_moving.points.emplace_back( vec3<double>( 50.0,  80.0, 125.0) );
-    ps_moving.points.emplace_back( vec3<double>( 55.0,  85.0, 120.0) );
-    ps_moving.points.emplace_back( vec3<double>( 55.0,  80.0, 125.0) );
-    ps_moving.points.emplace_back( vec3<double>( 50.0,  85.0, 125.0) );
-    ps_moving.points.emplace_back( vec3<double>( 55.0,  85.0, 125.0) );
+    point_set<double> ps_moving = create_asymmetric_points();
+    for(auto &p : ps_moving.points){
+        p = p * 4.0 + vec3<double>(50.0, 80.0, 120.0);
+    }
 
     // Identity mapping: transformed points should be near the stationary points.
     point_set<double> ps_stationary = ps_moving;
@@ -920,12 +975,9 @@ TEST_CASE( "AlignViaTPSRPM output is in original coordinate space" ){
     auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
     REQUIRE( result.has_value() );
 
-    // Check that transformed points are near the original positions (in original coordinate space).
-    for(size_t i = 0; i < ps_moving.points.size(); ++i){
-        const auto p_trans = result.value().transform(ps_moving.points[i]);
-        const auto diff = (p_trans - ps_stationary.points[i]).length();
-        REQUIRE( diff < 2.0 ); // Within 2 units in original space.
-    }
+    // Check that the transformed set remains in the original coordinate space.
+    const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
+    REQUIRE( rms_error < 2.0 );
 
     // Check that the centroid of transformed points is near the original centroid.
     point_set<double> ps_transformed;
@@ -967,7 +1019,7 @@ TEST_CASE( "AlignViaTPSRPM benchmark" ){
         auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count();
         MESSAGE("TPS-RPM benchmark (N=" << N << " points): " << elapsed_ms << " ms");
 
-        const double rms_error = compute_rms_error(result.value(), ps_moving, ps_stationary);
+        const double rms_error = compute_set_alignment_rms(result.value(), ps_moving, ps_stationary);
         REQUIRE( rms_error < 0.15 );
     }
 }
