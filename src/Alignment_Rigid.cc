@@ -606,11 +606,11 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
         if( std::isfinite(f_rel_tol) 
         &&  std::isfinite(f_curr)
         &&  std::isfinite(f_prev) ){
-            if(std::abs(f_prev) > std::numeric_limits<double>::epsilon()){
-                const auto f_rel = std::fabs( (f_prev - f_curr) / f_prev );
-                YLOGDEBUG("The relative change in global distance compared to the last iteration is " << f_rel);
-                if(f_rel < f_rel_tol) break;
-            }
+            const auto f_prev_abs = std::abs(f_prev);
+            const auto f_rel_denom = std::max(f_prev_abs, std::numeric_limits<double>::epsilon());
+            const auto f_rel = std::fabs( (f_prev - f_curr) / f_rel_denom );
+            YLOGDEBUG("The relative change in global distance compared to the last iteration is " << f_rel);
+            if(f_rel < f_rel_tol) break;
         }
         f_prev = f_curr;
     }
