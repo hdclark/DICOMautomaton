@@ -340,7 +340,8 @@ bool Sketch_Mesh_Builder::read_from(std::istream &is, Sketch_Mesh_Builder &out){
     out.active_index_ = 0U;
 
     std::string line;
-    std::size_t expected_count = 0U;
+    std::optional<std::size_t> expected_count;
+    bool found_end = false;
 
     while(std::getline(is, line)){
         std::istringstream iss(line);
@@ -348,13 +349,16 @@ bool Sketch_Mesh_Builder::read_from(std::istream &is, Sketch_Mesh_Builder &out){
         iss >> keyword;
 
         if(keyword == "sketch_mesh_builder_end"){
+            found_end = true;
             break;
         }else if(keyword == "sketch_mesh_builder_format_version"){
             int version = 0;
             iss >> version;
             if(version != 1) return false;
         }else if(keyword == "node_count"){
-            iss >> expected_count;
+            std::size_t parsed_expected_count = 0U;
+            if(!(iss >> parsed_expected_count)) return false;
+            expected_count = parsed_expected_count;
         }else if(keyword == "active_node"){
             iss >> out.active_index_;
         }else if(keyword == "node_begin"){
@@ -415,6 +419,12 @@ bool Sketch_Mesh_Builder::read_from(std::istream &is, Sketch_Mesh_Builder &out){
         }
     }
 
+    if(!found_end){
+        return false;
+    }
+    if(expected_count.has_value() && (out.nodes_.size() != expected_count.value())){
+        return false;
+    }
     if(out.nodes_.empty()){
         out.nodes_.emplace_back();
     }

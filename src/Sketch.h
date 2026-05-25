@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <iosfwd>
 #include <limits>
 #include <memory>
 #include <optional>

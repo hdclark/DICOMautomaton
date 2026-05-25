@@ -9018,6 +9018,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         try{
                             auto mesh_copy = active.mesh.value();
                             metadata_map_t mesh_metadata;
+                            bool exported = false;
                             {
                                 std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
                                 if(drover_lock){
@@ -9029,9 +9030,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     mesh_copy.metadata["Description"] = "Mesh from Sketch Mesh Builder";
                                     DICOM_data.smesh_data.emplace_back(std::make_shared<Surface_Mesh>());
                                     DICOM_data.smesh_data.back()->meshes = std::move(mesh_copy);
+                                    exported = true;
                                 }
                             }
-                            sketch_builder_status = "Exported mesh from node " + std::to_string(builder.active_node_index());
+                            if(exported){
+                                sketch_builder_status = "Exported mesh from node " + std::to_string(builder.active_node_index());
+                            }else{
+                                sketch_builder_status = "Export failed: unable to acquire Drover lock";
+                            }
                         }catch(const std::exception &e){
                             sketch_builder_status = std::string("Export failed: ") + e.what();
                         }
