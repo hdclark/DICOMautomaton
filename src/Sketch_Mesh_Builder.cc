@@ -69,21 +69,21 @@ bool Sketch_Procedure::read_from(std::istream &is, Sketch_Procedure &out){
             return found_begin;
         }else if(keyword == "procedure_kind"){
             std::string kind_str;
-            if(iss >> kind_str){
-                string_to_sketch_procedure_kind(kind_str, out.kind);
+            if(!(iss >> kind_str) || !string_to_sketch_procedure_kind(kind_str, out.kind)){
+                return false;
             }
         }else if(keyword == "extrusion_into_frame_length"){
-            iss >> out.extrusion_options.into_frame_length;
+            if(!(iss >> out.extrusion_options.into_frame_length)) return false;
         }else if(keyword == "extrusion_out_of_frame_length"){
-            iss >> out.extrusion_options.out_of_frame_length;
+            if(!(iss >> out.extrusion_options.out_of_frame_length)) return false;
         }else if(keyword == "extrusion_into_frame_angle_degrees"){
-            iss >> out.extrusion_options.into_frame_angle_degrees;
+            if(!(iss >> out.extrusion_options.into_frame_angle_degrees)) return false;
         }else if(keyword == "extrusion_out_of_frame_angle_degrees"){
-            iss >> out.extrusion_options.out_of_frame_angle_degrees;
+            if(!(iss >> out.extrusion_options.out_of_frame_angle_degrees)) return false;
         }else if(keyword == "extrusion_curve_segments"){
-            iss >> out.extrusion_options.curve_segments;
+            if(!(iss >> out.extrusion_options.curve_segments)) return false;
         }else if(keyword == "extrusion_max_discretization_error"){
-            iss >> out.extrusion_options.max_discretization_error;
+            if(!(iss >> out.extrusion_options.max_discretization_error)) return false;
         }
     }
     return false;
