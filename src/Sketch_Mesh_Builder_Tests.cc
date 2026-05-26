@@ -156,6 +156,31 @@ TEST_CASE("Sketch_Mesh_Builder compute_all handles sparse primitive slots"){
     CHECK(builder.node(1).mesh.has_value());
 }
 
+TEST_CASE("Sketch_Mesh_Builder last_mesh helpers track most recent computed mesh"){
+    Sketch_Mesh_Builder builder;
+    CHECK(builder.last_mesh_node_index() == std::nullopt);
+    CHECK(builder.last_mesh() == nullptr);
+
+    builder.node(0).sketch = make_circle_sketch(0.0, 0.0, 10.0);
+    builder.node(0).procedure.kind = sketch_procedure_kind_t::extrusion;
+    builder.node(0).procedure.extrusion_options.into_frame_length = 1.0;
+    builder.node(0).procedure.extrusion_options.out_of_frame_length = 1.0;
+    std::string error_message;
+    REQUIRE(builder.compute_node(0U, &error_message));
+    REQUIRE(builder.last_mesh_node_index().has_value());
+    CHECK(builder.last_mesh_node_index().value() == 0U);
+    REQUIRE(builder.last_mesh() != nullptr);
+
+    builder.append_default_node();
+    CHECK(builder.last_mesh_node_index().value() == 0U);
+    builder.node(1).procedure.kind = sketch_procedure_kind_t::noop;
+    REQUIRE(builder.compute_node(1U, &error_message));
+    REQUIRE(builder.last_mesh_node_index().has_value());
+    CHECK(builder.last_mesh_node_index().value() == 1U);
+    REQUIRE(builder.last_mesh() != nullptr);
+    CHECK(builder.last_mesh()->vertices.size() == builder.node(1).mesh->vertices.size());
+}
+
 // ---------------------------------------------------------------------------
 // Sketch_Mesh_Builder I/O round-trip.
 // ---------------------------------------------------------------------------

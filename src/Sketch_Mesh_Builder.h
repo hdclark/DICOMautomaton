@@ -90,6 +90,11 @@ public:
     bool save_to_file(const std::filesystem::path &path, std::string *error_message = nullptr) const;
     static bool load_from_file(const std::filesystem::path &path, Sketch_Mesh_Builder &out, std::string *error_message = nullptr);
 
+    // Returns the most recent node that currently owns a mesh, if any.
+    std::optional<std::size_t> last_mesh_node_index() const;
+    fv_surface_mesh<double, uint64_t>* last_mesh();
+    const fv_surface_mesh<double, uint64_t>* last_mesh() const;
+
 private:
     std::vector<Sketch_Mesh_Builder_Node> nodes_;
     std::size_t active_index_ = 0;

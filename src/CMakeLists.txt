@@ -125,6 +125,11 @@ set_target_properties(  Sketch_Mesh_Builder_obj PROPERTIES POSITION_INDEPENDENT_
 add_library(            Sketch_Mesh_Builder_Tests_obj OBJECT Sketch_Mesh_Builder_Tests.cc )
 set_target_properties(  Sketch_Mesh_Builder_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+if(WITH_SDL)
+    add_library(            SDL_Viewer_Meshes_Tests_obj OBJECT Operations/SDL_Viewer_Meshes_Tests.cc )
+    set_target_properties(  SDL_Viewer_Meshes_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
+
 add_library(            Metadata_obj OBJECT Metadata.cc )
 set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -520,6 +525,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
+    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Meshes_Tests_obj>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
@@ -647,6 +653,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
+        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Meshes_Tests_obj>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>

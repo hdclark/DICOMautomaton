@@ -451,6 +451,31 @@ bool Sketch_Mesh_Builder::save_to_file(const std::filesystem::path &path, std::s
     }
 }
 
+std::optional<std::size_t> Sketch_Mesh_Builder::last_mesh_node_index() const {
+    for(std::size_t idx = nodes_.size(); 0U < idx; --idx){
+        if(nodes_.at(idx - 1U).mesh.has_value()){
+            return idx - 1U;
+        }
+    }
+    return {};
+}
+
+fv_surface_mesh<double, uint64_t>* Sketch_Mesh_Builder::last_mesh(){
+    const auto idx = last_mesh_node_index();
+    if(!idx){
+        return nullptr;
+    }
+    return &nodes_.at(*idx).mesh.value();
+}
+
+const fv_surface_mesh<double, uint64_t>* Sketch_Mesh_Builder::last_mesh() const {
+    const auto idx = last_mesh_node_index();
+    if(!idx){
+        return nullptr;
+    }
+    return &nodes_.at(*idx).mesh.value();
+}
+
 bool Sketch_Mesh_Builder::load_from_file(const std::filesystem::path &path, Sketch_Mesh_Builder &out, std::string *error_message){
     try{
         std::ifstream fin(path);
