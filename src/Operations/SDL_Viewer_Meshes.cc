@@ -379,16 +379,18 @@ void opengl_mesh::draw(bool render_wireframe){
 }
 
 opengl_mesh::~opengl_mesh() noexcept {
-    if((0 < this->vao) && (0 < this->vbo) && (0 < this->nbo) && (0 < this->ebo)){
+    const auto had_resources = ((0 < this->vao) || (0 < this->vbo) || (0 < this->nbo) || (0 < this->ebo));
+    if(0 < this->vao){
         glBindVertexArray(this->vao);
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glBindVertexArray(0);
-
-        glDeleteBuffers(1, &this->ebo);
-        glDeleteBuffers(1, &this->nbo);
-        glDeleteBuffers(1, &this->vbo);
-        glDeleteVertexArrays(1, &this->vao);
+    }
+    if(0 < this->ebo) glDeleteBuffers(1, &this->ebo);
+    if(0 < this->nbo) glDeleteBuffers(1, &this->nbo);
+    if(0 < this->vbo) glDeleteBuffers(1, &this->vbo);
+    if(0 < this->vao) glDeleteVertexArrays(1, &this->vao);
+    if(had_resources){
         LOG_GL_ERRORS_MESHES();
     }
 
@@ -399,16 +401,24 @@ opengl_mesh::~opengl_mesh() noexcept {
 
 Mesh_Widget::~Mesh_Widget() noexcept {
     this->clear_mesh();
+    const auto had_overlay_resources = ((0 < this->overlay_vao_)
+                                     || (0 < this->overlay_vbo_)
+                                     || (0 < this->overlay_nbo_));
     if(0 < this->overlay_vao_){
         glBindVertexArray(this->overlay_vao_);
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glBindVertexArray(0);
-        if(0 < this->overlay_nbo_) glDeleteBuffers(1, &this->overlay_nbo_);
-        if(0 < this->overlay_vbo_) glDeleteBuffers(1, &this->overlay_vbo_);
-        glDeleteVertexArrays(1, &this->overlay_vao_);
+    }
+    if(0 < this->overlay_nbo_) glDeleteBuffers(1, &this->overlay_nbo_);
+    if(0 < this->overlay_vbo_) glDeleteBuffers(1, &this->overlay_vbo_);
+    if(0 < this->overlay_vao_) glDeleteVertexArrays(1, &this->overlay_vao_);
+    if(had_overlay_resources){
         LOG_GL_ERRORS_MESHES();
     }
+    this->overlay_nbo_ = 0;
+    this->overlay_vbo_ = 0;
+    this->overlay_vao_ = 0;
 }
 
 void Mesh_Widget::clear_mesh(){
