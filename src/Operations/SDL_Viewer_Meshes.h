@@ -126,6 +126,10 @@ public:
                                                const vec3<double> &target_pos,
                                                const vec3<double> &up_unit);
     static num_array<float> extract_normal_matrix(const num_array<float> &mv);
+    static render_stats_t compute_render_stats(const fv_surface_mesh<double, uint64_t> &mesh);
+    static float clamp_line_width(float requested_width,
+                                  float min_supported_width,
+                                  float max_supported_width);
 
     static void sync_orientation_from_euler(display_options_t &display_options);
     static void sync_euler_from_orientation(display_options_t &display_options);

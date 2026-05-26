@@ -9073,6 +9073,90 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::End();
             }
 
+            const auto display_mesh_viewer_sections = [](const char *id_suffix,
+                                                         SDL_Viewer_Meshes::display_options_t &display_options,
+                                                         const std::optional<SDL_Viewer_Meshes::render_stats_t> &stats,
+                                                         std::atomic<bool> *need_reload_mesh) -> void {
+                const auto make_label = [id_suffix](const char *label) -> std::string {
+                    return std::string(label) + "##" + id_suffix;
+                };
+
+                if(ImGui::CollapsingHeader(make_label("Display Options").c_str())){
+                    ImGui::ColorEdit4(make_label("Colour").c_str(), display_options.colours.data());
+                    ImGui::Checkbox(make_label("Precess").c_str(), &display_options.precess);
+                    ImGui::Checkbox(make_label("Wireframe").c_str(), &display_options.render_wireframe);
+                    ImGui::Checkbox(make_label("Cull back faces").c_str(), &display_options.use_opaque);
+                    if(ImGui::Checkbox(make_label("Reverse normals").c_str(), &display_options.reverse_normals)
+                    && (need_reload_mesh != nullptr)){
+                        need_reload_mesh->store(true);
+                    }
+                    ImGui::Checkbox(make_label("Use lighting").c_str(), &display_options.use_lighting);
+                    ImGui::Checkbox(make_label("Use smoothing").c_str(), &display_options.use_smoothing);
+                }
+
+                if(ImGui::CollapsingHeader(make_label("Viewing").c_str())){
+                    float drag_speed = 0.05f;
+                    double clamp_l = -10.0;
+                    double clamp_h = 10.0;
+                    ImGui::DragScalar(make_label("Precession rate").c_str(), ImGuiDataType_Double, &display_options.precess_rate, drag_speed, &clamp_l, &clamp_h, "%.1f");
+
+                    drag_speed = 0.3f;
+                    clamp_l = -360.0 * 10.0;
+                    clamp_h = 360.0 * 10.0;
+                    if(ImGui::DragScalar(make_label("Yaw").c_str(), ImGuiDataType_Double, &display_options.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        SDL_Viewer_Meshes::sync_orientation_from_euler(display_options);
+                    }
+                    if(ImGui::DragScalar(make_label("Pitch").c_str(), ImGuiDataType_Double, &display_options.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        SDL_Viewer_Meshes::sync_orientation_from_euler(display_options);
+                    }
+                    if(ImGui::DragScalar(make_label("Roll").c_str(), ImGuiDataType_Double, &display_options.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        SDL_Viewer_Meshes::sync_orientation_from_euler(display_options);
+                    }
+
+                    drag_speed = 0.005f;
+                    clamp_l = -10.0;
+                    clamp_h = 10.0;
+                    ImGui::DragScalar(make_label("Zoom").c_str(), ImGuiDataType_Double, &display_options.zoom, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar(make_label("Camera distort").c_str(), ImGuiDataType_Double, &display_options.cam_distort, drag_speed, &clamp_l, &clamp_h, "%.1f");
+
+                    if(ImGui::Button(make_label("Front").c_str())) SDL_Viewer_Meshes::apply_standard_view(display_options, SDL_Viewer_Meshes::standard_view_t::front);
+                    ImGui::SameLine();
+                    if(ImGui::Button(make_label("Back").c_str())) SDL_Viewer_Meshes::apply_standard_view(display_options, SDL_Viewer_Meshes::standard_view_t::back);
+                    ImGui::SameLine();
+                    if(ImGui::Button(make_label("Left").c_str())) SDL_Viewer_Meshes::apply_standard_view(display_options, SDL_Viewer_Meshes::standard_view_t::left);
+                    ImGui::SameLine();
+                    if(ImGui::Button(make_label("Right").c_str())) SDL_Viewer_Meshes::apply_standard_view(display_options, SDL_Viewer_Meshes::standard_view_t::right);
+                    ImGui::SameLine();
+                    if(ImGui::Button(make_label("Top").c_str())) SDL_Viewer_Meshes::apply_standard_view(display_options, SDL_Viewer_Meshes::standard_view_t::top);
+                    ImGui::SameLine();
+                    if(ImGui::Button(make_label("Bottom").c_str())) SDL_Viewer_Meshes::apply_standard_view(display_options, SDL_Viewer_Meshes::standard_view_t::bottom);
+                    ImGui::SameLine();
+                    if(ImGui::Button(make_label("Reset").c_str())) SDL_Viewer_Meshes::apply_standard_view(display_options, SDL_Viewer_Meshes::standard_view_t::reset);
+                }
+
+                if(ImGui::CollapsingHeader(make_label("Controls").c_str())){
+                    ImGui::BulletText("Left-click drag: virtual trackball rotate");
+                    ImGui::BulletText("Right-click drag: roll");
+                    ImGui::BulletText("Middle-click drag: pan");
+                    ImGui::BulletText("Scroll wheel: zoom");
+                    ImGui::BulletText("Arrow keys: translate X/Y");
+                    ImGui::BulletText("W/S: translate Z");
+                    ImGui::BulletText("Q/E: rotate around Z");
+                }
+
+                if(ImGui::CollapsingHeader(make_label("Statistics").c_str())){
+                    if(stats){
+                        ImGui::Text("Drawing %lld vertices, %lld indices, and %lld triangles.",
+                                    static_cast<long long>(stats->n_vertices),
+                                    static_cast<long long>(stats->n_indices),
+                                    static_cast<long long>(stats->n_triangles));
+                        ImGui::Text("Euler characteristic: %lld.", static_cast<long long>(stats->n_euler));
+                    }else{
+                        ImGui::TextUnformatted("No mesh statistics are available.");
+                    }
+                }
+            };
+
             if(view_toggles.view_vector_sketching_enabled && view_sketch_builder_mesh_preview_enabled){
                 ImGui::SetNextWindowSize(ImVec2(560.0f, 520.0f), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(1180.0f, 40.0f), ImGuiCond_FirstUseEver);
@@ -9080,6 +9164,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                     auto &builder = sketch_mesh_builders.at(static_cast<std::size_t>(std::clamp(sketch_mesh_builder_num, 0, static_cast<int>(sketch_mesh_builders.size()) - 1)));
                     const auto preview_mesh_idx = builder.last_mesh_node_index();
                     const auto *preview_mesh = builder.last_mesh();
+                    const auto preview_stats = (preview_mesh != nullptr)
+                                             ? std::optional<SDL_Viewer_Meshes::render_stats_t>(SDL_Viewer_Meshes::compute_render_stats(*preview_mesh))
+                                             : std::nullopt;
                     if(preview_mesh_idx){
                         ImGui::Text("Previewing node %zu", preview_mesh_idx.value());
                     }else{
@@ -9088,26 +9175,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(sketch_mesh_face_adoption.active){
                         ImGui::TextWrapped("Click a face in this preview to adopt its plane.");
                     }
-
-                    if(ImGui::Button("Front##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::front);
-                    ImGui::SameLine();
-                    if(ImGui::Button("Back##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::back);
-                    ImGui::SameLine();
-                    if(ImGui::Button("Left##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::left);
-                    ImGui::SameLine();
-                    if(ImGui::Button("Right##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::right);
-                    ImGui::SameLine();
-                    if(ImGui::Button("Top##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::top);
-                    ImGui::SameLine();
-                    if(ImGui::Button("Bottom##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::bottom);
-                    ImGui::SameLine();
-                    if(ImGui::Button("Reset##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::reset);
-
-                    ImGui::Checkbox("Wireframe##builder_mesh", &sketch_builder_mesh_display.render_wireframe);
-                    ImGui::SameLine();
-                    ImGui::Checkbox("Lighting##builder_mesh", &sketch_builder_mesh_display.use_lighting);
-                    ImGui::SameLine();
-                    ImGui::Checkbox("Cull back faces##builder_mesh", &sketch_builder_mesh_display.use_opaque);
+                    display_mesh_viewer_sections("builder_mesh", sketch_builder_mesh_display, preview_stats, nullptr);
 
                     auto canvas_size = ImGui::GetContentRegionAvail();
                     canvas_size.x = std::max(canvas_size.x, 64.0f);
@@ -12653,67 +12721,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                 }
 
-                ImGui::ColorEdit4("Colour", mesh_display_transform.colours.data());
                 ImGui::Checkbox("Metadata", &view_toggles.view_mesh_metadata_enabled);
-                ImGui::Checkbox("Precess", &mesh_display_transform.precess);
-                ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
-                ImGui::Checkbox("Cull back faces", &mesh_display_transform.use_opaque);
-                if(ImGui::Checkbox("Reverse normals", &mesh_display_transform.reverse_normals)){
-                    need_to_reload_opengl_mesh = true;
-                }
-                ImGui::Checkbox("Use lighting", &mesh_display_transform.use_lighting);
-                ImGui::Checkbox("Use smoothing", &mesh_display_transform.use_smoothing);
+                const auto mesh_stats = std::optional<SDL_Viewer_Meshes::render_stats_t>(SDL_Viewer_Meshes::compute_render_stats((*smesh_ptr_it)->meshes));
+                display_mesh_viewer_sections("drover_mesh", mesh_display_transform, mesh_stats, &need_to_reload_opengl_mesh);
 
-                float drag_speed = 0.05f;
-                double clamp_l = -10.0;
-                double clamp_h =  10.0;
-                ImGui::DragScalar("Precession rate", ImGuiDataType_Double, &mesh_display_transform.precess_rate, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                drag_speed = 0.3f;
-                clamp_l = -360.0 * 10.0;
-                clamp_h =  360.0 * 10.0;
-                if(ImGui::DragScalar("Yaw", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f")){
-                    SDL_Viewer_Meshes::sync_orientation_from_euler(mesh_display_transform);
-                }
-                if(ImGui::DragScalar("Pitch", ImGuiDataType_Double, &mesh_display_transform.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f")){
-                    SDL_Viewer_Meshes::sync_orientation_from_euler(mesh_display_transform);
-                }
-                if(ImGui::DragScalar("Roll", ImGuiDataType_Double, &mesh_display_transform.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f")){
-                    SDL_Viewer_Meshes::sync_orientation_from_euler(mesh_display_transform);
-                }
-
-                drag_speed = 0.005f;
-                clamp_l = -10.0;
-                clamp_h = 10.0;
-                ImGui::DragScalar("Zoom", ImGuiDataType_Double, &mesh_display_transform.zoom, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                ImGui::DragScalar("Camera distort", ImGuiDataType_Double, &mesh_display_transform.cam_distort, drag_speed, &clamp_l, &clamp_h, "%.1f");
-
-                ImGui::Separator();
-                ImGui::Text("Standard Views:");
-                if(ImGui::Button("Front")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::front);
-                ImGui::SameLine();
-                if(ImGui::Button("Back")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::back);
-                ImGui::SameLine();
-                if(ImGui::Button("Left")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::left);
-                ImGui::SameLine();
-                if(ImGui::Button("Right")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::right);
-                ImGui::SameLine();
-                if(ImGui::Button("Top")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::top);
-                ImGui::SameLine();
-                if(ImGui::Button("Bottom")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::bottom);
-                ImGui::SameLine();
-                if(ImGui::Button("Reset")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::reset);
-
-                if(ImGui::CollapsingHeader("Controls")){
-                    ImGui::BulletText("Left-click drag: virtual trackball rotate");
-                    ImGui::BulletText("Right-click drag: roll");
-                    ImGui::BulletText("Middle-click drag: pan");
-                    ImGui::BulletText("Scroll wheel: zoom");
-                    ImGui::BulletText("Arrow keys: translate X/Y");
-                    ImGui::BulletText("W/S: translate Z");
-                    ImGui::BulletText("Q/E: rotate around Z");
-                }
-
-                ImGui::Separator();
                 auto canvas_size = ImGui::GetContentRegionAvail();
                 canvas_size.x = std::max(canvas_size.x, 64.0f);
                 canvas_size.y = std::max(canvas_size.y, 320.0f);
@@ -12765,13 +12776,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                          ImVec2(0.0f, 1.0f),
                                                          ImVec2(1.0f, 0.0f));
                 }
-
-                const auto &stats = drover_mesh_widget.render_stats();
-                ImGui::Text("Drawing %lld vertices, %lld indices, and %lld triangles.",
-                            static_cast<long long>(stats.n_vertices),
-                            static_cast<long long>(stats.n_indices),
-                            static_cast<long long>(stats.n_triangles));
-                ImGui::Text("Euler characteristic: %lld.", static_cast<long long>(stats.n_euler));
 
                 if(view_toggles.view_mesh_metadata_enabled){
                     ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);

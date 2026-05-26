@@ -58,35 +58,7 @@ struct mesh_cpu_cache_t {
 mesh_cpu_cache_t build_mesh_cpu_cache(const fv_surface_mesh<double, uint64_t> &mesh,
                                       bool reverse_normals){
     mesh_cpu_cache_t out;
-
-    out.stats.n_vertices = static_cast<int64_t>(mesh.vertices.size());
-    out.stats.n_triangles = 0;
-    for(const auto &face : mesh.faces){
-        if(3U <= face.size()){
-            out.stats.n_triangles += static_cast<int64_t>(face.size() - 2U);
-        }
-    }
-
-    struct edge_pair_t {
-        uint64_t a = 0U;
-        uint64_t b = 0U;
-
-        bool operator<(const edge_pair_t &other) const {
-            return std::tie(a, b) < std::tie(other.a, other.b);
-        }
-    };
-    std::set<edge_pair_t> unique_edges;
-    for(const auto &face : mesh.faces){
-        for(std::size_t i = 0U; i < face.size(); ++i){
-            auto a = face.at(i);
-            auto b = face.at((i + 1U) % face.size());
-            if(a > b) std::swap(a, b);
-            unique_edges.insert(edge_pair_t{ a, b });
-        }
-    }
-    out.stats.n_euler = static_cast<int64_t>(mesh.vertices.size())
-                      - static_cast<int64_t>(unique_edges.size())
-                      + static_cast<int64_t>(mesh.faces.size());
+    out.stats = SDL_Viewer_Meshes::compute_render_stats(mesh);
 
     const auto inf = std::numeric_limits<double>::infinity();
     auto x_min = inf;
@@ -441,6 +413,50 @@ const SDL_Viewer_Meshes::hover_state_t& SDL_Viewer_Meshes::hover_state() const {
     return (impl_) ? impl_->hover : empty;
 }
 
+SDL_Viewer_Meshes::render_stats_t SDL_Viewer_Meshes::compute_render_stats(const fv_surface_mesh<double, uint64_t> &mesh){
+    render_stats_t out;
+    out.n_vertices = static_cast<int64_t>(mesh.vertices.size());
+    out.n_triangles = 0;
+    for(const auto &face : mesh.faces){
+        if(3U <= face.size()){
+            out.n_triangles += static_cast<int64_t>(face.size() - 2U);
+        }
+    }
+    out.n_indices = out.n_triangles * 3L;
+
+    struct edge_pair_t {
+        uint64_t a = 0U;
+        uint64_t b = 0U;
+
+        bool operator<(const edge_pair_t &other) const {
+            return std::tie(a, b) < std::tie(other.a, other.b);
+        }
+    };
+    std::set<edge_pair_t> unique_edges;
+    for(const auto &face : mesh.faces){
+        for(std::size_t i = 0U; i < face.size(); ++i){
+            auto a = face.at(i);
+            auto b = face.at((i + 1U) % face.size());
+            if(a > b) std::swap(a, b);
+            unique_edges.insert(edge_pair_t{ a, b });
+        }
+    }
+    out.n_euler = out.n_vertices
+                - static_cast<int64_t>(unique_edges.size())
+                + static_cast<int64_t>(mesh.faces.size());
+    return out;
+}
+
+float SDL_Viewer_Meshes::clamp_line_width(float requested_width,
+                                          float min_supported_width,
+                                          float max_supported_width){
+    if(!std::isfinite(requested_width)) requested_width = 1.0f;
+    if(!std::isfinite(min_supported_width)) min_supported_width = 1.0f;
+    if(!std::isfinite(max_supported_width)) max_supported_width = min_supported_width;
+    if(max_supported_width < min_supported_width) std::swap(min_supported_width, max_supported_width);
+    return std::clamp(requested_width, min_supported_width, max_supported_width);
+}
+
 num_array<float> SDL_Viewer_Meshes::make_orthographic_projection_matrix(float left_bound,
                                                                         float right_bound,
                                                                         float bottom_bound,
@@ -753,9 +769,26 @@ bool SDL_Viewer_Meshes::render(const render_request_t &request,
     GLint prior_framebuffer = 0;
     GLint prior_viewport[4] = { 0, 0, 0, 0 };
     GLint prior_program = 0;
+    const auto prior_depth_test_enabled = (glIsEnabled(GL_DEPTH_TEST) == GL_TRUE);
+    const auto prior_blend_enabled = (glIsEnabled(GL_BLEND) == GL_TRUE);
+    const auto prior_cull_face_enabled = (glIsEnabled(GL_CULL_FACE) == GL_TRUE);
+    GLint prior_cull_face_mode = GL_BACK;
+    GLint prior_blend_src_rgb = GL_ONE;
+    GLint prior_blend_dst_rgb = GL_ZERO;
+    GLint prior_blend_src_alpha = GL_ONE;
+    GLint prior_blend_dst_alpha = GL_ZERO;
+    GLint prior_polygon_mode[2] = { GL_FILL, GL_FILL };
+    GLfloat prior_line_width = 1.0f;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prior_framebuffer);
     glGetIntegerv(GL_VIEWPORT, prior_viewport);
     glGetIntegerv(GL_CURRENT_PROGRAM, &prior_program);
+    glGetIntegerv(GL_CULL_FACE_MODE, &prior_cull_face_mode);
+    glGetIntegerv(GL_BLEND_SRC_RGB, &prior_blend_src_rgb);
+    glGetIntegerv(GL_BLEND_DST_RGB, &prior_blend_dst_rgb);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &prior_blend_src_alpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &prior_blend_dst_alpha);
+    glGetIntegerv(GL_POLYGON_MODE, prior_polygon_mode);
+    glGetFloatv(GL_LINE_WIDTH, &prior_line_width);
 
     glBindFramebuffer(GL_FRAMEBUFFER, impl_->framebuffer);
     glViewport(0, 0, width_px, height_px);
@@ -967,6 +1000,8 @@ bool SDL_Viewer_Meshes::render(const render_request_t &request,
 
     if(impl_->overlay_ready){
         const auto overlay_colour = std::array<float, 4>{ 1.0f, 0.85f, 0.20f, 1.0f };
+        GLfloat line_width_range[2] = { 1.0f, 1.0f };
+        glGetFloatv(GL_ALIASED_LINE_WIDTH_RANGE, line_width_range);
         if(0 <= use_lighting_loc) glUniform1ui(use_lighting_loc, GL_FALSE);
         if(0 <= use_smoothing_loc) glUniform1ui(use_smoothing_loc, GL_FALSE);
         if(0 <= shader_user_colour_loc){
@@ -986,11 +1021,25 @@ bool SDL_Viewer_Meshes::render(const render_request_t &request,
 
         glDisable(GL_DEPTH_TEST);
         glBindVertexArray(impl_->overlay_vao);
-        glLineWidth(2.0f);
+        glLineWidth(clamp_line_width(2.0f, line_width_range[0], line_width_range[1]));
         glDrawArrays(GL_LINE_LOOP, 0, static_cast<GLsizei>(impl_->overlay_render_vertices.size()));
         glBindVertexArray(0);
-        glLineWidth(1.0f);
     }
+
+    if(prior_depth_test_enabled) glEnable(GL_DEPTH_TEST);
+    else glDisable(GL_DEPTH_TEST);
+    if(prior_blend_enabled) glEnable(GL_BLEND);
+    else glDisable(GL_BLEND);
+    if(prior_cull_face_enabled) glEnable(GL_CULL_FACE);
+    else glDisable(GL_CULL_FACE);
+    glCullFace(static_cast<GLenum>(prior_cull_face_mode));
+    glBlendFuncSeparate(static_cast<GLenum>(prior_blend_src_rgb),
+                        static_cast<GLenum>(prior_blend_dst_rgb),
+                        static_cast<GLenum>(prior_blend_src_alpha),
+                        static_cast<GLenum>(prior_blend_dst_alpha));
+    glPolygonMode(GL_FRONT, static_cast<GLenum>(prior_polygon_mode[0]));
+    glPolygonMode(GL_BACK, static_cast<GLenum>(prior_polygon_mode[1]));
+    glLineWidth(prior_line_width);
 
     glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prior_framebuffer));
     glViewport(prior_viewport[0], prior_viewport[1], prior_viewport[2], prior_viewport[3]);

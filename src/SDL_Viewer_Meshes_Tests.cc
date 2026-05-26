@@ -60,6 +60,15 @@ TEST_CASE("SDL_Viewer_Meshes compute_hover_state identifies polygon faces"){
     CHECK(hover->rectangle_visible);
 }
 
+TEST_CASE("SDL_Viewer_Meshes compute_render_stats counts polygon mesh topology"){
+    const auto mesh = make_unit_quad_mesh();
+    const auto stats = SDL_Viewer_Meshes::compute_render_stats(mesh);
+    CHECK(stats.n_vertices == 4);
+    CHECK(stats.n_triangles == 2);
+    CHECK(stats.n_indices == 6);
+    CHECK(stats.n_euler == 1);
+}
+
 TEST_CASE("SDL_Viewer_Meshes compute_hover_state prefers front-most face"){
     const auto mesh = make_overlapping_mesh();
     const auto mvp = num_array<float>().identity(4);
@@ -73,4 +82,10 @@ TEST_CASE("SDL_Viewer_Meshes compute_hover_state prefers front-most face"){
     REQUIRE(hover.has_value());
     REQUIRE(hover->face_index.has_value());
     CHECK(hover->face_index.value() == 0U);
+}
+
+TEST_CASE("SDL_Viewer_Meshes clamp_line_width respects supported range"){
+    CHECK(SDL_Viewer_Meshes::clamp_line_width(2.0f, 1.0f, 1.0f) == doctest::Approx(1.0f));
+    CHECK(SDL_Viewer_Meshes::clamp_line_width(0.5f, 1.0f, 4.0f) == doctest::Approx(1.0f));
+    CHECK(SDL_Viewer_Meshes::clamp_line_width(3.0f, 4.0f, 1.0f) == doctest::Approx(3.0f));
 }
