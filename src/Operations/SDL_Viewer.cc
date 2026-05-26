@@ -7203,7 +7203,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &sketch_builder_save_path,
                                             &sketch_builder_load_path,
                                             &sketch_builder_status,
-                                            &sketch_effective_grid_spacing ]() -> void {
+                                            &sketch_effective_grid_spacing,
+                                            &view_sketch_builder_mesh_preview_enabled,
+                                            &sketch_builder_mesh_widget,
+                                            &sketch_builder_mesh_display,
+                                            &custom_shader,
+                                            &background_colour ]() -> void {
             if(pending_sketch_plane_adoption){
                 adopt_sketch_plane(pending_sketch_plane_adoption->plane,
                                    pending_sketch_plane_adoption->support_loops,
@@ -9133,7 +9138,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                     mouse_state.wheel_delta = mouse_state.hovered ? static_cast<double>(ImGui::GetIO().MouseWheel) : 0.0;
 
-                    const auto *draw_list = ImGui::GetWindowDrawList();
+                    auto *draw_list = ImGui::GetWindowDrawList();
                     if(custom_shader && preview_mesh){
                         SDL_Viewer_Meshes::render_request_t request;
                         request.mesh = preview_mesh;
@@ -9144,7 +9149,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         request.hover_faces_enabled = sketch_mesh_face_adoption.active;
                         request.include_coplanar_geometry = sketch_mesh_face_adoption.include_coplanar_geometry;
                         request.coplanar_eps = sketch_mesh_face_adoption.coplanar_eps;
-                        request.clear_colour = { background_colour.x, background_colour.y, background_colour.z, background_colour.w };
+                        request.clear_colour = std::array<float, 4>{ background_colour.x, background_colour.y, background_colour.z, background_colour.w };
                         sketch_builder_mesh_widget.render(request, sketch_builder_mesh_display);
 
                         draw_list->AddImage(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(sketch_builder_mesh_widget.texture_id())),
@@ -12752,7 +12757,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     request.height_px = static_cast<int>(std::round(canvas_size.y));
                     request.shader_program = custom_shader->get_program_ID();
                     request.mouse = mouse_state;
-                    request.clear_colour = { background_colour.x, background_colour.y, background_colour.z, background_colour.w };
+                    request.clear_colour = std::array<float, 4>{ background_colour.x, background_colour.y, background_colour.z, background_colour.w };
                     drover_mesh_widget.render(request, mesh_display_transform);
                     ImGui::GetWindowDrawList()->AddImage(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(drover_mesh_widget.texture_id())),
                                                          canvas_pos,

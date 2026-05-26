@@ -49,7 +49,8 @@ TEST_CASE("SDL_Viewer_Meshes compute_hover_state identifies polygon faces"){
                                                               mvp,
                                                               200,
                                                               120,
-                                                              SDL_Viewer_Meshes::point_t{ 100.0, 60.0 });
+                                                              SDL_Viewer_Meshes::point_t{ 100.0, 60.0 },
+                                                              SDL_Viewer_Meshes::hover_pick_options_t{});
     REQUIRE(hover.has_value());
     REQUIRE(hover->face_index.has_value());
     CHECK(hover->face_index.value() == 0U);
@@ -67,7 +68,8 @@ TEST_CASE("SDL_Viewer_Meshes compute_hover_state prefers front-most face"){
                                                               mvp,
                                                               200,
                                                               200,
-                                                              SDL_Viewer_Meshes::point_t{ 100.0, 100.0 });
+                                                              SDL_Viewer_Meshes::point_t{ 100.0, 100.0 },
+                                                              SDL_Viewer_Meshes::hover_pick_options_t{});
     REQUIRE(hover.has_value());
     REQUIRE(hover->face_index.has_value());
     CHECK(hover->face_index.value() == 0U);

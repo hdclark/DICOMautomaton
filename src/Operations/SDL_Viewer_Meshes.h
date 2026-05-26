@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "YgorMath.h"
+#include "YgorMathQuaternions.h"
 
 #include "../Sketch.h"
 #include "../Surface_Meshes.h"
@@ -137,7 +138,7 @@ public:
                                                             int width_px,
                                                             int height_px,
                                                             const point_t &mouse_position_px,
-                                                            const hover_pick_options_t &options = hover_pick_options_t{});
+                                                            const hover_pick_options_t &options);
 
 private:
     struct impl_t;
