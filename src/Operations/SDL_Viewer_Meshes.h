@@ -32,7 +32,7 @@ struct opengl_mesh {
     opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
                 bool reverse_normals = false);
     void draw(bool render_wireframe = false);
-    ~opengl_mesh() noexcept(false);
+    ~opengl_mesh() noexcept;
 };
 
 class Mesh_Widget {
