@@ -854,11 +854,16 @@ void Mesh_Widget::draw_hover_overlay(GLuint shader_program,
     upload_mesh_uniforms(shader_program, overlay_options, matrices);
 
     GLfloat previous_line_width = 1.0f;
+    GLfloat supported_line_width_range[2] = { 1.0f, 1.0f };
     glGetFloatv(GL_LINE_WIDTH, &previous_line_width);
+    glGetFloatv(GL_ALIASED_LINE_WIDTH_RANGE, supported_line_width_range);
+    const auto overlay_line_width = std::clamp(2.0f,
+                                               supported_line_width_range[0],
+                                               supported_line_width_range[1]);
 
     glDisable(GL_DEPTH_TEST);
     glBindVertexArray(this->overlay_vao_);
-    glLineWidth(2.0f);
+    glLineWidth(overlay_line_width);
     glDrawArrays(GL_LINE_LOOP, 0, static_cast<GLsizei>(vertices.size()));
     glLineWidth(previous_line_width);
     glBindVertexArray(0);

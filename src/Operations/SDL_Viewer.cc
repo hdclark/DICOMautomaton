@@ -12361,6 +12361,79 @@ bool SDL_Viewer(Drover &DICOM_data,
             return payload;
         };
 
+        struct mesh_widget_render_request_t {
+            Mesh_Widget *widget = nullptr;
+            GLuint shader_program = 0;
+            Mesh_Widget::display_options_t *display_options = nullptr;
+            Mesh_Widget::viewport_t viewport;
+            Mesh_Widget::input_state_t input_state;
+        };
+        std::list<mesh_widget_render_request_t> queued_mesh_widget_renders;
+        constexpr float kDroverMeshViewportMinWidth = 64.0f;
+        constexpr float kDroverMeshViewportMinHeight = 240.0f;
+        constexpr float kSketchBuilderMeshViewportMinWidth = 64.0f;
+        constexpr float kSketchBuilderMeshViewportMinHeight = 220.0f;
+
+        const auto ensure_window_fits_viewport = [](const ImVec2 &minimum_viewport_size) -> ImVec2 {
+            auto viewport_size = ImGui::GetContentRegionAvail();
+            const auto window_size = ImGui::GetWindowSize();
+            const auto width_overhead = std::max(0.0f, window_size.x - viewport_size.x);
+            const auto height_overhead = std::max(0.0f, window_size.y - viewport_size.y);
+            const auto minimum_window_size = ImVec2(width_overhead + minimum_viewport_size.x,
+                                                    height_overhead + minimum_viewport_size.y);
+            if( (window_size.x + 0.5f < minimum_window_size.x)
+             || (window_size.y + 0.5f < minimum_window_size.y) ){
+                ImGui::SetWindowSize(ImVec2(std::max(window_size.x, minimum_window_size.x),
+                                           std::max(window_size.y, minimum_window_size.y)));
+                viewport_size = ImGui::GetContentRegionAvail();
+            }
+            viewport_size.x = std::max(viewport_size.x, minimum_viewport_size.x);
+            viewport_size.y = std::max(viewport_size.y, minimum_viewport_size.y);
+            return viewport_size;
+        };
+
+        const auto make_mesh_widget_viewport = [](const ImVec2 &rect_min,
+                                                  const ImVec2 &rect_max,
+                                                  const ImGuiIO &io,
+                                                  Mesh_Widget::input_state_t &input_state) -> Mesh_Widget::viewport_t {
+            const float framebuffer_scale_x = (io.DisplayFramebufferScale.x > 0.0f) ? io.DisplayFramebufferScale.x : 1.0f;
+            const float framebuffer_scale_y = (io.DisplayFramebufferScale.y > 0.0f) ? io.DisplayFramebufferScale.y : 1.0f;
+
+            Mesh_Widget::viewport_t viewport;
+            viewport.x = static_cast<int>(rect_min.x * framebuffer_scale_x);
+            viewport.y = static_cast<int>(rect_min.y * framebuffer_scale_y);
+            viewport.width = std::max(1, static_cast<int>((rect_max.x - rect_min.x) * framebuffer_scale_x));
+            viewport.height = std::max(1, static_cast<int>((rect_max.y - rect_min.y) * framebuffer_scale_y));
+            viewport.framebuffer_width = std::max(1, static_cast<int>(io.DisplaySize.x * framebuffer_scale_x));
+            viewport.framebuffer_height = std::max(1, static_cast<int>(io.DisplaySize.y * framebuffer_scale_y));
+
+            input_state.mouse_x *= framebuffer_scale_x;
+            input_state.mouse_y *= framebuffer_scale_y;
+            return viewport;
+        };
+
+        const auto queue_mesh_widget_render = [&queued_mesh_widget_renders](ImDrawList *draw_list,
+                                                                            Mesh_Widget &widget,
+                                                                            GLuint shader_program,
+                                                                            Mesh_Widget::display_options_t &display_options,
+                                                                            const Mesh_Widget::viewport_t &viewport,
+                                                                            const Mesh_Widget::input_state_t &input_state) -> void {
+            queued_mesh_widget_renders.push_back(mesh_widget_render_request_t{ &widget,
+                                                                               shader_program,
+                                                                               &display_options,
+                                                                               viewport,
+                                                                               input_state });
+            auto &request = queued_mesh_widget_renders.back();
+            draw_list->AddCallback([](const ImDrawList*, const ImDrawCmd *cmd) -> void {
+                auto *request_ptr = static_cast<mesh_widget_render_request_t*>(cmd->UserCallbackData);
+                request_ptr->widget->render(request_ptr->shader_program,
+                                            *(request_ptr->display_options),
+                                            request_ptr->viewport,
+                                            request_ptr->input_state);
+            }, &request);
+            draw_list->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+        };
+
         // Render surface meshes.
         const auto draw_surface_meshes = [&view_toggles,
                                           &drover_mutex,
@@ -12384,15 +12457,16 @@ bool SDL_Viewer(Drover &DICOM_data,
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
 
-            ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
-            if(!ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled, ImGuiWindowFlags_NoNavInputs)){
-                ImGui::End();
+            if(!DICOM_data.Has_Mesh_Data()){
+                drover_mesh_widget.clear_mesh();
                 return;
             }
 
-            if(!DICOM_data.Has_Mesh_Data()){
-                drover_mesh_widget.clear_mesh();
-                ImGui::TextWrapped("No Drover surface meshes are available.");
+            ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
+            if(!ImGui::Begin("Meshes",
+                             &view_toggles.view_meshes_enabled,
+                             ImGuiWindowFlags_NoNavInputs
+                           | ImGuiWindowFlags_NoResize)){
                 ImGui::End();
                 return;
             }
@@ -12430,12 +12504,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                                          true,
                                          &view_toggles.view_mesh_metadata_enabled,
                                          [&](){ need_to_reload_opengl_mesh = true; });
-
             ImGui::Separator();
             ImGui::TextUnformatted("Viewport");
-            auto viewport_size = ImGui::GetContentRegionAvail();
-            viewport_size.x = std::max(viewport_size.x, 64.0f);
-            viewport_size.y = std::max(viewport_size.y, 240.0f);
+            const auto viewport_size = ensure_window_fits_viewport(ImVec2(kDroverMeshViewportMinWidth,
+                                                                          kDroverMeshViewportMinHeight));
             ImGui::InvisibleButton("DroverMeshViewport", viewport_size,
                                    ImGuiButtonFlags_MouseButtonLeft
                                  | ImGuiButtonFlags_MouseButtonRight
@@ -12449,18 +12521,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGuiIO &io = ImGui::GetIO();
                 const auto rect_min = ImGui::GetItemRectMin();
                 const auto rect_max = ImGui::GetItemRectMax();
-                ImGui::GetWindowDrawList()->AddRect(rect_min, rect_max, ImGui::GetColorU32(ImGuiCol_Border));
-
-                const float framebuffer_scale_x = (io.DisplayFramebufferScale.x > 0.0f) ? io.DisplayFramebufferScale.x : 1.0f;
-                const float framebuffer_scale_y = (io.DisplayFramebufferScale.y > 0.0f) ? io.DisplayFramebufferScale.y : 1.0f;
-
-                Mesh_Widget::viewport_t viewport;
-                viewport.x = static_cast<int>(rect_min.x * framebuffer_scale_x);
-                viewport.y = static_cast<int>(rect_min.y * framebuffer_scale_y);
-                viewport.width = std::max(1, static_cast<int>((rect_max.x - rect_min.x) * framebuffer_scale_x));
-                viewport.height = std::max(1, static_cast<int>((rect_max.y - rect_min.y) * framebuffer_scale_y));
-                viewport.framebuffer_width = std::max(1, static_cast<int>(io.DisplaySize.x * framebuffer_scale_x));
-                viewport.framebuffer_height = std::max(1, static_cast<int>(io.DisplaySize.y * framebuffer_scale_y));
 
                 Mesh_Widget::input_state_t input_state;
                 input_state.mouse_inside = viewport_hovered;
@@ -12476,10 +12536,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                                               ImGui::IsMouseClicked(ImGuiMouseButton_Middle),
                                               ImGui::IsMouseClicked(ImGuiMouseButton_Right) };
 
-                drover_mesh_widget.render(custom_shader->get_program_ID(),
-                                          mesh_display_transform,
-                                          viewport,
-                                          input_state);
+                auto viewport = make_mesh_widget_viewport(rect_min, rect_max, io, input_state);
+                auto *draw_list = ImGui::GetWindowDrawList();
+                queue_mesh_widget_render(draw_list,
+                                         drover_mesh_widget,
+                                         custom_shader->get_program_ID(),
+                                         mesh_display_transform,
+                                         viewport,
+                                         input_state);
+                draw_list->AddRect(rect_min, rect_max, ImGui::GetColorU32(ImGuiCol_Border));
             }
 
             if(view_toggles.view_mesh_metadata_enabled){
@@ -12555,9 +12620,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             ImGui::Separator();
             ImGui::TextUnformatted("Viewport");
-            auto viewport_size = ImGui::GetContentRegionAvail();
-            viewport_size.x = std::max(viewport_size.x, 64.0f);
-            viewport_size.y = std::max(viewport_size.y, 220.0f);
+            auto viewport_size = ensure_window_fits_viewport(ImVec2(kSketchBuilderMeshViewportMinWidth,
+                                                                    kSketchBuilderMeshViewportMinHeight));
             ImGui::InvisibleButton("SketchBuilderMeshViewport", viewport_size,
                                    ImGuiButtonFlags_MouseButtonLeft
                                  | ImGuiButtonFlags_MouseButtonRight
@@ -12571,19 +12635,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGuiIO &io = ImGui::GetIO();
                 const auto rect_min = ImGui::GetItemRectMin();
                 const auto rect_max = ImGui::GetItemRectMax();
-                ImGui::GetWindowDrawList()->AddRect(rect_min, rect_max, ImGui::GetColorU32(ImGuiCol_Border));
-
-                Mesh_Widget::viewport_t viewport;
-                viewport.x = static_cast<int>(rect_min.x);
-                viewport.y = static_cast<int>(rect_min.y);
-                viewport.width = std::max(1, static_cast<int>(rect_max.x - rect_min.x));
-                viewport.height = std::max(1, static_cast<int>(rect_max.y - rect_min.y));
-                viewport.framebuffer_width = std::max(
-                    1,
-                    static_cast<int>(io.DisplaySize.x * io.DisplayFramebufferScale.x));
-                viewport.framebuffer_height = std::max(
-                    1,
-                    static_cast<int>(io.DisplaySize.y * io.DisplayFramebufferScale.y));
 
                 Mesh_Widget::input_state_t input_state;
                 input_state.mouse_inside = viewport_hovered;
@@ -12601,13 +12652,27 @@ bool SDL_Viewer(Drover &DICOM_data,
                                               ImGui::IsMouseClicked(ImGuiMouseButton_Middle),
                                               ImGui::IsMouseClicked(ImGuiMouseButton_Right) };
 
-                sketch_builder_mesh_widget.render(custom_shader->get_program_ID(),
-                                                  sketch_builder_mesh_display_transform,
-                                                  viewport,
-                                                  input_state);
+                const auto viewport = make_mesh_widget_viewport(rect_min, rect_max, io, input_state);
+                auto *draw_list = ImGui::GetWindowDrawList();
+                queue_mesh_widget_render(draw_list,
+                                         sketch_builder_mesh_widget,
+                                         custom_shader->get_program_ID(),
+                                         sketch_builder_mesh_display_transform,
+                                         viewport,
+                                         input_state);
+                draw_list->AddRect(rect_min, rect_max, ImGui::GetColorU32(ImGuiCol_Border));
 
                 if(sketch_mesh_face_adoption.active && viewport_hovered && input_state.mouse_clicked.at(0)){
-                    if(const auto payload = make_sketch_plane_adoption_payload(sketch_builder_mesh_widget.hovered_face())){
+                    const auto preview_matrices = Mesh_Widget::compute_matrices(sketch_builder_mesh_display_transform,
+                                                                               viewport);
+                    const auto hover_state = Mesh_Widget::compute_hover_state(*preview_mesh,
+                                                                             preview_matrices,
+                                                                             viewport,
+                                                                             input_state.mouse_x,
+                                                                             input_state.mouse_y,
+                                                                             std::max(0.0, input_state.coplanar_eps),
+                                                                             input_state.collect_coplanar_faces);
+                    if(const auto payload = make_sketch_plane_adoption_payload(hover_state)){
                         pending_sketch_plane_adoption = payload;
                     }
                 }
