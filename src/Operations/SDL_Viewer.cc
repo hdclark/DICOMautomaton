@@ -12451,13 +12451,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const auto rect_max = ImGui::GetItemRectMax();
                 ImGui::GetWindowDrawList()->AddRect(rect_min, rect_max, ImGui::GetColorU32(ImGuiCol_Border));
 
+                const float framebuffer_scale_x = (io.DisplayFramebufferScale.x > 0.0f) ? io.DisplayFramebufferScale.x : 1.0f;
+                const float framebuffer_scale_y = (io.DisplayFramebufferScale.y > 0.0f) ? io.DisplayFramebufferScale.y : 1.0f;
+
                 Mesh_Widget::viewport_t viewport;
-                viewport.x = static_cast<int>(rect_min.x);
-                viewport.y = static_cast<int>(rect_min.y);
-                viewport.width = std::max(1, static_cast<int>(rect_max.x - rect_min.x));
-                viewport.height = std::max(1, static_cast<int>(rect_max.y - rect_min.y));
-                viewport.framebuffer_width = std::max(1, static_cast<int>(io.DisplaySize.x));
-                viewport.framebuffer_height = std::max(1, static_cast<int>(io.DisplaySize.y));
+                viewport.x = static_cast<int>(rect_min.x * framebuffer_scale_x);
+                viewport.y = static_cast<int>(rect_min.y * framebuffer_scale_y);
+                viewport.width = std::max(1, static_cast<int>((rect_max.x - rect_min.x) * framebuffer_scale_x));
+                viewport.height = std::max(1, static_cast<int>((rect_max.y - rect_min.y) * framebuffer_scale_y));
+                viewport.framebuffer_width = std::max(1, static_cast<int>(io.DisplaySize.x * framebuffer_scale_x));
+                viewport.framebuffer_height = std::max(1, static_cast<int>(io.DisplaySize.y * framebuffer_scale_y));
 
                 Mesh_Widget::input_state_t input_state;
                 input_state.mouse_inside = viewport_hovered;
