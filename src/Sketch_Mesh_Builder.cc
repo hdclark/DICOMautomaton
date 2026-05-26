@@ -284,6 +284,28 @@ bool Sketch_Mesh_Builder::compute_all(std::string *error_message){
     return true;
 }
 
+std::optional<std::size_t> Sketch_Mesh_Builder::last_mesh_node_index() const {
+    for(std::size_t i = nodes_.size(); 0U < i; --i){
+        const auto idx = i - 1U;
+        if(nodes_.at(idx).mesh.has_value()){
+            return idx;
+        }
+    }
+    return {};
+}
+
+fv_surface_mesh<double, uint64_t>* Sketch_Mesh_Builder::last_mesh(){
+    const auto idx = last_mesh_node_index();
+    if(!idx) return nullptr;
+    return &nodes_.at(idx.value()).mesh.value();
+}
+
+const fv_surface_mesh<double, uint64_t>* Sketch_Mesh_Builder::last_mesh() const {
+    const auto idx = last_mesh_node_index();
+    if(!idx) return nullptr;
+    return &nodes_.at(idx.value()).mesh.value();
+}
+
 // ---------------------------------------------------------------------------
 // I/O.
 // ---------------------------------------------------------------------------

@@ -82,6 +82,11 @@ public:
     // Compute all nodes sequentially from root to the last node.
     bool compute_all(std::string *error_message = nullptr);
 
+    // Returns the latest node that currently holds a mesh, if any.
+    std::optional<std::size_t> last_mesh_node_index() const;
+    fv_surface_mesh<double, uint64_t>* last_mesh();
+    const fv_surface_mesh<double, uint64_t>* last_mesh() const;
+
     // I/O: write/read the entire builder (all nodes) to/from a stream.
     bool write_to(std::ostream &os) const;
     static bool read_from(std::istream &is, Sketch_Mesh_Builder &out);

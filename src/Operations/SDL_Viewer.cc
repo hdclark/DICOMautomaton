@@ -96,6 +96,7 @@
 #include "../Surface_Meshes.h"
 #include "../GLSL_Shaders.h"
 
+#include "SDL_Viewer_Meshes.h"
 #include "../Challenges/Clicker.h"
 #include "../Challenges/Encompass.h"
 #include "../Challenges/FreeSki.h"
@@ -1200,36 +1201,18 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Meshes.
     using disp_mesh_it_t = decltype(DICOM_data.smesh_data.begin());
-    std::unique_ptr<opengl_mesh> oglm_ptr;
     int64_t mesh_num = -1;
     std::atomic<bool> need_to_reload_opengl_mesh = true;
-
-    struct mesh_display_transform_t {
-        // Viewing options.
-        bool render_wireframe = true;
-        bool reverse_normals = false;
-        bool use_lighting = true;
-        bool use_opaque = false;
-        bool use_smoothing = true;
-
-        // Camera transformations.
-        bool precess = true;
-        double precess_rate = 1.0;
-
-        double rot_y = 0.0; // Yaw.
-        double rot_p = 0.0; // Pitch.
-        double rot_r = 0.0; // Roll.
-        quaternion orientation = quaternion().identity();
-
-        double zoom = 1.0;
-        double cam_distort = 0.0;
-
-        // Transformations applied to all models.
-        num_array<float> model = num_array<float>().identity(4);
-
-        // Nominal colours.
-        std::array<float, 4> colours = { 1.000, 0.588, 0.005, 0.8 };
-    } mesh_display_transform;
+    SDL_Viewer_Meshes drover_mesh_widget;
+    SDL_Viewer_Meshes::display_options_t mesh_display_transform;
+    struct mesh_canvas_state_t {
+        bool visible = false;
+        bool hovered = false;
+        bool active = false;
+        bool window_focused = false;
+        ImVec2 min = {};
+        ImVec2 size = {};
+    } drover_mesh_canvas;
 
     // Tables.
     using disp_table_it_t = decltype(DICOM_data.table_data.begin());
@@ -1824,11 +1807,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool include_face_geometry = false;
         bool include_coplanar_geometry = false;
         double coplanar_eps = 1.0;
-        std::optional<Sketch::plane_frame_t> hovered_plane;
-        std::vector<vec3<double>> hovered_face_vertices;
-        std::vector<std::vector<vec3<double>>> hovered_coplanar_faces;
-        std::array<ImVec2, 4> hovered_rectangle = {};
-        bool hovered_rectangle_visible = false;
     } sketch_mesh_face_adoption;
     struct sketch_plane_adoption_payload_t {
         Sketch::plane_frame_t plane;
@@ -1865,6 +1843,9 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::array<char, 4096> sketch_builder_save_path = {};
     std::array<char, 4096> sketch_builder_load_path = {};
     std::string sketch_builder_status;
+    bool view_sketch_builder_mesh_preview_enabled = true;
+    SDL_Viewer_Meshes sketch_builder_mesh_widget;
+    SDL_Viewer_Meshes::display_options_t sketch_builder_mesh_display;
 
     // Polyominoes state.
     opengl_texture_handle_t polyomino_texture;
@@ -8196,18 +8177,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(sketch_mesh_face_adoption.active){
                         if(ImGui::Button("Cancel Adopt Mesh Face Plane")){
                             sketch_mesh_face_adoption.active = false;
-                            sketch_mesh_face_adoption.hovered_plane = {};
-                            sketch_mesh_face_adoption.hovered_face_vertices.clear();
-                            sketch_mesh_face_adoption.hovered_coplanar_faces.clear();
-                            sketch_mesh_face_adoption.hovered_rectangle_visible = false;
                         }
-                        ImGui::TextWrapped("Hover a mesh face in the Meshes viewport and click to adopt its tangent plane.");
+                        ImGui::TextWrapped("Hover a face in the Sketch Builder Mesh Preview window and click to adopt its tangent plane.");
                     }else if(ImGui::Button("Adopt Mesh Face Plane")){
                         sketch_mesh_face_adoption.active = true;
-                        sketch_mesh_face_adoption.hovered_plane = {};
-                        sketch_mesh_face_adoption.hovered_face_vertices.clear();
-                        sketch_mesh_face_adoption.hovered_coplanar_faces.clear();
-                        sketch_mesh_face_adoption.hovered_rectangle_visible = false;
+                        view_sketch_builder_mesh_preview_enabled = true;
                     }
                 }
 
@@ -8879,6 +8853,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::Button("Add Builder")){
                         sketch_mesh_builders.emplace_back();
                         sketch_mesh_builder_num = static_cast<int>(sketch_mesh_builders.size()) - 1;
+                        sketch_builder_mesh_widget.invalidate_mesh_cache();
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Delete Builder")){
@@ -8892,6 +8867,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             sketch_mesh_builders.erase(it);
                             sketch_mesh_builder_num = std::clamp(sketch_mesh_builder_num, 0, static_cast<int>(sketch_mesh_builders.size()) - 1);
                         }
+                        sketch_builder_mesh_widget.invalidate_mesh_cache();
                     }
                 }
                 auto &builder = sketch_mesh_builders.at(static_cast<std::size_t>(std::clamp(sketch_mesh_builder_num, 0, static_cast<int>(sketch_mesh_builders.size()) - 1)));
@@ -8924,6 +8900,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Node management buttons.
                 if(ImGui::Button("Add Node")){
                     builder.append_default_node();
+                    sketch_builder_mesh_widget.invalidate_mesh_cache();
                     slot.history.current() = builder.active_node().sketch;
                     clear_sketch_interaction_state();
                     slot.selection.clear();
@@ -8934,6 +8911,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(ImGui::Button("Delete Node")){
                     const auto old_idx = builder.active_node_index();
                     builder.delete_leaf_node(builder.active_node_index());
+                    sketch_builder_mesh_widget.invalidate_mesh_cache();
                     slot.history.current() = builder.active_node().sketch;
                     clear_sketch_interaction_state();
                     slot.selection.clear();
@@ -8992,6 +8970,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     builder.active_node().sketch = slot.history.current();
                     std::string err;
                     if(builder.compute_node(builder.active_node_index(), &err)){
+                        sketch_builder_mesh_widget.invalidate_mesh_cache();
                         sketch_builder_status = "Computed node " + std::to_string(builder.active_node_index());
                     }else{
                         sketch_builder_status = "Compute failed: " + err;
@@ -9004,6 +8983,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     builder.active_node().sketch = slot.history.current();
                     std::string err;
                     if(builder.compute_all(&err)){
+                        sketch_builder_mesh_widget.invalidate_mesh_cache();
                         sketch_builder_status = "Computed all " + std::to_string(builder.node_count()) + " nodes";
                     }else{
                         sketch_builder_status = "Compute all failed: " + err;
@@ -9068,6 +9048,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         Sketch_Mesh_Builder loaded;
                         if(Sketch_Mesh_Builder::load_from_file(std::filesystem::path(sketch_builder_load_path.data()), loaded, &err)){
                             builder = std::move(loaded);
+                            sketch_builder_mesh_widget.invalidate_mesh_cache();
                             slot.history.current() = builder.active_node().sketch;
                             clear_sketch_interaction_state();
                             slot.selection.clear();
@@ -9085,6 +9066,117 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 ImGui::End();
+            }
+
+            if(view_toggles.view_vector_sketching_enabled && view_sketch_builder_mesh_preview_enabled){
+                ImGui::SetNextWindowSize(ImVec2(560.0f, 520.0f), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(1180.0f, 40.0f), ImGuiCond_FirstUseEver);
+                if(ImGui::Begin("Sketch Builder Mesh Preview", &view_sketch_builder_mesh_preview_enabled)){
+                    auto &builder = sketch_mesh_builders.at(static_cast<std::size_t>(std::clamp(sketch_mesh_builder_num, 0, static_cast<int>(sketch_mesh_builders.size()) - 1)));
+                    const auto preview_mesh_idx = builder.last_mesh_node_index();
+                    const auto *preview_mesh = builder.last_mesh();
+                    if(preview_mesh_idx){
+                        ImGui::Text("Previewing node %zu", preview_mesh_idx.value());
+                    }else{
+                        ImGui::TextWrapped("No computed mesh is available in the current builder.");
+                    }
+                    if(sketch_mesh_face_adoption.active){
+                        ImGui::TextWrapped("Click a face in this preview to adopt its plane.");
+                    }
+
+                    if(ImGui::Button("Front##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::front);
+                    ImGui::SameLine();
+                    if(ImGui::Button("Back##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::back);
+                    ImGui::SameLine();
+                    if(ImGui::Button("Left##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::left);
+                    ImGui::SameLine();
+                    if(ImGui::Button("Right##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::right);
+                    ImGui::SameLine();
+                    if(ImGui::Button("Top##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::top);
+                    ImGui::SameLine();
+                    if(ImGui::Button("Bottom##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::bottom);
+                    ImGui::SameLine();
+                    if(ImGui::Button("Reset##builder_mesh")) SDL_Viewer_Meshes::apply_standard_view(sketch_builder_mesh_display, SDL_Viewer_Meshes::standard_view_t::reset);
+
+                    ImGui::Checkbox("Wireframe##builder_mesh", &sketch_builder_mesh_display.render_wireframe);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Lighting##builder_mesh", &sketch_builder_mesh_display.use_lighting);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Cull back faces##builder_mesh", &sketch_builder_mesh_display.use_opaque);
+
+                    auto canvas_size = ImGui::GetContentRegionAvail();
+                    canvas_size.x = std::max(canvas_size.x, 64.0f);
+                    canvas_size.y = std::max(canvas_size.y, 240.0f);
+                    const auto canvas_pos = ImGui::GetCursorScreenPos();
+                    ImGui::InvisibleButton("##builder_mesh_canvas", canvas_size,
+                                           ImGuiButtonFlags_MouseButtonLeft
+                                           | ImGuiButtonFlags_MouseButtonMiddle
+                                           | ImGuiButtonFlags_MouseButtonRight);
+
+                    SDL_Viewer_Meshes::mouse_state_t mouse_state;
+                    mouse_state.hovered = ImGui::IsItemHovered();
+                    mouse_state.active = ImGui::IsItemActive();
+                    const auto local_mouse = ImVec2(ImGui::GetIO().MousePos.x - canvas_pos.x,
+                                                    ImGui::GetIO().MousePos.y - canvas_pos.y);
+                    mouse_state.position_px.x = std::clamp<double>(local_mouse.x, 0.0, std::max<double>(canvas_size.x, 1.0));
+                    mouse_state.position_px.y = std::clamp<double>(local_mouse.y, 0.0, std::max<double>(canvas_size.y, 1.0));
+                    mouse_state.clicked = { ImGui::IsItemClicked(ImGuiMouseButton_Left),
+                                            ImGui::IsItemClicked(ImGuiMouseButton_Middle),
+                                            ImGui::IsItemClicked(ImGuiMouseButton_Right) };
+                    mouse_state.dragging = { ImGui::IsMouseDragging(ImGuiMouseButton_Left) && mouse_state.active,
+                                             ImGui::IsMouseDragging(ImGuiMouseButton_Middle) && mouse_state.active,
+                                             ImGui::IsMouseDragging(ImGuiMouseButton_Right) && mouse_state.active };
+                    const auto mouse_delta = ImGui::GetIO().MouseDelta;
+                    for(auto &delta : mouse_state.drag_delta_px){
+                        delta.x = static_cast<double>(mouse_delta.x);
+                        delta.y = static_cast<double>(mouse_delta.y);
+                    }
+                    mouse_state.wheel_delta = mouse_state.hovered ? static_cast<double>(ImGui::GetIO().MouseWheel) : 0.0;
+
+                    const auto *draw_list = ImGui::GetWindowDrawList();
+                    if(custom_shader && preview_mesh){
+                        SDL_Viewer_Meshes::render_request_t request;
+                        request.mesh = preview_mesh;
+                        request.width_px = static_cast<int>(std::round(canvas_size.x));
+                        request.height_px = static_cast<int>(std::round(canvas_size.y));
+                        request.shader_program = custom_shader->get_program_ID();
+                        request.mouse = mouse_state;
+                        request.hover_faces_enabled = sketch_mesh_face_adoption.active;
+                        request.include_coplanar_geometry = sketch_mesh_face_adoption.include_coplanar_geometry;
+                        request.coplanar_eps = sketch_mesh_face_adoption.coplanar_eps;
+                        request.clear_colour = { background_colour.x, background_colour.y, background_colour.z, background_colour.w };
+                        sketch_builder_mesh_widget.render(request, sketch_builder_mesh_display);
+
+                        draw_list->AddImage(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(sketch_builder_mesh_widget.texture_id())),
+                                            canvas_pos,
+                                            ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y),
+                                            ImVec2(0.0f, 1.0f),
+                                            ImVec2(1.0f, 0.0f));
+
+                        if(sketch_mesh_face_adoption.active
+                        && mouse_state.clicked.at(0)
+                        && sketch_builder_mesh_widget.hover_state().plane){
+                            sketch_plane_adoption_payload_t payload;
+                            payload.plane = sketch_builder_mesh_widget.hover_state().plane.value();
+                            if(sketch_mesh_face_adoption.include_face_geometry){
+                                payload.support_loops.emplace_back(sketch_builder_mesh_widget.hover_state().face_vertices);
+                            }
+                            if(sketch_mesh_face_adoption.include_coplanar_geometry){
+                                payload.support_loops.insert(payload.support_loops.end(),
+                                                             sketch_builder_mesh_widget.hover_state().coplanar_faces.begin(),
+                                                             sketch_builder_mesh_widget.hover_state().coplanar_faces.end());
+                            }
+                            pending_sketch_plane_adoption = std::move(payload);
+                        }
+                    }else{
+                        draw_list->AddRectFilled(canvas_pos,
+                                                 ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y),
+                                                 ImGui::GetColorU32(ImVec4(background_colour.x, background_colour.y, background_colour.z, background_colour.w)));
+                    }
+                }
+                ImGui::End();
+            }else if(sketch_mesh_face_adoption.active && (!view_toggles.view_vector_sketching_enabled || !view_sketch_builder_mesh_preview_enabled)){
+                sketch_mesh_face_adoption.active = false;
             }
 
             if(view_sketch_editor_enabled){
@@ -12494,21 +12586,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &drover_mutex,
                                           &mutex_dt,
                                           &DICOM_data,
-                                          &oglm_ptr,
+                                          &drover_mesh_widget,
+                                          &drover_mesh_canvas,
                                           &mesh_num,
                                           &mesh_display_transform,
                                           &display_metadata_table,
                                           &recompute_smesh_iters,
                                           &need_to_reload_opengl_mesh,
                                           &custom_shader,
-                                          &frame_count ]() -> void {
-
-            const auto pi = std::acos(-1.0);
-
+                                          &background_colour ]() -> void {
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
             if( !view_toggles.view_meshes_enabled
-            ||  !DICOM_data.Has_Mesh_Data() ) return;
+            ||  !DICOM_data.Has_Mesh_Data() ){
+                drover_mesh_widget.clear();
+                return;
+            }
 
             const auto N_meshes = static_cast<int64_t>(DICOM_data.smesh_data.size());
             const auto new_mesh_num = std::clamp<int64_t>(mesh_num, 0L, N_meshes - 1L);
@@ -12516,204 +12609,179 @@ bool SDL_Viewer(Drover &DICOM_data,
                 mesh_num = new_mesh_num;
                 need_to_reload_opengl_mesh = true;
             }
+            auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
+            if(!mesh_is_valid) return;
 
-            const auto reload_opengl_mesh = [&](){
-                auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
-                if(!mesh_is_valid) return;
-                oglm_ptr = std::make_unique<opengl_mesh>( (*smesh_ptr_it)->meshes, mesh_display_transform.reverse_normals );
-                need_to_reload_opengl_mesh = false;
-            };
             if(need_to_reload_opengl_mesh){
-                reload_opengl_mesh();
+                drover_mesh_widget.invalidate_mesh_cache();
+                need_to_reload_opengl_mesh = false;
             }
 
-            if(!oglm_ptr){
-                mesh_num = 0;
-                reload_opengl_mesh();
-            }
-
-            if(oglm_ptr){
-                // Draw the currently-loaded mesh.
-                oglm_ptr->draw( mesh_display_transform.render_wireframe );
-
-                //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-                ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
-                if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled, ImGuiWindowFlags_NoNavInputs)){
-
-                    // Alter the common model transformation.
-                    if(ImGui::IsWindowFocused()){
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_RIGHT ) ){
-                            mesh_display_transform.model.coeff(0,3) += 0.001;
-                        }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_LEFT ) ){
-                            mesh_display_transform.model.coeff(0,3) -= 0.001;
-                        }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_UP ) ){
-                            mesh_display_transform.model.coeff(1,3) += 0.001;
-                        }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_DOWN ) ){
-                            mesh_display_transform.model.coeff(1,3) -= 0.001;
-                        }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_W ) ){
-                            mesh_display_transform.model.coeff(2,3) += 0.001;
-                        }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_S ) ){
-                            mesh_display_transform.model.coeff(2,3) -= 0.001;
-                        }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_Q ) ){
-                            auto rot = affine_rotate<float>( vec3<float>(0,0,0), vec3<float>(0,0,1), 3.14/100.0 );
-                            mesh_display_transform.model = mesh_display_transform.model * static_cast<num_array<float>>(rot);
-                        }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_E ) ){
-                            auto rot = affine_rotate<float>( vec3<float>(0,0,0), vec3<float>(0,0,1), -3.14/100.0 );
-                            mesh_display_transform.model = mesh_display_transform.model * static_cast<num_array<float>>(rot);
-                        }
+            ImGui::SetNextWindowSize(ImVec2(760.0f, 760.0f), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(10.0f, 20.0f), ImGuiCond_FirstUseEver);
+            if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled, ImGuiWindowFlags_NoNavInputs)){
+                if(ImGui::IsWindowFocused()){
+                    if( ImGui::IsKeyDown( SDL_SCANCODE_RIGHT ) ) mesh_display_transform.model.coeff(0,3) += 0.001;
+                    if( ImGui::IsKeyDown( SDL_SCANCODE_LEFT ) )  mesh_display_transform.model.coeff(0,3) -= 0.001;
+                    if( ImGui::IsKeyDown( SDL_SCANCODE_UP ) )    mesh_display_transform.model.coeff(1,3) += 0.001;
+                    if( ImGui::IsKeyDown( SDL_SCANCODE_DOWN ) )  mesh_display_transform.model.coeff(1,3) -= 0.001;
+                    if( ImGui::IsKeyDown( SDL_SCANCODE_W ) )     mesh_display_transform.model.coeff(2,3) += 0.001;
+                    if( ImGui::IsKeyDown( SDL_SCANCODE_S ) )     mesh_display_transform.model.coeff(2,3) -= 0.001;
+                    if( ImGui::IsKeyDown( SDL_SCANCODE_Q ) ){
+                        const auto rot = affine_rotate<float>(vec3<float>(0,0,0), vec3<float>(0,0,1), 3.14f / 100.0f);
+                        mesh_display_transform.model = mesh_display_transform.model * static_cast<num_array<float>>(rot);
                     }
-
-                    {
-                        std::string msg = "Drawing "_s
-                                        + std::to_string(oglm_ptr->N_vertices) + " vertices, "
-                                        + std::to_string(oglm_ptr->N_indices) + " indices, and "
-                                        + std::to_string(oglm_ptr->N_triangles) + " triangles.";
-                        ImGui::Text("%s", msg.c_str());
-                    }
-
-                    {
-                        std::string msg = "Euler characteristic: " + std::to_string(oglm_ptr->N_euler) + ".";
-                        ImGui::Text("%s", msg.c_str());
-                    }
-
-                    auto scroll_meshes = static_cast<int>(mesh_num);
-                    ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
-                    if(static_cast<int64_t>(scroll_meshes) != mesh_num){
-                        mesh_num = std::clamp<int64_t>(static_cast<int64_t>(scroll_meshes), 0L, N_meshes - 1L);
-                        reload_opengl_mesh();
-                    }
-
-                    ImGui::ColorEdit4("Colour", mesh_display_transform.colours.data());
-
-                    ImGui::Checkbox("Metadata", &view_toggles.view_mesh_metadata_enabled);
-                    ImGui::Checkbox("Precess", &mesh_display_transform.precess);
-                    ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
-                    ImGui::Checkbox("Cull back faces", &mesh_display_transform.use_opaque);
-                    if(ImGui::Checkbox("Reverse normals", &mesh_display_transform.reverse_normals)){
-                        reload_opengl_mesh();
-                    }
-                    ImGui::Checkbox("Use lighting", &mesh_display_transform.use_lighting);
-                    ImGui::Checkbox("Use smoothing", &mesh_display_transform.use_smoothing);
-                    float drag_speed = 0.05f;
-                    double clamp_l = -10.0;
-                    double clamp_h =  10.0;
-                    ImGui::DragScalar("Precession rate", ImGuiDataType_Double, &mesh_display_transform.precess_rate, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    drag_speed = 0.3f;
-                    clamp_l = -360.0 * 10.0;
-                    clamp_h =  360.0 * 10.0;
-                    const auto sync_orientation_from_euler = [&mesh_display_transform](){
-                        const auto pi = std::acos(-1.0);
-                        const auto deg_to_rad = pi / 180.0;
-                        const auto y_rot = mesh_display_transform.rot_y * deg_to_rad;
-                        const auto p_rot = mesh_display_transform.rot_p * deg_to_rad;
-                        const auto r_rot = mesh_display_transform.rot_r * deg_to_rad;
-                        mesh_display_transform.orientation = quaternion().from_euler_ypr(y_rot, p_rot, r_rot);
-                    };
-                    if(ImGui::DragScalar("Yaw", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f")){
-                        sync_orientation_from_euler();
-                    }
-                    if(ImGui::DragScalar("Pitch", ImGuiDataType_Double, &mesh_display_transform.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f")){
-                        sync_orientation_from_euler();
-                    }
-                    if(ImGui::DragScalar("Roll", ImGuiDataType_Double, &mesh_display_transform.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f")){
-                        sync_orientation_from_euler();
-                    }
-
-                    drag_speed = 0.005f;
-                    clamp_l = -10.0;
-                    clamp_h = 10.0;
-                    ImGui::DragScalar("Zoom", ImGuiDataType_Double, &mesh_display_transform.zoom, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Camera distort", ImGuiDataType_Double, &mesh_display_transform.cam_distort, drag_speed, &clamp_l, &clamp_h, "%.1f");
-
-                    // Standard orientation buttons.
-                    ImGui::Separator();
-                    ImGui::Text("Standard Views:");
-                    if(ImGui::Button("Front")){
-                        mesh_display_transform.rot_y = 0.0;
-                        mesh_display_transform.rot_p = 0.0;
-                        mesh_display_transform.rot_r = 0.0;
-                        mesh_display_transform.orientation = quaternion().from_euler_ypr(0.0, 0.0, 0.0);
-                    }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Back")){
-                        mesh_display_transform.rot_y = 180.0;
-                        mesh_display_transform.rot_p = 0.0;
-                        mesh_display_transform.rot_r = 0.0;
-                        mesh_display_transform.orientation = quaternion().from_euler_ypr(pi, 0.0, 0.0);
-                    }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Left")){
-                        mesh_display_transform.rot_y = 90.0;
-                        mesh_display_transform.rot_p = 0.0;
-                        mesh_display_transform.rot_r = 0.0;
-                        mesh_display_transform.orientation = quaternion().from_euler_ypr(0.5 * pi, 0.0, 0.0);
-                    }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Right")){
-                        mesh_display_transform.rot_y = -90.0;
-                        mesh_display_transform.rot_p = 0.0;
-                        mesh_display_transform.rot_r = 0.0;
-                        mesh_display_transform.orientation = quaternion().from_euler_ypr(-0.5 * pi, 0.0, 0.0);
-                    }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Top")){
-                        mesh_display_transform.rot_y = 0.0;
-                        mesh_display_transform.rot_p = 90.0;
-                        mesh_display_transform.rot_r = 0.0;
-                        mesh_display_transform.orientation = quaternion().from_euler_ypr(0.0, 0.5 * pi, 0.0);
-                    }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Bottom")){
-                        mesh_display_transform.rot_y = 0.0;
-                        mesh_display_transform.rot_p = -90.0;
-                        mesh_display_transform.rot_r = 0.0;
-                        mesh_display_transform.orientation = quaternion().from_euler_ypr(0.0, -0.5 * pi, 0.0);
-                    }
-
-                    if(ImGui::Button("Reset")){
-                        mesh_display_transform = mesh_display_transform_t();
-                    }
-
-                    // Navigation tooltip.
-                    ImGui::Separator();
-                    if(ImGui::CollapsingHeader("Controls")){
-                        ImGui::BulletText("Left-click drag (viewport): virtual trackball rotate");
-                        ImGui::BulletText("Right-click drag (viewport): roll");
-                        ImGui::BulletText("Middle-click drag (viewport): pan");
-                        ImGui::BulletText("Scroll wheel (viewport): zoom");
-                        ImGui::BulletText("Arrow keys (window focused): translate X/Y");
-                        ImGui::BulletText("W/S (window focused): translate Z");
-                        ImGui::BulletText("Q/E (window focused): rotate around Z");
-                    }
-
-                    // Mesh metadata window.
-                    if( view_toggles.view_mesh_metadata_enabled ){
-                        auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
-                        if(mesh_is_valid){
-                            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-                            ImGui::Begin("Mesh Metadata", &view_toggles.view_mesh_metadata_enabled);
-
-                            display_metadata_table( (*smesh_ptr_it)->meshes.metadata );
-
-                            ImGui::End();
-                        }
+                    if( ImGui::IsKeyDown( SDL_SCANCODE_E ) ){
+                        const auto rot = affine_rotate<float>(vec3<float>(0,0,0), vec3<float>(0,0,1), -3.14f / 100.0f);
+                        mesh_display_transform.model = mesh_display_transform.model * static_cast<num_array<float>>(rot);
                     }
                 }
-                ImGui::End();
+
+                auto scroll_meshes = static_cast<int>(mesh_num);
+                ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
+                if(static_cast<int64_t>(scroll_meshes) != mesh_num){
+                    mesh_num = std::clamp<int64_t>(static_cast<int64_t>(scroll_meshes), 0L, N_meshes - 1L);
+                    need_to_reload_opengl_mesh = true;
+                    auto [mesh_is_valid_after_scroll, smesh_ptr_it_after_scroll] = recompute_smesh_iters();
+                    if(mesh_is_valid_after_scroll){
+                        smesh_ptr_it = smesh_ptr_it_after_scroll;
+                    }
+                }
+
+                ImGui::ColorEdit4("Colour", mesh_display_transform.colours.data());
+                ImGui::Checkbox("Metadata", &view_toggles.view_mesh_metadata_enabled);
+                ImGui::Checkbox("Precess", &mesh_display_transform.precess);
+                ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
+                ImGui::Checkbox("Cull back faces", &mesh_display_transform.use_opaque);
+                if(ImGui::Checkbox("Reverse normals", &mesh_display_transform.reverse_normals)){
+                    need_to_reload_opengl_mesh = true;
+                }
+                ImGui::Checkbox("Use lighting", &mesh_display_transform.use_lighting);
+                ImGui::Checkbox("Use smoothing", &mesh_display_transform.use_smoothing);
+
+                float drag_speed = 0.05f;
+                double clamp_l = -10.0;
+                double clamp_h =  10.0;
+                ImGui::DragScalar("Precession rate", ImGuiDataType_Double, &mesh_display_transform.precess_rate, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                drag_speed = 0.3f;
+                clamp_l = -360.0 * 10.0;
+                clamp_h =  360.0 * 10.0;
+                if(ImGui::DragScalar("Yaw", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                    SDL_Viewer_Meshes::sync_orientation_from_euler(mesh_display_transform);
+                }
+                if(ImGui::DragScalar("Pitch", ImGuiDataType_Double, &mesh_display_transform.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                    SDL_Viewer_Meshes::sync_orientation_from_euler(mesh_display_transform);
+                }
+                if(ImGui::DragScalar("Roll", ImGuiDataType_Double, &mesh_display_transform.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                    SDL_Viewer_Meshes::sync_orientation_from_euler(mesh_display_transform);
+                }
+
+                drag_speed = 0.005f;
+                clamp_l = -10.0;
+                clamp_h = 10.0;
+                ImGui::DragScalar("Zoom", ImGuiDataType_Double, &mesh_display_transform.zoom, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                ImGui::DragScalar("Camera distort", ImGuiDataType_Double, &mesh_display_transform.cam_distort, drag_speed, &clamp_l, &clamp_h, "%.1f");
+
+                ImGui::Separator();
+                ImGui::Text("Standard Views:");
+                if(ImGui::Button("Front")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::front);
+                ImGui::SameLine();
+                if(ImGui::Button("Back")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::back);
+                ImGui::SameLine();
+                if(ImGui::Button("Left")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::left);
+                ImGui::SameLine();
+                if(ImGui::Button("Right")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::right);
+                ImGui::SameLine();
+                if(ImGui::Button("Top")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::top);
+                ImGui::SameLine();
+                if(ImGui::Button("Bottom")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::bottom);
+                ImGui::SameLine();
+                if(ImGui::Button("Reset")) SDL_Viewer_Meshes::apply_standard_view(mesh_display_transform, SDL_Viewer_Meshes::standard_view_t::reset);
+
+                if(ImGui::CollapsingHeader("Controls")){
+                    ImGui::BulletText("Left-click drag: virtual trackball rotate");
+                    ImGui::BulletText("Right-click drag: roll");
+                    ImGui::BulletText("Middle-click drag: pan");
+                    ImGui::BulletText("Scroll wheel: zoom");
+                    ImGui::BulletText("Arrow keys: translate X/Y");
+                    ImGui::BulletText("W/S: translate Z");
+                    ImGui::BulletText("Q/E: rotate around Z");
+                }
+
+                ImGui::Separator();
+                auto canvas_size = ImGui::GetContentRegionAvail();
+                canvas_size.x = std::max(canvas_size.x, 64.0f);
+                canvas_size.y = std::max(canvas_size.y, 320.0f);
+                const auto canvas_pos = ImGui::GetCursorScreenPos();
+                ImGui::InvisibleButton("##drover_mesh_canvas", canvas_size,
+                                       ImGuiButtonFlags_MouseButtonLeft
+                                       | ImGuiButtonFlags_MouseButtonMiddle
+                                       | ImGuiButtonFlags_MouseButtonRight);
+
+                drover_mesh_canvas.visible = true;
+                drover_mesh_canvas.hovered = ImGui::IsItemHovered();
+                drover_mesh_canvas.active = ImGui::IsItemActive();
+                drover_mesh_canvas.window_focused = ImGui::IsWindowFocused();
+                drover_mesh_canvas.min = canvas_pos;
+                drover_mesh_canvas.size = canvas_size;
+
+                SDL_Viewer_Meshes::mouse_state_t mouse_state;
+                mouse_state.hovered = drover_mesh_canvas.hovered;
+                mouse_state.active = drover_mesh_canvas.active;
+                const auto local_mouse = ImVec2(ImGui::GetIO().MousePos.x - canvas_pos.x,
+                                                ImGui::GetIO().MousePos.y - canvas_pos.y);
+                mouse_state.position_px.x = std::clamp<double>(local_mouse.x, 0.0, std::max<double>(canvas_size.x, 1.0));
+                mouse_state.position_px.y = std::clamp<double>(local_mouse.y, 0.0, std::max<double>(canvas_size.y, 1.0));
+                mouse_state.clicked = { ImGui::IsItemClicked(ImGuiMouseButton_Left),
+                                        ImGui::IsItemClicked(ImGuiMouseButton_Middle),
+                                        ImGui::IsItemClicked(ImGuiMouseButton_Right) };
+                mouse_state.dragging = { ImGui::IsMouseDragging(ImGuiMouseButton_Left) && mouse_state.active,
+                                         ImGui::IsMouseDragging(ImGuiMouseButton_Middle) && mouse_state.active,
+                                         ImGui::IsMouseDragging(ImGuiMouseButton_Right) && mouse_state.active };
+                const auto mouse_delta = ImGui::GetIO().MouseDelta;
+                for(auto &delta : mouse_state.drag_delta_px){
+                    delta.x = static_cast<double>(mouse_delta.x);
+                    delta.y = static_cast<double>(mouse_delta.y);
+                }
+                mouse_state.wheel_delta = mouse_state.hovered ? static_cast<double>(ImGui::GetIO().MouseWheel) : 0.0;
+
+                if(custom_shader){
+                    SDL_Viewer_Meshes::render_request_t request;
+                    request.mesh = &(*smesh_ptr_it)->meshes;
+                    request.width_px = static_cast<int>(std::round(canvas_size.x));
+                    request.height_px = static_cast<int>(std::round(canvas_size.y));
+                    request.shader_program = custom_shader->get_program_ID();
+                    request.mouse = mouse_state;
+                    request.clear_colour = { background_colour.x, background_colour.y, background_colour.z, background_colour.w };
+                    drover_mesh_widget.render(request, mesh_display_transform);
+                    ImGui::GetWindowDrawList()->AddImage(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(drover_mesh_widget.texture_id())),
+                                                         canvas_pos,
+                                                         ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y),
+                                                         ImVec2(0.0f, 1.0f),
+                                                         ImVec2(1.0f, 0.0f));
+                }
+
+                const auto &stats = drover_mesh_widget.render_stats();
+                ImGui::Text("Drawing %lld vertices, %lld indices, and %lld triangles.",
+                            static_cast<long long>(stats.n_vertices),
+                            static_cast<long long>(stats.n_indices),
+                            static_cast<long long>(stats.n_triangles));
+                ImGui::Text("Euler characteristic: %lld.", static_cast<long long>(stats.n_euler));
+
+                if(view_toggles.view_mesh_metadata_enabled){
+                    ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                    ImGui::Begin("Mesh Metadata", &view_toggles.view_mesh_metadata_enabled);
+                    display_metadata_table((*smesh_ptr_it)->meshes.metadata);
+                    ImGui::End();
+                }
             }
+            ImGui::End();
 
             // Release the GPU memory when mesh viewing is disabled. Otherwise, it will just needlessly consume
             // resources.
             if(!view_toggles.view_meshes_enabled){
                 mesh_num = -1;
-                oglm_ptr = nullptr;
+                drover_mesh_widget.clear();
             }
             return;
         };
@@ -12767,503 +12835,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                          background_colour.w);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             CHECK_FOR_GL_ERRORS();
-
-            const auto pi = std::acos(-1.0);
-            const auto kDegToRad = pi / 180.0;
-            const auto kCameraForward = vec3<double>(0.0, 0.0, 1.0);
-            const auto kCameraUp = vec3<double>(0.0, 1.0, 0.0);
-            const auto kCameraPitchAxis = vec3<double>(1.0, 0.0, 0.0);
-            const auto kCameraYawAxis = vec3<double>(0.0, 1.0, 0.0);
-            const auto kCameraRollAxis = vec3<double>(0.0, 0.0, 1.0);
-
-            const auto sync_euler_from_orientation = [&mesh_display_transform](){
-                const auto pi = std::acos(-1.0);
-                const auto rad_to_deg = 180.0 / pi;
-                double y_rot = 0.0;
-                double p_rot = 0.0;
-                double r_rot = 0.0;
-                mesh_display_transform.orientation.to_euler_ypr(y_rot, p_rot, r_rot);
-                mesh_display_transform.rot_y = y_rot * rad_to_deg;
-                mesh_display_transform.rot_p = p_rot * rad_to_deg;
-                mesh_display_transform.rot_r = r_rot * rad_to_deg;
-            };
-            constexpr double kPrecessionYawRate = 0.0100;
-            constexpr double kPrecessionPitchRate = -0.0029;
-            constexpr double kPrecessionRollRate = 0.0003;
-
-            {
-                if(mesh_display_transform.precess){
-                    const auto q_y = quaternion().from_axis_angle(kCameraYawAxis,
-                                                                   (kPrecessionYawRate * mesh_display_transform.precess_rate) * kDegToRad);
-                    const auto q_x = quaternion().from_axis_angle(kCameraPitchAxis,
-                                                                   (kPrecessionPitchRate * mesh_display_transform.precess_rate) * kDegToRad);
-                    const auto q_z = quaternion().from_axis_angle(kCameraRollAxis,
-                                                                   (kPrecessionRollRate * mesh_display_transform.precess_rate) * kDegToRad);
-                    mesh_display_transform.orientation = (q_y * q_z * q_x * mesh_display_transform.orientation).normalized();
-                }
-                sync_euler_from_orientation();
-            }
-
-            // Mouse-based mesh navigation (only when ImGui does not want the mouse).
-            if( view_toggles.view_meshes_enabled
-            &&  !io.WantCaptureMouse ){
-                constexpr double kTrackballRollDegreesPerPixel = 0.30;
-                constexpr double kPanMultiplier = 1.0;
-                constexpr double kZoomScalePerWheelNotch = 1.10;
-                constexpr double kMinZoom = 0.1;
-                constexpr double kMaxZoom = 100.0;
-                const auto nav_w = std::max<double>(static_cast<double>(io.DisplaySize.x), 1.0);
-                const auto nav_h = std::max<double>(static_cast<double>(io.DisplaySize.y), 1.0);
-                const auto nav_aspect = nav_w / nav_h;
-                mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
-                const auto zoom = mesh_display_transform.zoom;
-                const auto world_width = (2.0 * nav_aspect) / zoom;
-                const auto world_height = 2.0 / zoom;
-                const auto world_dx_per_px = world_width / nav_w;
-                const auto world_dy_per_px = world_height / nav_h;
-
-                // Left-click drag: trackball rotation (yaw and pitch).
-                if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
-                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-                    const auto to_trackball = [](double x_px, double y_px, double w_px, double h_px){
-                        // Map viewport pixel coordinates to normalized trackball coordinates in [-1, 1].
-                        const auto normalized_x = std::clamp((2.0 * x_px - w_px) / w_px, -1.0, 1.0);
-                        const auto normalized_y = std::clamp((h_px - 2.0 * y_px) / h_px, -1.0, 1.0);
-                        const auto r2 = normalized_x*normalized_x + normalized_y*normalized_y;
-                        if(r2 <= 1.0){
-                            return vec3<double>(normalized_x, normalized_y, std::sqrt(std::max(0.0, 1.0 - r2))).unit();
-                        }
-                        return vec3<double>(normalized_x, normalized_y, 0.0).unit();
-                    };
-                    const auto mpos = ImGui::GetMousePos();
-                    const auto curr = to_trackball(static_cast<double>(mpos.x),
-                                                   static_cast<double>(mpos.y),
-                                                   nav_w,
-                                                   nav_h);
-                    const auto prev = to_trackball(static_cast<double>(mpos.x - delta.x),
-                                                   static_cast<double>(mpos.y - delta.y),
-                                                   nav_w,
-                                                   nav_h);
-                    const auto q_drag = quaternion().from_two_unit_vectors(prev, curr);
-                    mesh_display_transform.orientation = (mesh_display_transform.orientation * q_drag).normalized();
-                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
-                }
-                // Middle-click drag: pan (translate model).
-                if(ImGui::IsMouseDragging(ImGuiMouseButton_Middle)){
-                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Middle);
-                    mesh_display_transform.model.coeff(0,3) += static_cast<double>(delta.x) * world_dx_per_px * kPanMultiplier;
-                    mesh_display_transform.model.coeff(1,3) -= static_cast<double>(delta.y) * world_dy_per_px * kPanMultiplier;
-                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Middle);
-                }
-                // Right-click drag: roll.
-                if(ImGui::IsMouseDragging(ImGuiMouseButton_Right)){
-                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
-                    const auto roll_rad = static_cast<double>(delta.x) * kTrackballRollDegreesPerPixel * kDegToRad;
-                    const auto q_roll = quaternion().from_axis_angle(kCameraForward, -roll_rad);
-                    mesh_display_transform.orientation = (mesh_display_transform.orientation * q_roll).normalized();
-                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
-                }
-                // Scroll wheel: zoom.
-                if(std::abs(io.MouseWheel) > 0.0f){
-                    const auto scale = std::pow(kZoomScalePerWheelNotch, static_cast<double>(io.MouseWheel));
-                    mesh_display_transform.zoom *= scale;
-                    mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
-                }
-                sync_euler_from_orientation();
-            }
-
-            // Locate uniform locations in the custom shader program.
-            if(!custom_shader) throw std::logic_error("No available shader, cannot continue");
-            const auto custom_gl_program = custom_shader->get_program_ID();
-            auto shader_user_colour_loc = glGetUniformLocation(custom_gl_program, "user_colour");
-            auto shader_diffuse_colour_loc = glGetUniformLocation(custom_gl_program, "diffuse_colour");
-            auto mvp_loc = glGetUniformLocation(custom_gl_program, "mvp_matrix");
-            auto mv_loc = glGetUniformLocation(custom_gl_program, "mv_matrix");
-            auto norm_loc = glGetUniformLocation(custom_gl_program, "norm_matrix");
-            auto use_lighting_loc = glGetUniformLocation(custom_gl_program, "use_lighting");
-            auto use_smoothing_loc = glGetUniformLocation(custom_gl_program, "use_smoothing");
-
-            // Activate the custom shader program.
-            // Note: this must be done after locating uniforms but before uploading them.
-            GLuint prior_gl_program = 0;
-            glGetIntegerv(GL_CURRENT_PROGRAM, reinterpret_cast<GLint*>(&prior_gl_program));
-            glUseProgram(custom_gl_program);
-
-            // Account for viewport aspect ratio to make the render square.
-            const auto w = static_cast<int>(io.DisplaySize.x);
-            const auto h = static_cast<int>(io.DisplaySize.y);
-            glViewport(0, 0, w, h);
-            CHECK_FOR_GL_ERRORS();
-
-            const auto wsize = ImGui::GetMainViewport()->WorkSize;
-            const auto waspect = wsize.x / wsize.y;
-
-            // Override to normalized and aspect-corrected screen space coords.
-            auto l_bound = -waspect/mesh_display_transform.zoom;
-            auto r_bound =  waspect/mesh_display_transform.zoom;
-            auto b_bound = -1.0/mesh_display_transform.zoom;
-            auto t_bound =  1.0/mesh_display_transform.zoom;
-            auto n_bound = -1000.0f/mesh_display_transform.zoom;
-            auto f_bound =  1000.0f/mesh_display_transform.zoom;
-
-            // Orthographic projection.
-            auto make_orthographic_projection_matrix = []( float left_bound   = -1.0f,
-                                                           float right_bound  =  1.0f,
-                                                           float bottom_bound = -1.0f,
-                                                           float top_bound    =  1.0f,
-                                                           float near_bound   = -1.0f,
-                                                           float far_bound    =  1.0f ){
-                num_array<float> proj(4,4,0.0f);
-                proj.coeff(0,0) = 2.0f/(right_bound - left_bound);
-                proj.coeff(1,1) = 2.0f/(top_bound - bottom_bound);
-                proj.coeff(2,2) = 2.0f/(near_bound - far_bound);
-                proj.coeff(0,3) = -(right_bound + left_bound) / (right_bound - left_bound);
-                proj.coeff(1,3) = -(top_bound + bottom_bound) / (top_bound - bottom_bound);
-                proj.coeff(2,3) = -(far_bound + near_bound) / (far_bound - near_bound);
-                proj.coeff(3,3) = 1.0f;
-                proj = proj.transpose();
-                return proj;
-            };
-            auto proj = make_orthographic_projection_matrix(l_bound, r_bound, b_bound, t_bound, n_bound, f_bound);
-
-            // Model matrix.
-            num_array<float> model = mesh_display_transform.model;
-
-            // Camera matrix.
-            auto make_camera_matrix = [](const vec3<double> &cam_pos,
-                                         const vec3<double> &target_pos,
-                                         const vec3<double> &up_unit){
-
-                num_array<float> out(4, 4, 0.0f);
-
-                // Extract the camera-facing coordinate system via a Gram-Schmidt-like process.
-                const auto inward   = (cam_pos - target_pos).unit(); // From target point of view.
-                const auto leftward = up_unit.Cross(inward).unit();
-                const auto upward   = inward.Cross(leftward).unit();
-
-                if( inward.isfinite()
-                &&  leftward.isfinite()
-                &&  upward.isfinite() ){
-                /*
-                    // Rotational component (inverted = transposed).
-                    out.coeff(0,0) = leftward.x;
-                    out.coeff(0,1) = leftward.y;
-                    out.coeff(0,2) = leftward.z;
-                                 
-                    out.coeff(1,0) = upward.x;
-                    out.coeff(1,1) = upward.y;
-                    out.coeff(1,2) = upward.z;
-                                 
-                    out.coeff(2,0) = inward.x;
-                    out.coeff(2,1) = inward.y;
-                    out.coeff(2,2) = inward.z;
-
-                    // Translational component (inverted = negated).
-                    out.coeff(0,3) = - cam_pos.Dot(leftward);
-                    out.coeff(1,3) = - cam_pos.Dot(upward);
-                    out.coeff(2,3) = - cam_pos.Dot(inward);
-                */
-                    // Rotational component.
-                    out.coeff(0,0) = leftward.x;
-                    out.coeff(1,0) = leftward.y;
-                    out.coeff(2,0) = leftward.z;
-                                 
-                    out.coeff(0,1) = upward.x;
-                    out.coeff(1,1) = upward.y;
-                    out.coeff(2,1) = upward.z;
-                                 
-                    out.coeff(0,2) = inward.x;
-                    out.coeff(1,2) = inward.y;
-                    out.coeff(2,2) = inward.z;
-
-                    // Translational component.
-                    out.coeff(0,3) = cam_pos.Dot(leftward);
-                    out.coeff(1,3) = cam_pos.Dot(upward);
-                    out.coeff(2,3) = cam_pos.Dot(inward);
-
-                    // Projection component.
-                    out.coeff(3,3) = 1.0f;
-                    out = out.transpose();
-
-                }else{
-                    out = num_array<float>().identity(4);
-                }
-                return out;
-            };
-
-            auto extract_normal_matrix = [](const num_array<float>& mvp){
-                // Extract only the rotational component of the MVP matrix. This can be used to transform mesh normals.
-                if( (mvp.num_rows() != 4) || (mvp.num_cols() != 4) ){
-                    throw std::logic_error("Expected 4x4 matrix");
-                }
-                num_array<float> out(3, 3, 0.0f);
-                for(int64_t r = 0; r < 3; ++r){
-                    for(int64_t c = 0; c < 3; ++c){
-                        out.coeff(r,c) = mvp.read_coeff(r,c);
-                    }
-                }
-                return out;
-            };
-
-            // Rotate camera according as per user's settings / precession.
-            auto axis_1 = mesh_display_transform.orientation.rotate(kCameraForward); // Camera position direction.
-            auto axis_3 = mesh_display_transform.orientation.rotate(kCameraUp); // Camera up.
-
-            const auto target_pos = vec3<double>(0.0, 0.0, 0.0);
-            const auto up_unit = axis_3.unit();
-            const auto cam_pos = axis_1.unit() * std::exp(mesh_display_transform.cam_distort - 5.0);
-
-            num_array<float> camera = make_camera_matrix( cam_pos, target_pos, up_unit );
-
-            // Final coordinate system transforms.
-            const auto mv = camera * model;
-            const auto mvp = proj * mv;
-            const auto norm = extract_normal_matrix(mv);
-
-            if(sketch_mesh_face_adoption.active){
-                sketch_mesh_face_adoption.hovered_plane = {};
-                sketch_mesh_face_adoption.hovered_face_vertices.clear();
-                sketch_mesh_face_adoption.hovered_coplanar_faces.clear();
-                sketch_mesh_face_adoption.hovered_rectangle_visible = false;
-
-                auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
-                if(mesh_is_valid && !io.WantCaptureMouse){
-                    const auto transform_point = [&](const vec3<double> &point) -> std::array<double, 4> {
-                        const std::array<double, 4> in = { point.x, point.y, point.z, 1.0 };
-                        std::array<double, 4> out = { 0.0, 0.0, 0.0, 0.0 };
-                        for(int r = 0; r < 4; ++r){
-                            for(int c = 0; c < 4; ++c){
-                                out[r] += static_cast<double>(mvp.read_coeff(r, c)) * in.at(c);
-                            }
-                        }
-                        return out;
-                    };
-                    const auto to_screen = [&](const vec3<double> &point) -> std::optional<ImVec2> {
-                        const auto clip = transform_point(point);
-                        if(std::abs(clip.at(3)) <= std::numeric_limits<double>::epsilon()){
-                            return {};
-                        }
-                        const auto ndc_x = clip.at(0) / clip.at(3);
-                        const auto ndc_y = clip.at(1) / clip.at(3);
-                        if(!std::isfinite(ndc_x) || !std::isfinite(ndc_y)){
-                            return {};
-                        }
-                        return ImVec2(static_cast<float>((0.5 * (ndc_x + 1.0)) * io.DisplaySize.x),
-                                      static_cast<float>((0.5 * (1.0 - ndc_y)) * io.DisplaySize.y));
-                    };
-                    const auto point_in_triangle_2d = [](const ImVec2 &p,
-                                                          const ImVec2 &a,
-                                                          const ImVec2 &b,
-                                                          const ImVec2 &c) -> bool {
-                        const auto sign = [](const ImVec2 &p1, const ImVec2 &p2, const ImVec2 &p3) -> float {
-                            return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
-                        };
-                        const auto d1 = sign(p, a, b);
-                        const auto d2 = sign(p, b, c);
-                        const auto d3 = sign(p, c, a);
-                        const bool has_neg = (d1 < 0.0f) || (d2 < 0.0f) || (d3 < 0.0f);
-                        const bool has_pos = (0.0f < d1) || (0.0f < d2) || (0.0f < d3);
-                        return !(has_neg && has_pos);
-                    };
-
-                    std::optional<std::size_t> hovered_face_index;
-                    double hovered_depth = std::numeric_limits<double>::infinity();
-                    const auto &mesh = (*smesh_ptr_it)->meshes;
-                    for(std::size_t face_idx = 0U; face_idx < mesh.faces.size(); ++face_idx){
-                        const auto &face = mesh.faces.at(face_idx);
-                        if(face.size() < 3U) continue;
-                        const auto &face_a = mesh.vertices.at(face.at(0));
-                        for(std::size_t tri_idx = 2U; tri_idx < face.size(); ++tri_idx){
-                            const auto &face_b = mesh.vertices.at(face.at(tri_idx - 1U));
-                            const auto &face_c = mesh.vertices.at(face.at(tri_idx));
-                            const auto screen_a = to_screen(face_a);
-                            const auto screen_b = to_screen(face_b);
-                            const auto screen_c = to_screen(face_c);
-                            if(!screen_a || !screen_b || !screen_c) continue;
-                            if(!point_in_triangle_2d(io.MousePos, screen_a.value(), screen_b.value(), screen_c.value())){
-                                continue;
-                            }
-                            const auto clip_a = transform_point(face_a);
-                            const auto clip_b = transform_point(face_b);
-                            const auto clip_c = transform_point(face_c);
-                            const auto depth = (clip_a.at(2) / clip_a.at(3)
-                                              + clip_b.at(2) / clip_b.at(3)
-                                              + clip_c.at(2) / clip_c.at(3)) / 3.0;
-                            if(depth < hovered_depth){
-                                hovered_depth = depth;
-                                hovered_face_index = face_idx;
-                            }
-                        }
-                    }
-
-                    if(hovered_face_index){
-                        const auto &face = mesh.faces.at(hovered_face_index.value());
-                        if(3U <= face.size()){
-                            const auto &a = mesh.vertices.at(face.at(0));
-                            const auto &b = mesh.vertices.at(face.at(1));
-                            const auto &c = mesh.vertices.at(face.at(2));
-                            const auto normal = (b - a).Cross(c - a).unit();
-                            const auto centroid = (a + b + c) / 3.0;
-                            // Use the first face edge as the in-plane hint so the adopted sketch frame stays tangent to
-                            // the hovered triangle while remaining stable across repeated hovers and clicks.
-                            sketch_mesh_face_adoption.hovered_plane = Sketch::plane_frame_t::from_plane(plane<double>(normal, centroid), b - a);
-                            sketch_mesh_face_adoption.hovered_face_vertices.assign({ a, b, c });
-
-                            auto face_min = Sketch::projection_t{  std::numeric_limits<double>::infinity(),  std::numeric_limits<double>::infinity() };
-                            auto face_max = Sketch::projection_t{ -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
-                            for(const auto &vertex : sketch_mesh_face_adoption.hovered_face_vertices){
-                                const auto p = Sketch::projection_t{
-                                    sketch_mesh_face_adoption.hovered_plane->row_unit.Dot(vertex - sketch_mesh_face_adoption.hovered_plane->origin),
-                                    sketch_mesh_face_adoption.hovered_plane->col_unit.Dot(vertex - sketch_mesh_face_adoption.hovered_plane->origin)
-                                };
-                                face_min.u = std::min(face_min.u, p.u);
-                                face_min.v = std::min(face_min.v, p.v);
-                                face_max.u = std::max(face_max.u, p.u);
-                                face_max.v = std::max(face_max.v, p.v);
-                            }
-                            constexpr double kHoveredFaceMinPadding = 1.0;
-                            constexpr double kHoveredFacePaddingScale = 0.15;
-                            const auto pad_u = std::max(kHoveredFaceMinPadding, (face_max.u - face_min.u) * kHoveredFacePaddingScale);
-                            const auto pad_v = std::max(kHoveredFaceMinPadding, (face_max.v - face_min.v) * kHoveredFacePaddingScale);
-                            face_min.u -= pad_u;
-                            face_min.v -= pad_v;
-                            face_max.u += pad_u;
-                            face_max.v += pad_v;
-                            const auto rectangle_world = std::array<vec3<double>, 4>{
-                                sketch_mesh_face_adoption.hovered_plane->origin
-                                    + sketch_mesh_face_adoption.hovered_plane->row_unit * face_min.u
-                                    + sketch_mesh_face_adoption.hovered_plane->col_unit * face_min.v,
-                                sketch_mesh_face_adoption.hovered_plane->origin
-                                    + sketch_mesh_face_adoption.hovered_plane->row_unit * face_max.u
-                                    + sketch_mesh_face_adoption.hovered_plane->col_unit * face_min.v,
-                                sketch_mesh_face_adoption.hovered_plane->origin
-                                    + sketch_mesh_face_adoption.hovered_plane->row_unit * face_max.u
-                                    + sketch_mesh_face_adoption.hovered_plane->col_unit * face_max.v,
-                                sketch_mesh_face_adoption.hovered_plane->origin
-                                    + sketch_mesh_face_adoption.hovered_plane->row_unit * face_min.u
-                                    + sketch_mesh_face_adoption.hovered_plane->col_unit * face_max.v,
-                            };
-                            bool rectangle_visible = true;
-                            for(std::size_t i = 0U; i < rectangle_world.size(); ++i){
-                                const auto screen_point = to_screen(rectangle_world.at(i));
-                                if(!screen_point){
-                                    rectangle_visible = false;
-                                    break;
-                                }
-                                sketch_mesh_face_adoption.hovered_rectangle.at(i) = screen_point.value();
-                            }
-                            sketch_mesh_face_adoption.hovered_rectangle_visible = rectangle_visible;
-                            if(rectangle_visible){
-                                auto *overlay_draw_list = ImGui::GetForegroundDrawList();
-                                for(std::size_t i = 0U; i < rectangle_world.size(); ++i){
-                                    overlay_draw_list->AddLine(sketch_mesh_face_adoption.hovered_rectangle.at(i),
-                                                               sketch_mesh_face_adoption.hovered_rectangle.at((i + 1U) % rectangle_world.size()),
-                                                               ImColor(1.0f, 0.8f, 0.2f, 1.0f),
-                                                               2.0f);
-                                }
-                            }
-
-                            if(sketch_mesh_face_adoption.include_coplanar_geometry){
-                                const auto hovered_plane = sketch_mesh_face_adoption.hovered_plane->to_plane();
-                                for(const auto &candidate_face : mesh.faces){
-                                    if(candidate_face.size() < 3U) continue;
-                                    std::vector<vec3<double>> candidate_loop;
-                                    candidate_loop.reserve(candidate_face.size());
-                                    bool candidate_valid = true;
-                                    for(const auto vertex_idx : candidate_face){
-                                        const auto &vertex = mesh.vertices.at(vertex_idx);
-                                        const auto projected = Sketch::projection_t{
-                                            sketch_mesh_face_adoption.hovered_plane->row_unit.Dot(vertex - sketch_mesh_face_adoption.hovered_plane->origin),
-                                            sketch_mesh_face_adoption.hovered_plane->col_unit.Dot(vertex - sketch_mesh_face_adoption.hovered_plane->origin)
-                                        };
-                                        const bool is_coplanar = (std::abs(hovered_plane.Get_Signed_Distance_To_Point(vertex))
-                                                               <= sketch_mesh_face_adoption.coplanar_eps);
-                                        const bool in_bounds = (face_min.u <= projected.u) && (projected.u <= face_max.u)
-                                                            && (face_min.v <= projected.v) && (projected.v <= face_max.v);
-                                        if(!is_coplanar || !in_bounds){
-                                            candidate_valid = false;
-                                            break;
-                                        }
-                                        candidate_loop.emplace_back(vertex);
-                                    }
-                                    if(candidate_valid){
-                                        sketch_mesh_face_adoption.hovered_coplanar_faces.emplace_back(std::move(candidate_loop));
-                                    }
-                                }
-                            }
-
-                            if(ImGui::IsMouseClicked(ImGuiMouseButton_Left)){
-                                sketch_plane_adoption_payload_t payload;
-                                payload.plane = sketch_mesh_face_adoption.hovered_plane.value();
-                                if(sketch_mesh_face_adoption.include_face_geometry){
-                                    payload.support_loops.emplace_back(sketch_mesh_face_adoption.hovered_face_vertices);
-                                }
-                                if(sketch_mesh_face_adoption.include_coplanar_geometry){
-                                    payload.support_loops.insert(payload.support_loops.end(),
-                                                                 sketch_mesh_face_adoption.hovered_coplanar_faces.begin(),
-                                                                 sketch_mesh_face_adoption.hovered_coplanar_faces.end());
-                                }
-                                pending_sketch_plane_adoption = std::move(payload);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Pass uniforms to custom shader program iff they are needed.
-            const std::vector<float> mv_data( mv.cbegin(), mv.cend() );
-            if(0 <= mv_loc) glUniformMatrix4fv(mv_loc, 1, GL_FALSE, mv_data.data());
-
-            const std::vector<float> mvp_data( mvp.cbegin(), mvp.cend() );
-            if(0 <= mvp_loc) glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, mvp_data.data());
-
-            const std::vector<float> norm_data( norm.cbegin(), norm.cend() );
-            if(0 <= norm_loc) glUniformMatrix3fv(norm_loc, 1, GL_FALSE, norm_data.data());
-
-            if(0 <= use_lighting_loc){
-                glUniform1ui(use_lighting_loc, (mesh_display_transform.use_lighting ? GL_TRUE : GL_FALSE));
-            }
-            if(0 <= use_smoothing_loc){
-                glUniform1ui(use_smoothing_loc, (mesh_display_transform.use_smoothing ? GL_TRUE : GL_FALSE));
-            }
-            if(0 < shader_user_colour_loc){
-                glUniform4f(shader_user_colour_loc, mesh_display_transform.colours[0],
-                                                    mesh_display_transform.colours[1],
-                                                    mesh_display_transform.colours[2],
-                                                    mesh_display_transform.colours[3] );
-            }
-            if(0 <= shader_diffuse_colour_loc){
-                glUniform4f(shader_diffuse_colour_loc, mesh_display_transform.colours[0],
-                                                       mesh_display_transform.colours[1],
-                                                       mesh_display_transform.colours[2],
-                                                       mesh_display_transform.colours[3] );
-            }
-            CHECK_FOR_GL_ERRORS();
-
-            // Set how overlapping vertices are rendered.
-            glEnable(GL_DEPTH_TEST);
-            glDepthFunc(GL_LESS);
-
-            if(mesh_display_transform.use_opaque){
-                glDisable(GL_BLEND);
-
-                glEnable(GL_CULL_FACE);
-                glCullFace(GL_BACK);
-
-            }else{
-                glEnable(GL_BLEND);
-                // Order-dependent rendering:
-                //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                // Order-independent rendering.
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-
-                glDisable(GL_CULL_FACE);
-            }
-
-            CHECK_FOR_GL_ERRORS();
             draw_surface_meshes();
-            CHECK_FOR_GL_ERRORS();
-            glUseProgram(prior_gl_program);
             CHECK_FOR_GL_ERRORS();
         }
 
@@ -13532,7 +13104,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                  // TODO: use a work queue with condition variable to
                                                                  // signal termination!
 
-    oglm_ptr = nullptr;  // Release OpenGL resources while context is valid.
+    drover_mesh_widget.clear();
+    sketch_builder_mesh_widget.clear();
     custom_shader = nullptr;
     Free_OpenGL_Texture(current_texture);
     Free_OpenGL_Texture(contouring_texture);

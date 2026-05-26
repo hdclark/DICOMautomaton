@@ -156,6 +156,23 @@ TEST_CASE("Sketch_Mesh_Builder compute_all handles sparse primitive slots"){
     CHECK(builder.node(1).mesh.has_value());
 }
 
+TEST_CASE("Sketch_Mesh_Builder last_mesh returns latest computed node"){
+    Sketch_Mesh_Builder builder;
+    CHECK(builder.last_mesh_node_index() == std::optional<std::size_t>{});
+    CHECK(builder.last_mesh() == nullptr);
+
+    builder.node(0).mesh = fv_surface_mesh<double, uint64_t>();
+    REQUIRE(builder.last_mesh_node_index().has_value());
+    CHECK(builder.last_mesh_node_index().value() == 0U);
+    REQUIRE(builder.last_mesh() != nullptr);
+
+    builder.append_default_node();
+    builder.node(1).mesh = fv_surface_mesh<double, uint64_t>();
+    REQUIRE(builder.last_mesh_node_index().has_value());
+    CHECK(builder.last_mesh_node_index().value() == 1U);
+    REQUIRE(builder.last_mesh() != nullptr);
+}
+
 // ---------------------------------------------------------------------------
 // Sketch_Mesh_Builder I/O round-trip.
 // ---------------------------------------------------------------------------
