@@ -47,6 +47,38 @@ void log_gl_errors(const char *func, int line) noexcept {
 #define CHECK_FOR_GL_ERRORS_MESHES() check_for_gl_errors(__PRETTY_FUNCTION__, __LINE__)
 #define LOG_GL_ERRORS_MESHES() log_gl_errors(__PRETTY_FUNCTION__, __LINE__)
 
+void cleanup_mesh_handles(GLuint &vao,
+                          GLuint &vbo,
+                          GLuint &nbo,
+                          GLuint &ebo) noexcept {
+    if(0 < vao){
+        glBindVertexArray(vao);
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glBindVertexArray(0);
+    }
+    if(0 < ebo) glDeleteBuffers(1, &ebo);
+    if(0 < nbo) glDeleteBuffers(1, &nbo);
+    if(0 < vbo) glDeleteBuffers(1, &vbo);
+    if(0 < vao) glDeleteVertexArrays(1, &vao);
+    ebo = vbo = nbo = vao = 0;
+}
+
+void cleanup_overlay_handles(GLuint &vao,
+                             GLuint &vbo,
+                             GLuint &nbo) noexcept {
+    if(0 < vao){
+        glBindVertexArray(vao);
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glBindVertexArray(0);
+    }
+    if(0 < nbo) glDeleteBuffers(1, &nbo);
+    if(0 < vbo) glDeleteBuffers(1, &vbo);
+    if(0 < vao) glDeleteVertexArrays(1, &vao);
+    nbo = vbo = vao = 0;
+}
+
 num_array<float> make_orthographic_projection_matrix(float left_bound,
                                                      float right_bound,
                                                      float bottom_bound,
@@ -322,48 +354,54 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
         throw std::logic_error("Vertex normals not consistent with vertex positions");
     }
 
-    CHECK_FOR_GL_ERRORS_MESHES();
+    try{
+        CHECK_FOR_GL_ERRORS_MESHES();
 
-    glGenBuffers(1, &this->vbo);
-    if(this->vbo == 0) throw std::runtime_error("Unable to generate vertex buffer object");
-    glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>((3 * vertices.size()) * sizeof(GLfloat)),
-                 static_cast<void*>(vertices.data()),
-                 GL_STATIC_DRAW);
+        glGenBuffers(1, &this->vbo);
+        if(this->vbo == 0) throw std::runtime_error("Unable to generate vertex buffer object");
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>((3 * vertices.size()) * sizeof(GLfloat)),
+                     static_cast<void*>(vertices.data()),
+                     GL_STATIC_DRAW);
 
-    glGenBuffers(1, &this->nbo);
-    if(this->nbo == 0) throw std::runtime_error("Unable to generate normals buffer object");
-    glBindBuffer(GL_ARRAY_BUFFER, this->nbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>((3 * normals.size()) * sizeof(GLfloat)),
-                 static_cast<void*>(normals.data()),
-                 GL_STATIC_DRAW);
+        glGenBuffers(1, &this->nbo);
+        if(this->nbo == 0) throw std::runtime_error("Unable to generate normals buffer object");
+        glBindBuffer(GL_ARRAY_BUFFER, this->nbo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>((3 * normals.size()) * sizeof(GLfloat)),
+                     static_cast<void*>(normals.data()),
+                     GL_STATIC_DRAW);
 
-    glGenBuffers(1, &this->ebo);
-    if(this->ebo == 0) throw std::runtime_error("Unable to generate element buffer object");
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(indices.size() * sizeof(unsigned int)),
-                 static_cast<void*>(indices.data()),
-                 GL_STATIC_DRAW);
+        glGenBuffers(1, &this->ebo);
+        if(this->ebo == 0) throw std::runtime_error("Unable to generate element buffer object");
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(indices.size() * sizeof(unsigned int)),
+                     static_cast<void*>(indices.data()),
+                     GL_STATIC_DRAW);
 
-    glGenVertexArrays(1, &this->vao);
-    if(this->vao == 0) throw std::runtime_error("Unable to generate vertex array object");
-    glBindVertexArray(this->vao);
+        glGenVertexArrays(1, &this->vao);
+        if(this->vao == 0) throw std::runtime_error("Unable to generate vertex array object");
+        glBindVertexArray(this->vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, this->nbo);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, this->nbo);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
 
-    glBindVertexArray(0);
-    CHECK_FOR_GL_ERRORS_MESHES();
+        glBindVertexArray(0);
+        CHECK_FOR_GL_ERRORS_MESHES();
+    }catch(...){
+        cleanup_mesh_handles(this->vao, this->vbo, this->nbo, this->ebo);
+        LOG_GL_ERRORS_MESHES();
+        throw;
+    }
 
     YLOGINFO("Registered new OpenGL mesh");
 }
@@ -380,21 +418,10 @@ void opengl_mesh::draw(bool render_wireframe){
 
 opengl_mesh::~opengl_mesh() noexcept {
     const auto had_resources = ((0 < this->vao) || (0 < this->vbo) || (0 < this->nbo) || (0 < this->ebo));
-    if(0 < this->vao){
-        glBindVertexArray(this->vao);
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glBindVertexArray(0);
-    }
-    if(0 < this->ebo) glDeleteBuffers(1, &this->ebo);
-    if(0 < this->nbo) glDeleteBuffers(1, &this->nbo);
-    if(0 < this->vbo) glDeleteBuffers(1, &this->vbo);
-    if(0 < this->vao) glDeleteVertexArrays(1, &this->vao);
+    cleanup_mesh_handles(this->vao, this->vbo, this->nbo, this->ebo);
     if(had_resources){
         LOG_GL_ERRORS_MESHES();
     }
-
-    this->ebo = this->vbo = this->nbo = this->vao = 0;
     this->N_triangles = this->N_indices = this->N_vertices = 0;
     this->N_euler = 0;
 }
@@ -404,21 +431,10 @@ Mesh_Widget::~Mesh_Widget() noexcept {
     const auto had_overlay_resources = ((0 < this->overlay_vao_)
                                      || (0 < this->overlay_vbo_)
                                      || (0 < this->overlay_nbo_));
-    if(0 < this->overlay_vao_){
-        glBindVertexArray(this->overlay_vao_);
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glBindVertexArray(0);
-    }
-    if(0 < this->overlay_nbo_) glDeleteBuffers(1, &this->overlay_nbo_);
-    if(0 < this->overlay_vbo_) glDeleteBuffers(1, &this->overlay_vbo_);
-    if(0 < this->overlay_vao_) glDeleteVertexArrays(1, &this->overlay_vao_);
+    cleanup_overlay_handles(this->overlay_vao_, this->overlay_vbo_, this->overlay_nbo_);
     if(had_overlay_resources){
         LOG_GL_ERRORS_MESHES();
     }
-    this->overlay_nbo_ = 0;
-    this->overlay_vbo_ = 0;
-    this->overlay_vao_ = 0;
 }
 
 void Mesh_Widget::clear_mesh(){
@@ -776,23 +792,29 @@ void Mesh_Widget::ensure_overlay_buffers(){
         return;
     }
 
-    glGenVertexArrays(1, &this->overlay_vao_);
-    if(this->overlay_vao_ == 0) throw std::runtime_error("Unable to generate overlay vertex array object");
-    glGenBuffers(1, &this->overlay_vbo_);
-    if(this->overlay_vbo_ == 0) throw std::runtime_error("Unable to generate overlay vertex buffer object");
-    glGenBuffers(1, &this->overlay_nbo_);
-    if(this->overlay_nbo_ == 0) throw std::runtime_error("Unable to generate overlay normal buffer object");
+    try{
+        glGenVertexArrays(1, &this->overlay_vao_);
+        if(this->overlay_vao_ == 0) throw std::runtime_error("Unable to generate overlay vertex array object");
+        glGenBuffers(1, &this->overlay_vbo_);
+        if(this->overlay_vbo_ == 0) throw std::runtime_error("Unable to generate overlay vertex buffer object");
+        glGenBuffers(1, &this->overlay_nbo_);
+        if(this->overlay_nbo_ == 0) throw std::runtime_error("Unable to generate overlay normal buffer object");
 
-    glBindVertexArray(this->overlay_vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, this->overlay_vbo_);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
+        glBindVertexArray(this->overlay_vao_);
+        glBindBuffer(GL_ARRAY_BUFFER, this->overlay_vbo_);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, this->overlay_nbo_);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-    CHECK_FOR_GL_ERRORS_MESHES();
+        glBindBuffer(GL_ARRAY_BUFFER, this->overlay_nbo_);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(1);
+        glBindVertexArray(0);
+        CHECK_FOR_GL_ERRORS_MESHES();
+    }catch(...){
+        cleanup_overlay_handles(this->overlay_vao_, this->overlay_vbo_, this->overlay_nbo_);
+        LOG_GL_ERRORS_MESHES();
+        throw;
+    }
 }
 
 void Mesh_Widget::draw_hover_overlay(GLuint shader_program,
