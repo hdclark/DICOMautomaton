@@ -803,10 +803,14 @@ void Mesh_Widget::draw_hover_overlay(GLuint shader_program,
     overlay_options.colours = { 1.0f, 0.8f, 0.2f, 1.0f };
     upload_mesh_uniforms(shader_program, overlay_options, matrices);
 
+    GLfloat previous_line_width = 1.0f;
+    glGetFloatv(GL_LINE_WIDTH, &previous_line_width);
+
     glDisable(GL_DEPTH_TEST);
     glBindVertexArray(this->overlay_vao_);
     glLineWidth(2.0f);
     glDrawArrays(GL_LINE_LOOP, 0, static_cast<GLsizei>(vertices.size()));
+    glLineWidth(previous_line_width);
     glBindVertexArray(0);
     CHECK_FOR_GL_ERRORS_MESHES();
 }
