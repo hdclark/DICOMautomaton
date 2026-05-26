@@ -12578,8 +12578,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                 viewport.y = static_cast<int>(rect_min.y);
                 viewport.width = std::max(1, static_cast<int>(rect_max.x - rect_min.x));
                 viewport.height = std::max(1, static_cast<int>(rect_max.y - rect_min.y));
-                viewport.framebuffer_width = std::max(1, static_cast<int>(io.DisplaySize.x));
-                viewport.framebuffer_height = std::max(1, static_cast<int>(io.DisplaySize.y));
+                viewport.framebuffer_width = std::max(
+                    1,
+                    static_cast<int>(io.DisplaySize.x * io.DisplayFramebufferScale.x));
+                viewport.framebuffer_height = std::max(
+                    1,
+                    static_cast<int>(io.DisplaySize.y * io.DisplayFramebufferScale.y));
 
                 Mesh_Widget::input_state_t input_state;
                 input_state.mouse_inside = viewport_hovered;
