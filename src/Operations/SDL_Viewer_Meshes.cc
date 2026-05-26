@@ -27,7 +27,25 @@ void check_for_gl_errors(const char *func, int line){
     }
 }
 
+void log_gl_errors(const char *func, int line) noexcept {
+    try{
+        while(true){
+            const auto err = glGetError();
+            if(err == GL_NO_ERROR) break;
+            const auto *err_str = reinterpret_cast<const char*>(glewGetErrorString(err));
+            YLOGWARN(std::string("OpenGL error in ")
+                     + func
+                     + " at line "
+                     + std::to_string(line)
+                     + ": "
+                     + ((err_str != nullptr) ? err_str : "unknown error"));
+        }
+    }catch(...){
+    }
+}
+
 #define CHECK_FOR_GL_ERRORS_MESHES() check_for_gl_errors(__PRETTY_FUNCTION__, __LINE__)
+#define LOG_GL_ERRORS_MESHES() log_gl_errors(__PRETTY_FUNCTION__, __LINE__)
 
 num_array<float> make_orthographic_projection_matrix(float left_bound,
                                                      float right_bound,
@@ -360,7 +378,7 @@ void opengl_mesh::draw(bool render_wireframe){
     CHECK_FOR_GL_ERRORS_MESHES();
 }
 
-opengl_mesh::~opengl_mesh() noexcept(false) {
+opengl_mesh::~opengl_mesh() noexcept {
     if((0 < this->vao) && (0 < this->vbo) && (0 < this->nbo) && (0 < this->ebo)){
         glBindVertexArray(this->vao);
         glDisableVertexAttribArray(0);
@@ -371,7 +389,7 @@ opengl_mesh::~opengl_mesh() noexcept(false) {
         glDeleteBuffers(1, &this->nbo);
         glDeleteBuffers(1, &this->vbo);
         glDeleteVertexArrays(1, &this->vao);
-        CHECK_FOR_GL_ERRORS_MESHES();
+        LOG_GL_ERRORS_MESHES();
     }
 
     this->ebo = this->vbo = this->nbo = this->vao = 0;
@@ -379,7 +397,7 @@ opengl_mesh::~opengl_mesh() noexcept(false) {
     this->N_euler = 0;
 }
 
-Mesh_Widget::~Mesh_Widget() noexcept(false) {
+Mesh_Widget::~Mesh_Widget() noexcept {
     this->clear_mesh();
     if(0 < this->overlay_vao_){
         glBindVertexArray(this->overlay_vao_);
@@ -389,7 +407,7 @@ Mesh_Widget::~Mesh_Widget() noexcept(false) {
         if(0 < this->overlay_nbo_) glDeleteBuffers(1, &this->overlay_nbo_);
         if(0 < this->overlay_vbo_) glDeleteBuffers(1, &this->overlay_vbo_);
         glDeleteVertexArrays(1, &this->overlay_vao_);
-        CHECK_FOR_GL_ERRORS_MESHES();
+        LOG_GL_ERRORS_MESHES();
     }
 }
 
@@ -835,62 +853,89 @@ void Mesh_Widget::render(GLuint shader_program,
     GLint prior_program = 0;
     GLint prior_viewport[4] = { 0, 0, 0, 0 };
     GLint prior_scissor_box[4] = { 0, 0, 0, 0 };
+    GLint prior_depth_func = GL_LESS;
+    GLint prior_cull_face_mode = GL_BACK;
+    GLint prior_blend_src_rgb = GL_ONE;
+    GLint prior_blend_dst_rgb = GL_ZERO;
+    GLint prior_blend_src_alpha = GL_ONE;
+    GLint prior_blend_dst_alpha = GL_ZERO;
     glGetIntegerv(GL_CURRENT_PROGRAM, &prior_program);
     glGetIntegerv(GL_VIEWPORT, prior_viewport);
     glGetIntegerv(GL_SCISSOR_BOX, prior_scissor_box);
+    glGetIntegerv(GL_DEPTH_FUNC, &prior_depth_func);
+    glGetIntegerv(GL_CULL_FACE_MODE, &prior_cull_face_mode);
+    glGetIntegerv(GL_BLEND_SRC_RGB, &prior_blend_src_rgb);
+    glGetIntegerv(GL_BLEND_DST_RGB, &prior_blend_dst_rgb);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &prior_blend_src_alpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &prior_blend_dst_alpha);
     const auto scissor_enabled = (glIsEnabled(GL_SCISSOR_TEST) == GL_TRUE);
 
     const auto depth_enabled = (glIsEnabled(GL_DEPTH_TEST) == GL_TRUE);
     const auto blend_enabled = (glIsEnabled(GL_BLEND) == GL_TRUE);
     const auto cull_enabled = (glIsEnabled(GL_CULL_FACE) == GL_TRUE);
 
-    const auto gl_x = viewport.x;
-    const auto gl_y = viewport.framebuffer_height - viewport.y - viewport.height;
-    glViewport(gl_x, gl_y, viewport.width, viewport.height);
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(gl_x, gl_y, viewport.width, viewport.height);
-    glClear(GL_DEPTH_BUFFER_BIT);
+    const auto restore_state = [&]() {
+        glDepthFunc(static_cast<GLenum>(prior_depth_func));
+        glCullFace(static_cast<GLenum>(prior_cull_face_mode));
+        glBlendFuncSeparate(static_cast<GLenum>(prior_blend_src_rgb),
+                            static_cast<GLenum>(prior_blend_dst_rgb),
+                            static_cast<GLenum>(prior_blend_src_alpha),
+                            static_cast<GLenum>(prior_blend_dst_alpha));
+        if(depth_enabled) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+        if(blend_enabled) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+        if(cull_enabled) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+        if(scissor_enabled){
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(prior_scissor_box[0], prior_scissor_box[1], prior_scissor_box[2], prior_scissor_box[3]);
+        }else{
+            glDisable(GL_SCISSOR_TEST);
+        }
+        glViewport(prior_viewport[0], prior_viewport[1], prior_viewport[2], prior_viewport[3]);
+        glUseProgram(static_cast<GLuint>(prior_program));
+    };
 
-    glUseProgram(shader_program);
-    upload_mesh_uniforms(shader_program, display_options, matrices);
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    if(display_options.use_opaque){
-        glDisable(GL_BLEND);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-    }else{
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-        glDisable(GL_CULL_FACE);
-    }
-
-    this->mesh_gpu_->draw(display_options.render_wireframe);
-
-    if(input_state.allow_face_hover && input_state.mouse_inside){
-        this->hover_state_ = compute_hover_state(*this->mesh_ptr_,
-                                                 matrices,
-                                                 viewport,
-                                                 input_state.mouse_x,
-                                                 input_state.mouse_y,
-                                                 std::max(0.0, input_state.coplanar_eps),
-                                                 input_state.collect_coplanar_faces);
-        this->draw_hover_overlay(shader_program, display_options, matrices);
-    }else{
-        this->reset_hover_state();
-    }
-
-    if(depth_enabled) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-    if(blend_enabled) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-    if(cull_enabled) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
-    if(scissor_enabled){
+    try{
+        const auto gl_x = viewport.x;
+        const auto gl_y = viewport.framebuffer_height - viewport.y - viewport.height;
+        glViewport(gl_x, gl_y, viewport.width, viewport.height);
         glEnable(GL_SCISSOR_TEST);
-        glScissor(prior_scissor_box[0], prior_scissor_box[1], prior_scissor_box[2], prior_scissor_box[3]);
-    }else{
-        glDisable(GL_SCISSOR_TEST);
+        glScissor(gl_x, gl_y, viewport.width, viewport.height);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        glUseProgram(shader_program);
+        upload_mesh_uniforms(shader_program, display_options, matrices);
+
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+        if(display_options.use_opaque){
+            glDisable(GL_BLEND);
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+        }else{
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glDisable(GL_CULL_FACE);
+        }
+
+        this->mesh_gpu_->draw(display_options.render_wireframe);
+
+        if(input_state.allow_face_hover && input_state.mouse_inside){
+            this->hover_state_ = compute_hover_state(*this->mesh_ptr_,
+                                                     matrices,
+                                                     viewport,
+                                                     input_state.mouse_x,
+                                                     input_state.mouse_y,
+                                                     std::max(0.0, input_state.coplanar_eps),
+                                                     input_state.collect_coplanar_faces);
+            this->draw_hover_overlay(shader_program, display_options, matrices);
+        }else{
+            this->reset_hover_state();
+        }
+    }catch(...){
+        restore_state();
+        throw;
     }
-    glViewport(prior_viewport[0], prior_viewport[1], prior_viewport[2], prior_viewport[3]);
-    glUseProgram(static_cast<GLuint>(prior_program));
+
+    restore_state();
     CHECK_FOR_GL_ERRORS_MESHES();
 }

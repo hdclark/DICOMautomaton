@@ -114,7 +114,7 @@ public:
     Mesh_Widget& operator=(const Mesh_Widget&) = delete;
     Mesh_Widget(Mesh_Widget&&) = delete;
     Mesh_Widget& operator=(Mesh_Widget&&) = delete;
-    ~Mesh_Widget() noexcept(false);
+    ~Mesh_Widget() noexcept;
 
     void clear_mesh();
     void reload_mesh(const mesh_t &mesh, bool reverse_normals = false);
