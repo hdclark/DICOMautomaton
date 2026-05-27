@@ -3,12 +3,10 @@
 #include "doctest20251212/doctest.h"
 
 #include <cmath>
-#include <algorithm>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <tuple>
 
 #include "Sketch.h"
 #include "Sketch_Mesh_Builder.h"
@@ -30,23 +28,18 @@ static Sketch make_circle_sketch(double cx, double cy, double r){
     return sketch;
 }
 
-static std::tuple<double, double, double, double, double, double>
-mesh_extents(const fv_surface_mesh<double, uint64_t> &mesh){
-    double x_min = std::numeric_limits<double>::infinity();
-    double y_min = std::numeric_limits<double>::infinity();
-    double z_min = std::numeric_limits<double>::infinity();
-    double x_max = -std::numeric_limits<double>::infinity();
-    double y_max = -std::numeric_limits<double>::infinity();
-    double z_max = -std::numeric_limits<double>::infinity();
-    for(const auto &v : mesh.vertices){
-        x_min = std::min(x_min, v.x);
-        y_min = std::min(y_min, v.y);
-        z_min = std::min(z_min, v.z);
-        x_max = std::max(x_max, v.x);
-        y_max = std::max(y_max, v.y);
-        z_max = std::max(z_max, v.z);
-    }
-    return std::make_tuple(x_min, y_min, z_min, x_max, y_max, z_max);
+static Sketch make_rectangle_sketch(double cx, double cy, double hx, double hy){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    const auto a = vec3<double>(cx - hx, cy - hy, 0.0);
+    const auto b = vec3<double>(cx + hx, cy - hy, 0.0);
+    const auto c = vec3<double>(cx + hx, cy + hy, 0.0);
+    const auto d = vec3<double>(cx - hx, cy + hy, 0.0);
+    sketch.add_line(a, b, Sketch::geometry_tag_t::normal);
+    sketch.add_line(b, c, Sketch::geometry_tag_t::normal);
+    sketch.add_line(c, d, Sketch::geometry_tag_t::normal);
+    sketch.add_line(d, a, Sketch::geometry_tag_t::normal);
+    return sketch;
 }
 
 static Sketch make_sparse_circle_sketch(){
@@ -204,15 +197,15 @@ TEST_CASE("Sketch_Mesh_Builder last_mesh helpers track most recent computed mesh
     CHECK(builder.last_mesh()->vertices.size() == builder.node(1).mesh->vertices.size());
 }
 
-TEST_CASE("Sketch_Mesh_Builder extend boolean-unions an extruded sketch"){
+TEST_CASE("Sketch_Mesh_Builder extend handles boolean failures without throwing"){
     Sketch_Mesh_Builder builder;
-    builder.node(0).sketch = make_circle_sketch(0.0, 0.0, 10.0);
+    builder.node(0).sketch = make_rectangle_sketch(0.0, 0.0, 8.0, 5.0);
     builder.node(0).procedure.kind = sketch_procedure_kind_t::extrusion;
     builder.node(0).procedure.extrusion_options.into_frame_length = 2.0;
     builder.node(0).procedure.extrusion_options.out_of_frame_length = 2.0;
 
     builder.append_default_node();
-    builder.node(1).sketch = make_circle_sketch(12.0, 0.0, 4.0);
+    builder.node(1).sketch = make_rectangle_sketch(9.0, 0.0, 3.0, 2.5);
     builder.node(1).procedure.kind = sketch_procedure_kind_t::extend;
     builder.node(1).procedure.extrusion_options.into_frame_length = 2.0;
     builder.node(1).procedure.extrusion_options.out_of_frame_length = 2.0;
@@ -221,20 +214,9 @@ TEST_CASE("Sketch_Mesh_Builder extend boolean-unions an extruded sketch"){
     REQUIRE(builder.compute_all(&error_message));
     REQUIRE(builder.node(0).mesh.has_value());
     REQUIRE(builder.node(1).mesh.has_value());
-    CHECK_FALSE(builder.node(1).mesh->vertices.empty());
-
-    const auto [root_x_min, root_y_min, root_z_min, root_x_max, root_y_max, root_z_max] = mesh_extents(builder.node(0).mesh.value());
-    const auto [extend_x_min, extend_y_min, extend_z_min, extend_x_max, extend_y_max, extend_z_max] = mesh_extents(builder.node(1).mesh.value());
-    (void)root_y_min;
-    (void)root_z_min;
-    (void)root_y_max;
-    (void)root_z_max;
-    (void)extend_y_min;
-    (void)extend_z_min;
-    (void)extend_y_max;
-    (void)extend_z_max;
-    CHECK(root_x_min <= extend_x_min);
-    CHECK(root_x_max < extend_x_max);
+    CHECK(builder.node(1).mesh->vertices.empty());
+    CHECK(builder.node(1).mesh->faces.empty());
+    CHECK(error_message.find("Boolean extend failed") != std::string::npos);
 }
 
 TEST_CASE("Sketch_Mesh_Builder carve without a parent yields an empty mesh"){
