@@ -21,6 +21,8 @@ enum class sketch_procedure_kind_t {
     noop,         // Pass the parent mesh through unchanged (sketch is ignored).
     extrusion,    // Extrude the current sketch and merge with the parent mesh.
     through_hole, // Extrude the current sketch and subtract from the parent mesh.
+    extend,       // Extrude the current sketch and boolean-union with the parent mesh.
+    carve,        // Extrude the current sketch and boolean-subtract from the parent mesh.
 };
 
 std::string sketch_procedure_kind_to_string(sketch_procedure_kind_t kind);

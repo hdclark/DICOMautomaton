@@ -23,6 +23,10 @@ struct opengl_mesh {
     GLuint vbo = 0;
     GLuint nbo = 0;
     GLuint ebo = 0;
+    GLuint hover_vao = 0;
+    GLuint hover_vbo = 0;
+    GLuint hover_nbo = 0;
+    GLuint hover_fbo = 0;
 
     GLsizei N_indices = 0;
     GLsizei N_vertices = 0;
@@ -32,7 +36,12 @@ struct opengl_mesh {
     opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
                 bool reverse_normals = false);
     void draw(bool render_wireframe = false);
+    void draw_hover_highlight() const;
+    const std::vector<vec3<double>>& normalized_vertices() const;
     ~opengl_mesh() noexcept;
+
+private:
+    std::vector<vec3<double>> normalized_vertices_;
 };
 
 class Mesh_Widget {
@@ -123,6 +132,7 @@ public:
     const mesh_t* source_mesh() const;
 
     void render(GLuint shader_program,
+                GLuint hover_shader_program,
                 display_options_t &display_options,
                 const viewport_t &viewport,
                 const input_state_t &input_state);
@@ -136,6 +146,14 @@ public:
                                   standard_view_t standard_view);
     static matrices_t compute_matrices(const display_options_t &display_options,
                                        const viewport_t &viewport);
+    static hover_state_t compute_hover_state(const mesh_t &mesh,
+                                             const std::vector<vec3<double>> &display_vertices,
+                                             const matrices_t &matrices,
+                                             const viewport_t &viewport,
+                                             double mouse_x,
+                                             double mouse_y,
+                                             double coplanar_eps,
+                                             bool collect_coplanar_faces);
     static hover_state_t compute_hover_state(const mesh_t &mesh,
                                              const matrices_t &matrices,
                                              const viewport_t &viewport,
@@ -156,17 +174,11 @@ private:
     void update_navigation(display_options_t &display_options,
                            const viewport_t &viewport,
                            const input_state_t &input_state);
-    void ensure_overlay_buffers();
-    void draw_hover_overlay(GLuint shader_program,
-                            const display_options_t &display_options,
-                            const matrices_t &matrices);
+    void draw_hover_highlight(GLuint shader_program,
+                              const matrices_t &matrices) const;
 
     const mesh_t *mesh_ptr_ = nullptr;
     std::unique_ptr<opengl_mesh> mesh_gpu_;
     hover_state_t hover_state_;
     drag_state_t drag_state_;
-
-    GLuint overlay_vao_ = 0;
-    GLuint overlay_vbo_ = 0;
-    GLuint overlay_nbo_ = 0;
 };

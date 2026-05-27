@@ -50,33 +50,34 @@ void log_gl_errors(const char *func, int line) noexcept {
 void cleanup_mesh_handles(GLuint &vao,
                           GLuint &vbo,
                           GLuint &nbo,
-                          GLuint &ebo) noexcept {
+                          GLuint &ebo,
+                          GLuint &hover_vao,
+                          GLuint &hover_vbo,
+                          GLuint &hover_nbo,
+                          GLuint &hover_fbo) noexcept {
     if(0 < vao){
         glBindVertexArray(vao);
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glBindVertexArray(0);
     }
+    if(0 < hover_vao){
+        glBindVertexArray(hover_vao);
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
+        glBindVertexArray(0);
+    }
+    if(0 < hover_fbo) glDeleteBuffers(1, &hover_fbo);
+    if(0 < hover_nbo) glDeleteBuffers(1, &hover_nbo);
+    if(0 < hover_vbo) glDeleteBuffers(1, &hover_vbo);
+    if(0 < hover_vao) glDeleteVertexArrays(1, &hover_vao);
     if(0 < ebo) glDeleteBuffers(1, &ebo);
     if(0 < nbo) glDeleteBuffers(1, &nbo);
     if(0 < vbo) glDeleteBuffers(1, &vbo);
     if(0 < vao) glDeleteVertexArrays(1, &vao);
+    hover_fbo = hover_nbo = hover_vbo = hover_vao = 0;
     ebo = vbo = nbo = vao = 0;
-}
-
-void cleanup_overlay_handles(GLuint &vao,
-                             GLuint &vbo,
-                             GLuint &nbo) noexcept {
-    if(0 < vao){
-        glBindVertexArray(vao);
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glBindVertexArray(0);
-    }
-    if(0 < nbo) glDeleteBuffers(1, &nbo);
-    if(0 < vbo) glDeleteBuffers(1, &vbo);
-    if(0 < vao) glDeleteVertexArrays(1, &vao);
-    nbo = vbo = vao = 0;
 }
 
 num_array<float> make_orthographic_projection_matrix(float left_bound,
@@ -296,10 +297,17 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
 
     std::vector<vec3<float>> vertices;
     vertices.reserve(this->N_vertices);
+    this->normalized_vertices_.reserve(this->N_vertices);
+    const auto normalization_denom = std::max<double>(0.5 * max_range * std::sqrt(3.0),
+                                                      std::numeric_limits<double>::epsilon());
     for(const auto &v : meshes.vertices){
-        vertices.emplace_back(static_cast<float>((2.0 * (v.x - x_min) / (x_max - x_min) - 1.0) / std::sqrt(3.0)),
-                              static_cast<float>((2.0 * (v.y - y_min) / (y_max - y_min) - 1.0) / std::sqrt(3.0)),
-                              static_cast<float>((2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) / std::sqrt(3.0)));
+        const auto nv = vec3<double>((v.x - x_mid) / normalization_denom,
+                                     (v.y - y_mid) / normalization_denom,
+                                     (v.z - z_mid) / normalization_denom);
+        this->normalized_vertices_.push_back(nv);
+        vertices.emplace_back(static_cast<float>(nv.x),
+                              static_cast<float>(nv.y),
+                              static_cast<float>(nv.z));
     }
 
     std::vector<vec3<float>> normals;
@@ -311,7 +319,16 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
 
     std::vector<unsigned int> indices;
     indices.reserve(3 * this->N_triangles);
+    std::vector<vec3<float>> hover_vertices;
+    std::vector<vec3<float>> hover_normals;
+    std::vector<float> hover_face_indices;
+    std::vector<unsigned int> hover_vertex_indices;
+    hover_vertices.reserve(3 * this->N_triangles);
+    hover_normals.reserve(3 * this->N_triangles);
+    hover_face_indices.reserve(3 * this->N_triangles);
+    hover_vertex_indices.reserve(3 * this->N_triangles);
     for(const auto &f : meshes.faces){
+        const auto face_idx = static_cast<float>(&f - meshes.faces.data());
         if(f.size() < 3U) continue;
         const auto it_1 = std::cbegin(f);
         const auto it_2 = std::next(it_1);
@@ -324,6 +341,16 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
             indices.push_back(i_A);
             indices.push_back(i_B);
             indices.push_back(i_C);
+
+            hover_vertices.push_back(vertices.at(i_A));
+            hover_vertices.push_back(vertices.at(i_B));
+            hover_vertices.push_back(vertices.at(i_C));
+            hover_vertex_indices.push_back(i_A);
+            hover_vertex_indices.push_back(i_B);
+            hover_vertex_indices.push_back(i_C);
+            hover_face_indices.push_back(face_idx);
+            hover_face_indices.push_back(face_idx);
+            hover_face_indices.push_back(face_idx);
 
             if(!has_vert_normals){
                 const auto awn = (meshes.vertices[i_C] - meshes.vertices[i_B]).Cross(meshes.vertices[i_A] - meshes.vertices[i_B]);
@@ -348,6 +375,10 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
         for(auto &v : normals){
             v = v.unit();
         }
+    }
+
+    for(const auto vertex_idx : hover_vertex_indices){
+        hover_normals.push_back(normals.at(vertex_idx));
     }
 
     if(vertices.size() != normals.size()){
@@ -396,9 +427,58 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
         glEnableVertexAttribArray(1);
 
         glBindVertexArray(0);
+
+        glGenBuffers(1, &this->hover_vbo);
+        if(this->hover_vbo == 0) throw std::runtime_error("Unable to generate hover vertex buffer object");
+        glBindBuffer(GL_ARRAY_BUFFER, this->hover_vbo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(hover_vertices.size() * sizeof(vec3<float>)),
+                     static_cast<void*>(hover_vertices.data()),
+                     GL_STATIC_DRAW);
+
+        glGenBuffers(1, &this->hover_nbo);
+        if(this->hover_nbo == 0) throw std::runtime_error("Unable to generate hover normal buffer object");
+        glBindBuffer(GL_ARRAY_BUFFER, this->hover_nbo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(hover_normals.size() * sizeof(vec3<float>)),
+                     static_cast<void*>(hover_normals.data()),
+                     GL_STATIC_DRAW);
+
+        glGenBuffers(1, &this->hover_fbo);
+        if(this->hover_fbo == 0) throw std::runtime_error("Unable to generate hover face-index buffer object");
+        glBindBuffer(GL_ARRAY_BUFFER, this->hover_fbo);
+        glBufferData(GL_ARRAY_BUFFER,
+                     static_cast<GLsizeiptr>(hover_face_indices.size() * sizeof(float)),
+                     static_cast<void*>(hover_face_indices.data()),
+                     GL_STATIC_DRAW);
+
+        glGenVertexArrays(1, &this->hover_vao);
+        if(this->hover_vao == 0) throw std::runtime_error("Unable to generate hover vertex array object");
+        glBindVertexArray(this->hover_vao);
+
+        glBindBuffer(GL_ARRAY_BUFFER, this->hover_vbo);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, this->hover_nbo);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(1);
+
+        glBindBuffer(GL_ARRAY_BUFFER, this->hover_fbo);
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(2);
+
+        glBindVertexArray(0);
         CHECK_FOR_GL_ERRORS_MESHES();
     }catch(...){
-        cleanup_mesh_handles(this->vao, this->vbo, this->nbo, this->ebo);
+        cleanup_mesh_handles(this->vao,
+                             this->vbo,
+                             this->nbo,
+                             this->ebo,
+                             this->hover_vao,
+                             this->hover_vbo,
+                             this->hover_nbo,
+                             this->hover_fbo);
         LOG_GL_ERRORS_MESHES();
         throw;
     }
@@ -416,9 +496,29 @@ void opengl_mesh::draw(bool render_wireframe){
     CHECK_FOR_GL_ERRORS_MESHES();
 }
 
+void opengl_mesh::draw_hover_highlight() const {
+    CHECK_FOR_GL_ERRORS_MESHES();
+    glBindVertexArray(this->hover_vao);
+    glDrawArrays(GL_TRIANGLES, 0, this->N_indices);
+    glBindVertexArray(0);
+    CHECK_FOR_GL_ERRORS_MESHES();
+}
+
+const std::vector<vec3<double>>& opengl_mesh::normalized_vertices() const {
+    return this->normalized_vertices_;
+}
+
 opengl_mesh::~opengl_mesh() noexcept {
-    const auto had_resources = ((0 < this->vao) || (0 < this->vbo) || (0 < this->nbo) || (0 < this->ebo));
-    cleanup_mesh_handles(this->vao, this->vbo, this->nbo, this->ebo);
+    const auto had_resources = ((0 < this->vao) || (0 < this->vbo) || (0 < this->nbo) || (0 < this->ebo)
+                             || (0 < this->hover_vao) || (0 < this->hover_vbo) || (0 < this->hover_nbo) || (0 < this->hover_fbo));
+    cleanup_mesh_handles(this->vao,
+                         this->vbo,
+                         this->nbo,
+                         this->ebo,
+                         this->hover_vao,
+                         this->hover_vbo,
+                         this->hover_nbo,
+                         this->hover_fbo);
     if(had_resources){
         LOG_GL_ERRORS_MESHES();
     }
@@ -428,13 +528,6 @@ opengl_mesh::~opengl_mesh() noexcept {
 
 Mesh_Widget::~Mesh_Widget() noexcept {
     this->clear_mesh();
-    const auto had_overlay_resources = ((0 < this->overlay_vao_)
-                                     || (0 < this->overlay_vbo_)
-                                     || (0 < this->overlay_nbo_));
-    cleanup_overlay_handles(this->overlay_vao_, this->overlay_vbo_, this->overlay_nbo_);
-    if(had_overlay_resources){
-        LOG_GL_ERRORS_MESHES();
-    }
 }
 
 void Mesh_Widget::clear_mesh(){
@@ -572,6 +665,7 @@ Mesh_Widget::compute_matrices(const display_options_t &display_options,
 
 Mesh_Widget::hover_state_t
 Mesh_Widget::compute_hover_state(const mesh_t &mesh,
+                                 const std::vector<vec3<double>> &display_vertices,
                                  const matrices_t &matrices,
                                  const viewport_t &viewport,
                                  double mouse_x,
@@ -585,10 +679,10 @@ Mesh_Widget::compute_hover_state(const mesh_t &mesh,
     for(std::size_t face_idx = 0U; face_idx < mesh.faces.size(); ++face_idx){
         const auto &face = mesh.faces.at(face_idx);
         if(face.size() < 3U) continue;
-        const auto &face_a = mesh.vertices.at(face.at(0));
+        const auto &face_a = display_vertices.at(face.at(0));
         for(std::size_t tri_idx = 2U; tri_idx < face.size(); ++tri_idx){
-            const auto &face_b = mesh.vertices.at(face.at(tri_idx - 1U));
-            const auto &face_c = mesh.vertices.at(face.at(tri_idx));
+            const auto &face_b = display_vertices.at(face.at(tri_idx - 1U));
+            const auto &face_c = display_vertices.at(face.at(tri_idx));
             const auto screen_a = to_screen_point(viewport, matrices.mvp, face_a);
             const auto screen_b = to_screen_point(viewport, matrices.mvp, face_b);
             const auto screen_c = to_screen_point(viewport, matrices.mvp, face_c);
@@ -624,7 +718,11 @@ Mesh_Widget::compute_hover_state(const mesh_t &mesh,
     const auto normal = (b - a).Cross(c - a).unit();
     const auto centroid = (a + b + c) / 3.0;
     out.plane = Sketch::plane_frame_t::from_plane(plane<double>(normal, centroid), b - a);
-    out.face_vertices.assign({ a, b, c });
+    out.face_vertices.clear();
+    out.face_vertices.reserve(face.size());
+    for(const auto vertex_idx : face){
+        out.face_vertices.push_back(mesh.vertices.at(vertex_idx));
+    }
 
     auto face_min = Sketch::projection_t{  std::numeric_limits<double>::infinity(),  std::numeric_limits<double>::infinity() };
     auto face_max = Sketch::projection_t{ -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
@@ -637,30 +735,6 @@ Mesh_Widget::compute_hover_state(const mesh_t &mesh,
         face_min.v = std::min(face_min.v, p.v);
         face_max.u = std::max(face_max.u, p.u);
         face_max.v = std::max(face_max.v, p.v);
-    }
-
-    constexpr double kHoveredFaceMinPadding = 1.0;
-    constexpr double kHoveredFacePaddingScale = 0.15;
-    const auto pad_u = std::max(kHoveredFaceMinPadding, (face_max.u - face_min.u) * kHoveredFacePaddingScale);
-    const auto pad_v = std::max(kHoveredFaceMinPadding, (face_max.v - face_min.v) * kHoveredFacePaddingScale);
-    face_min.u -= pad_u;
-    face_min.v -= pad_v;
-    face_max.u += pad_u;
-    face_max.v += pad_v;
-
-    out.rectangle_world = {
-        out.plane->origin + out.plane->row_unit * face_min.u + out.plane->col_unit * face_min.v,
-        out.plane->origin + out.plane->row_unit * face_max.u + out.plane->col_unit * face_min.v,
-        out.plane->origin + out.plane->row_unit * face_max.u + out.plane->col_unit * face_max.v,
-        out.plane->origin + out.plane->row_unit * face_min.u + out.plane->col_unit * face_max.v
-    };
-
-    out.rectangle_visible = true;
-    for(const auto &corner : out.rectangle_world){
-        if(!to_screen_point(viewport, matrices.mvp, corner)){
-            out.rectangle_visible = false;
-            break;
-        }
     }
 
     if(collect_coplanar_faces && out.plane){
@@ -692,6 +766,24 @@ Mesh_Widget::compute_hover_state(const mesh_t &mesh,
     }
 
     return out;
+}
+
+Mesh_Widget::hover_state_t
+Mesh_Widget::compute_hover_state(const mesh_t &mesh,
+                                 const matrices_t &matrices,
+                                 const viewport_t &viewport,
+                                 double mouse_x,
+                                 double mouse_y,
+                                 double coplanar_eps,
+                                 bool collect_coplanar_faces){
+    return compute_hover_state(mesh,
+                               mesh.vertices,
+                               matrices,
+                               viewport,
+                               mouse_x,
+                               mouse_y,
+                               coplanar_eps,
+                               collect_coplanar_faces);
 }
 
 void Mesh_Widget::reset_hover_state(){
@@ -787,105 +879,42 @@ void Mesh_Widget::update_navigation(display_options_t &display_options,
     sync_euler_from_orientation(display_options);
 }
 
-void Mesh_Widget::ensure_overlay_buffers(){
-    if(0 < this->overlay_vao_){
+void Mesh_Widget::draw_hover_highlight(GLuint shader_program,
+                                       const matrices_t &matrices) const {
+    if((shader_program == 0U)
+    || !this->mesh_gpu_
+    || !this->hover_state_.face_index.has_value()){
         return;
     }
 
-    try{
-        glGenVertexArrays(1, &this->overlay_vao_);
-        if(this->overlay_vao_ == 0) throw std::runtime_error("Unable to generate overlay vertex array object");
-        glGenBuffers(1, &this->overlay_vbo_);
-        if(this->overlay_vbo_ == 0) throw std::runtime_error("Unable to generate overlay vertex buffer object");
-        glGenBuffers(1, &this->overlay_nbo_);
-        if(this->overlay_nbo_ == 0) throw std::runtime_error("Unable to generate overlay normal buffer object");
-
-        glBindVertexArray(this->overlay_vao_);
-        glBindBuffer(GL_ARRAY_BUFFER, this->overlay_vbo_);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, this->overlay_nbo_);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(1);
-        glBindVertexArray(0);
-        CHECK_FOR_GL_ERRORS_MESHES();
-    }catch(...){
-        cleanup_overlay_handles(this->overlay_vao_, this->overlay_vbo_, this->overlay_nbo_);
-        LOG_GL_ERRORS_MESHES();
-        throw;
+    CHECK_FOR_GL_ERRORS_MESHES();
+    glUseProgram(shader_program);
+    const auto mvp_loc = glGetUniformLocation(shader_program, "mvp_matrix");
+    const auto mv_loc = glGetUniformLocation(shader_program, "mv_matrix");
+    const auto norm_loc = glGetUniformLocation(shader_program, "norm_matrix");
+    const auto user_colour_loc = glGetUniformLocation(shader_program, "user_colour");
+    const auto hovered_face_index_loc = glGetUniformLocation(shader_program, "hovered_face_index");
+    const std::vector<float> mvp_data(matrices.mvp.cbegin(), matrices.mvp.cend());
+    const std::vector<float> mv_data(matrices.mv.cbegin(), matrices.mv.cend());
+    const std::vector<float> norm_data(matrices.norm.cbegin(), matrices.norm.cend());
+    if(0 <= mvp_loc) glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, mvp_data.data());
+    if(0 <= mv_loc) glUniformMatrix4fv(mv_loc, 1, GL_FALSE, mv_data.data());
+    if(0 <= norm_loc) glUniformMatrix3fv(norm_loc, 1, GL_FALSE, norm_data.data());
+    if(0 <= user_colour_loc) glUniform4f(user_colour_loc, 1.0f, 0.85f, 0.25f, 0.75f);
+    if(0 <= hovered_face_index_loc){
+        glUniform1f(hovered_face_index_loc,
+                    static_cast<float>(this->hover_state_.face_index.value()));
     }
-}
-
-void Mesh_Widget::draw_hover_overlay(GLuint shader_program,
-                                     const display_options_t &display_options,
-                                     const matrices_t &matrices){
-
-    if(!this->hover_state_.rectangle_visible){
-        return;
-    }
-
-    this->ensure_overlay_buffers();
-
-    std::vector<vec3<float>> vertices;
-    vertices.reserve(this->hover_state_.rectangle_world.size());
-    for(const auto &corner : this->hover_state_.rectangle_world){
-        vertices.emplace_back(static_cast<float>(corner.x),
-                              static_cast<float>(corner.y),
-                              static_cast<float>(corner.z));
-    }
-    std::vector<vec3<float>> normals(vertices.size(), vec3<float>(0.0f, 0.0f, 1.0f));
-
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glBindBuffer(GL_ARRAY_BUFFER, this->overlay_vbo_);
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(vertices.size() * sizeof(vec3<float>)),
-                 static_cast<void*>(vertices.data()),
-                 GL_DYNAMIC_DRAW);
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glBindBuffer(GL_ARRAY_BUFFER, this->overlay_nbo_);
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(normals.size() * sizeof(vec3<float>)),
-                 static_cast<void*>(normals.data()),
-                 GL_DYNAMIC_DRAW);
-
-    auto overlay_options = display_options;
-    overlay_options.use_lighting = false;
-    overlay_options.use_smoothing = false;
-    overlay_options.render_wireframe = false;
-    overlay_options.colours = { 1.0f, 0.8f, 0.2f, 1.0f };
-    CHECK_FOR_GL_ERRORS_MESHES();
-    upload_mesh_uniforms(shader_program, overlay_options, matrices);
-
-    GLfloat previous_line_width = 1.0f;
-    GLfloat supported_line_width_range[2] = { 1.0f, 1.0f };
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glGetFloatv(GL_LINE_WIDTH, &previous_line_width);
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glGetFloatv(GL_ALIASED_LINE_WIDTH_RANGE, supported_line_width_range);
-    CHECK_FOR_GL_ERRORS_MESHES();
-    const auto overlay_line_width = std::clamp(2.0f,
-                                               supported_line_width_range[0],
-                                               supported_line_width_range[1]);
-
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glDisable(GL_DEPTH_TEST);
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glBindVertexArray(this->overlay_vao_);
-    CHECK_FOR_GL_ERRORS_MESHES();
-//    glLineWidth(overlay_line_width); // Causes OpenGL error...?
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glDrawArrays(GL_LINE_LOOP, 0, static_cast<GLsizei>(vertices.size()));
-    CHECK_FOR_GL_ERRORS_MESHES();
-//    glLineWidth(previous_line_width);
-    CHECK_FOR_GL_ERRORS_MESHES();
-    glBindVertexArray(0);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    this->mesh_gpu_->draw_hover_highlight();
     CHECK_FOR_GL_ERRORS_MESHES();
 }
 
 void Mesh_Widget::render(GLuint shader_program,
+                         GLuint hover_shader_program,
                          display_options_t &display_options,
                          const viewport_t &viewport,
                          const input_state_t &input_state){
@@ -973,13 +1002,14 @@ void Mesh_Widget::render(GLuint shader_program,
 
         if(input_state.allow_face_hover && input_state.mouse_inside){
             this->hover_state_ = compute_hover_state(*this->mesh_ptr_,
+                                                     this->mesh_gpu_->normalized_vertices(),
                                                      matrices,
                                                      viewport,
                                                      input_state.mouse_x,
                                                      input_state.mouse_y,
                                                      std::max(0.0, input_state.coplanar_eps),
                                                      input_state.collect_coplanar_faces);
-            this->draw_hover_overlay(shader_program, display_options, matrices);
+            this->draw_hover_highlight(hover_shader_program, matrices);
         }else{
             this->reset_hover_state();
         }

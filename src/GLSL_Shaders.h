@@ -19,3 +19,5 @@ struct glsl_shader_preset {
 // The first entry is always the default Blinn-Phong shader.
 std::vector<glsl_shader_preset> get_glsl_shader_presets();
 
+// Returns a dedicated shader for emphasizing a hovered mesh face.
+glsl_shader_preset get_glsl_face_highlight_shader_preset();

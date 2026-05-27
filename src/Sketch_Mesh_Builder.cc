@@ -12,6 +12,96 @@
 
 #include "YgorLog.h"
 #include "YgorMathIOOBJ.h"
+#include <YgorMeshesBoolean.h>
+
+namespace {
+
+fv_surface_mesh<double, uint64_t>
+make_empty_mesh(){
+    return fv_surface_mesh<double, uint64_t>();
+}
+
+Sketch
+make_extrudable_sketch_copy(const Sketch &sketch){
+    auto extrude_sketch = sketch;
+    for(std::size_t i = 0; i < extrude_sketch.primitive_count(); ){
+        auto *primitive = extrude_sketch.primitive(i);
+        if(primitive != nullptr && primitive->tag == Sketch::geometry_tag_t::support){
+            extrude_sketch.delete_primitive(i);
+        }else{
+            ++i;
+        }
+    }
+    extrude_sketch.delete_unreferenced_vertices();
+    return extrude_sketch;
+}
+
+bool
+build_extruded_mesh(const Sketch &sketch,
+                    const Sketch::extrusion_options_t &options,
+                    fv_surface_mesh<double, uint64_t> &mesh,
+                    std::string *error_message){
+    auto extrude_sketch = make_extrudable_sketch_copy(sketch);
+    return extrude_sketch.build_extruded_surface_mesh(options, mesh, nullptr, error_message);
+}
+
+fv_surface_mesh<double, uint64_t>
+boolean_union_meshes(const fv_surface_mesh<double, uint64_t> &parent_mesh,
+                     const fv_surface_mesh<double, uint64_t> &child_mesh){
+    return BooleanUnion(parent_mesh, child_mesh, /*max_depth=*/5, /*boundary_scale=*/0.0);
+}
+
+fv_surface_mesh<double, uint64_t>
+boolean_subtract_meshes(const fv_surface_mesh<double, uint64_t> &parent_mesh,
+                        const fv_surface_mesh<double, uint64_t> &child_mesh){
+    return BooleanSubtraction(parent_mesh, child_mesh, /*max_depth=*/5, /*boundary_scale=*/0.0);
+}
+
+template <class BooleanOp>
+bool
+compute_boolean_procedure(const char *procedure_name,
+                          const std::optional<fv_surface_mesh<double, uint64_t>> &parent_mesh,
+                          const Sketch &sketch,
+                          const Sketch::extrusion_options_t &options,
+                          fv_surface_mesh<double, uint64_t> &result_mesh,
+                          std::string *error_message,
+                          BooleanOp &&boolean_op){
+    fv_surface_mesh<double, uint64_t> extruded_mesh;
+    if(!build_extruded_mesh(sketch, options, extruded_mesh, error_message)){
+        return false;
+    }
+
+    if(!parent_mesh.has_value()){
+        if(std::string(procedure_name) == "carve"){
+            result_mesh = make_empty_mesh();
+        }else{
+            result_mesh = std::move(extruded_mesh);
+        }
+        return true;
+    }
+
+    try{
+        result_mesh = boolean_op(parent_mesh.value(), extruded_mesh);
+        return true;
+    }catch(const std::exception &e){
+        YLOGWARN("Sketch mesh builder '" << procedure_name
+                 << "' procedure failed: " << e.what());
+        if(error_message != nullptr){
+            *error_message = std::string("Boolean ") + procedure_name + " failed: " + e.what();
+        }
+    }catch(...){
+        YLOGWARN("Sketch mesh builder '" << procedure_name
+                 << "' procedure failed with an unknown exception");
+        if(error_message != nullptr){
+            *error_message = std::string("Boolean ") + procedure_name + " failed with an unknown exception";
+        }
+    }
+
+    result_mesh = make_empty_mesh();
+    return true;
+}
+
+} // namespace
 
 // ---------------------------------------------------------------------------
 // Procedure kind string conversions.
@@ -22,6 +112,8 @@ std::string sketch_procedure_kind_to_string(sketch_procedure_kind_t kind){
         case sketch_procedure_kind_t::noop:         return "noop";
         case sketch_procedure_kind_t::extrusion:    return "extrusion";
         case sketch_procedure_kind_t::through_hole: return "through_hole";
+        case sketch_procedure_kind_t::extend:       return "extend";
+        case sketch_procedure_kind_t::carve:        return "carve";
     }
     return "clear";
 }
@@ -31,6 +123,8 @@ bool string_to_sketch_procedure_kind(const std::string &s, sketch_procedure_kind
     if(s == "noop"){         out = sketch_procedure_kind_t::noop;         return true; }
     if(s == "extrusion"){    out = sketch_procedure_kind_t::extrusion;    return true; }
     if(s == "through_hole"){ out = sketch_procedure_kind_t::through_hole; return true; }
+    if(s == "extend"){       out = sketch_procedure_kind_t::extend;       return true; }
+    if(s == "carve"){        out = sketch_procedure_kind_t::carve;        return true; }
     return false;
 }
 
@@ -162,25 +256,14 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
         {
             // Discard parent mesh. If sketch has primitives, extrude it; otherwise leave empty.
             if(current.sketch.primitive_count() > 0U){
-                auto extrude_sketch = current.sketch;
-                // Remove support primitives.
-                for(std::size_t i = 0; i < extrude_sketch.primitive_count(); ){
-                    auto *primitive = extrude_sketch.primitive(i);
-                    if(primitive != nullptr && primitive->tag == Sketch::geometry_tag_t::support){
-                        extrude_sketch.delete_primitive(i);
-                    }else{
-                        ++i;
-                    }
-                }
-                extrude_sketch.delete_unreferenced_vertices();
                 fv_surface_mesh<double, uint64_t> mesh;
                 std::string build_error_message;
-                if(!extrude_sketch.build_extruded_surface_mesh(current.procedure.extrusion_options,
-                                                               mesh,
-                                                               nullptr,
-                                                               &build_error_message)){
+                if(!build_extruded_mesh(current.sketch,
+                                        current.procedure.extrusion_options,
+                                        mesh,
+                                        &build_error_message)){
                     if(build_error_message == "does not contain any extrudable primitives"){
-                        current.mesh = fv_surface_mesh<double, uint64_t>();
+                        current.mesh = make_empty_mesh();
                         return true;
                     }
                     if(error_message) *error_message = build_error_message;
@@ -200,18 +283,11 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
         }
         case sketch_procedure_kind_t::extrusion:
         {
-            auto extrude_sketch = current.sketch;
-            for(std::size_t i = 0; i < extrude_sketch.primitive_count(); ){
-                auto *primitive = extrude_sketch.primitive(i);
-                if(primitive != nullptr && primitive->tag == Sketch::geometry_tag_t::support){
-                    extrude_sketch.delete_primitive(i);
-                }else{
-                    ++i;
-                }
-            }
-            extrude_sketch.delete_unreferenced_vertices();
             fv_surface_mesh<double, uint64_t> extruded;
-            if(!extrude_sketch.build_extruded_surface_mesh(current.procedure.extrusion_options, extruded, nullptr, error_message)){
+            if(!build_extruded_mesh(current.sketch,
+                                    current.procedure.extrusion_options,
+                                    extruded,
+                                    error_message)){
                 return false;
             }
             // Merge with parent mesh if available.
@@ -238,18 +314,11 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
             // Through-hole: extrude the sketch and conceptually subtract from parent.
             // Full CSG boolean subtraction is beyond scope; for now, extrude and merge
             // (the mesh will contain intersecting geometry that downstream tools can resolve).
-            auto extrude_sketch = current.sketch;
-            for(std::size_t i = 0; i < extrude_sketch.primitive_count(); ){
-                auto *primitive = extrude_sketch.primitive(i);
-                if(primitive != nullptr && primitive->tag == Sketch::geometry_tag_t::support){
-                    extrude_sketch.delete_primitive(i);
-                }else{
-                    ++i;
-                }
-            }
-            extrude_sketch.delete_unreferenced_vertices();
             fv_surface_mesh<double, uint64_t> hole_mesh;
-            if(!extrude_sketch.build_extruded_surface_mesh(current.procedure.extrusion_options, hole_mesh, nullptr, error_message)){
+            if(!build_extruded_mesh(current.sketch,
+                                    current.procedure.extrusion_options,
+                                    hole_mesh,
+                                    error_message)){
                 return false;
             }
             if(parent_mesh.has_value()){
@@ -270,6 +339,36 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
             }else{
                 current.mesh = std::move(hole_mesh);
             }
+            return true;
+        }
+        case sketch_procedure_kind_t::extend:
+        {
+            fv_surface_mesh<double, uint64_t> mesh;
+            if(!compute_boolean_procedure("extend",
+                                          parent_mesh,
+                                          current.sketch,
+                                          current.procedure.extrusion_options,
+                                          mesh,
+                                          error_message,
+                                          boolean_union_meshes)){
+                return false;
+            }
+            current.mesh = std::move(mesh);
+            return true;
+        }
+        case sketch_procedure_kind_t::carve:
+        {
+            fv_surface_mesh<double, uint64_t> mesh;
+            if(!compute_boolean_procedure("carve",
+                                          parent_mesh,
+                                          current.sketch,
+                                          current.procedure.extrusion_options,
+                                          mesh,
+                                          error_message,
+                                          boolean_subtract_meshes)){
+                return false;
+            }
+            current.mesh = std::move(mesh);
             return true;
         }
     }

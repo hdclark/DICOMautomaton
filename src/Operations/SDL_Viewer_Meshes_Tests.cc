@@ -63,13 +63,49 @@ TEST_CASE("Mesh_Widget hover selection identifies visible face and overlay"){
     REQUIRE(hover.face_index.has_value());
     CHECK(hover.face_index.value() == 0U);
     REQUIRE(hover.plane.has_value());
-    CHECK(hover.face_vertices.size() == 3U);
-    CHECK(hover.rectangle_visible);
+    CHECK(hover.face_vertices.size() == 4U);
     CHECK(hover.coplanar_faces.size() == 1U);
+}
 
-    for(const auto &corner : hover.rectangle_world){
-        CHECK(std::isfinite(corner.x));
-        CHECK(std::isfinite(corner.y));
-        CHECK(std::isfinite(corner.z));
+TEST_CASE("Mesh_Widget hover selection can use rendered display vertices"){
+    auto mesh = make_unit_square_mesh();
+    for(auto &vertex : mesh.vertices){
+        vertex.x += 25.0;
+        vertex.y -= 13.0;
+        vertex.z += 7.5;
     }
+
+    const std::vector<vec3<double>> display_vertices = {
+        vec3<double>(-1.0, -1.0, 0.0),
+        vec3<double>( 1.0, -1.0, 0.0),
+        vec3<double>( 1.0,  1.0, 0.0),
+        vec3<double>(-1.0,  1.0, 0.0),
+    };
+
+    Mesh_Widget::display_options_t display_options;
+    display_options.precess = false;
+    Mesh_Widget::set_standard_view(display_options, Mesh_Widget::standard_view_t::front);
+
+    Mesh_Widget::viewport_t viewport;
+    viewport.width = 160;
+    viewport.height = 160;
+    viewport.framebuffer_width = 160;
+    viewport.framebuffer_height = 160;
+
+    const auto matrices = Mesh_Widget::compute_matrices(display_options, viewport);
+    const auto hover = Mesh_Widget::compute_hover_state(mesh,
+                                                        display_vertices,
+                                                        matrices,
+                                                        viewport,
+                                                        80.0,
+                                                        80.0,
+                                                        0.01,
+                                                        false);
+
+    REQUIRE(hover.face_index.has_value());
+    CHECK(hover.face_index.value() == 0U);
+    REQUIRE(hover.plane.has_value());
+    CHECK(hover.face_vertices.front().x == doctest::Approx(24.0));
+    CHECK(hover.face_vertices.front().y == doctest::Approx(-14.0));
+    CHECK(hover.face_vertices.front().z == doctest::Approx(7.5));
 }

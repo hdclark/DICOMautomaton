@@ -1237,6 +1237,15 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Note: the following will throw if the default shader fails to compile and link.
     auto custom_shader = compile_shader_program(vert_shader_src, frag_shader_src, shader_log);
+    const auto face_highlight_shader_preset = get_glsl_face_highlight_shader_preset();
+    std::array<char, 2048> face_highlight_vert_shader_src = string_to_array(
+        "#version " + glsl_version + "\n" + face_highlight_shader_preset.vertex_shader );
+    std::array<char, 2048> face_highlight_frag_shader_src = string_to_array(
+        "#version " + glsl_version + "\n" + face_highlight_shader_preset.fragment_shader );
+    std::array<char, 2048> face_highlight_shader_log;
+    auto sketch_face_highlight_shader = compile_shader_program(face_highlight_vert_shader_src,
+                                                               face_highlight_frag_shader_src,
+                                                               face_highlight_shader_log);
 
     // -------------------------------- Functors for various things ---------------------------------------
 
@@ -12364,6 +12373,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         struct mesh_widget_render_request_t {
             Mesh_Widget *widget = nullptr;
             GLuint shader_program = 0;
+            GLuint hover_shader_program = 0;
             Mesh_Widget::display_options_t *display_options = nullptr;
             Mesh_Widget::viewport_t viewport;
             Mesh_Widget::input_state_t input_state;
@@ -12415,11 +12425,13 @@ bool SDL_Viewer(Drover &DICOM_data,
         const auto queue_mesh_widget_render = [&queued_mesh_widget_renders](ImDrawList *draw_list,
                                                                             Mesh_Widget &widget,
                                                                             GLuint shader_program,
+                                                                            GLuint hover_shader_program,
                                                                             Mesh_Widget::display_options_t &display_options,
                                                                             const Mesh_Widget::viewport_t &viewport,
                                                                             const Mesh_Widget::input_state_t &input_state) -> void {
             queued_mesh_widget_renders.push_back(mesh_widget_render_request_t{ &widget,
                                                                                shader_program,
+                                                                               hover_shader_program,
                                                                                &display_options,
                                                                                viewport,
                                                                                input_state });
@@ -12427,6 +12439,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             draw_list->AddCallback([](const ImDrawList*, const ImDrawCmd *cmd) -> void {
                 auto *request_ptr = static_cast<mesh_widget_render_request_t*>(cmd->UserCallbackData);
                 request_ptr->widget->render(request_ptr->shader_program,
+                                            request_ptr->hover_shader_program,
                                             *(request_ptr->display_options),
                                             request_ptr->viewport,
                                             request_ptr->input_state);
@@ -12545,6 +12558,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 queue_mesh_widget_render(draw_list,
                                          drover_mesh_widget,
                                          custom_shader->get_program_ID(),
+                                         0U,
                                          mesh_display_transform,
                                          viewport,
                                          input_state);
@@ -12571,6 +12585,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                        &sketch_builder_mesh_display_transform,
                                                        &need_to_reload_sketch_builder_mesh_preview,
                                                        &custom_shader,
+                                                       &sketch_face_highlight_shader,
                                                        &display_mesh_viewer_controls,
                                                        &apply_mesh_keyboard_navigation,
                                                        &sketch_mesh_face_adoption,
@@ -12664,22 +12679,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                 queue_mesh_widget_render(draw_list,
                                          sketch_builder_mesh_widget,
                                          custom_shader->get_program_ID(),
+                                         sketch_face_highlight_shader->get_program_ID(),
                                          sketch_builder_mesh_display_transform,
                                          viewport,
                                          input_state);
                 draw_list->AddRect(rect_min, rect_max, ImGui::GetColorU32(ImGuiCol_Border));
 
                 if(sketch_mesh_face_adoption.active && viewport_hovered && input_state.mouse_clicked.at(0)){
-                    const auto preview_matrices = Mesh_Widget::compute_matrices(sketch_builder_mesh_display_transform,
-                                                                               viewport);
-                    const auto hover_state = Mesh_Widget::compute_hover_state(*preview_mesh,
-                                                                             preview_matrices,
-                                                                             viewport,
-                                                                             input_state.mouse_x,
-                                                                             input_state.mouse_y,
-                                                                             std::max(0.0, input_state.coplanar_eps),
-                                                                             input_state.collect_coplanar_faces);
-                    if(const auto payload = make_sketch_plane_adoption_payload(hover_state)){
+                    if(const auto payload = make_sketch_plane_adoption_payload(sketch_builder_mesh_widget.hovered_face())){
                         pending_sketch_plane_adoption = payload;
                     }
                 }

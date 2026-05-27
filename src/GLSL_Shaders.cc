@@ -351,3 +351,54 @@ void main(){
     return presets;
 }
 
+glsl_shader_preset get_glsl_face_highlight_shader_preset(){
+    return {
+        "Face Highlight",
+        "Highlights a single face selected by index using a dedicated overlay shader.",
+
+        R"(
+in vec3 v_pos;
+in vec3 v_norm;
+in float v_face_index;
+
+uniform mat4 mvp_matrix;
+uniform mat4 mv_matrix;
+uniform mat3 norm_matrix;
+
+out vec3 frag_pos;
+out vec3 frag_norm;
+flat out float frag_face_index;
+
+void main(){
+    gl_Position = mvp_matrix * vec4(v_pos, 1.0);
+    vec4 p = mv_matrix * vec4(v_pos, 1.0);
+    frag_pos = p.xyz / p.w;
+    frag_norm = normalize(norm_matrix * v_norm);
+    frag_face_index = v_face_index;
+}
+)",
+
+        R"(
+in vec3 frag_pos;
+in vec3 frag_norm;
+flat in float frag_face_index;
+
+uniform vec4 user_colour;
+uniform float hovered_face_index;
+
+out vec4 frag_colour;
+
+void main(){
+    if(abs(frag_face_index - hovered_face_index) > 0.25){
+        discard;
+    }
+
+    vec3 N = normalize(frag_norm);
+    vec3 L = normalize(vec3(1.0, 2.0, 3.0) - frag_pos);
+    float diff = max(dot(N, L), 0.0);
+    vec3 shaded = mix(user_colour.rgb * 0.65, vec3(1.0, 0.95, 0.35), 0.45 + 0.55 * diff);
+    frag_colour = vec4(shaded, user_colour.a);
+}
+)"
+    };
+}
