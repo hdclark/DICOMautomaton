@@ -108,4 +108,13 @@ TEST_CASE("Mesh_Widget hover selection can use rendered display vertices"){
     CHECK(hover.face_vertices.front().x == doctest::Approx(24.0));
     CHECK(hover.face_vertices.front().y == doctest::Approx(-14.0));
     CHECK(hover.face_vertices.front().z == doctest::Approx(7.5));
+    CHECK(hover.face_vertices.at(1).x == doctest::Approx(26.0));
+    CHECK(hover.face_vertices.at(1).y == doctest::Approx(-14.0));
+    CHECK(hover.face_vertices.at(1).z == doctest::Approx(7.5));
+    CHECK(hover.face_vertices.at(2).x == doctest::Approx(26.0));
+    CHECK(hover.face_vertices.at(2).y == doctest::Approx(-12.0));
+    CHECK(hover.face_vertices.at(2).z == doctest::Approx(7.5));
+    CHECK(hover.face_vertices.at(3).x == doctest::Approx(24.0));
+    CHECK(hover.face_vertices.at(3).y == doctest::Approx(-12.0));
+    CHECK(hover.face_vertices.at(3).z == doctest::Approx(7.5));
 }

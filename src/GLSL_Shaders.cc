@@ -388,8 +388,10 @@ uniform float hovered_face_index;
 
 out vec4 frag_colour;
 
+const float FACE_INDEX_FLOAT_TOLERANCE = 0.25;
+
 void main(){
-    if(abs(frag_face_index - hovered_face_index) > 0.25){
+    if(abs(frag_face_index - hovered_face_index) > FACE_INDEX_FLOAT_TOLERANCE){
         discard;
     }
 

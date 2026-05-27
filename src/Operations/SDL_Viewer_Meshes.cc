@@ -298,6 +298,8 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
     std::vector<vec3<float>> vertices;
     vertices.reserve(this->N_vertices);
     this->normalized_vertices_.reserve(this->N_vertices);
+    // The normalized mesh is fit into a sphere of radius 1/sqrt(3), which keeps the
+    // axis-aligned unit cube inside the default orthographic view volume.
     const auto normalization_denom = std::max<double>(0.5 * max_range * std::sqrt(3.0),
                                                       std::numeric_limits<double>::epsilon());
     for(const auto &v : meshes.vertices){

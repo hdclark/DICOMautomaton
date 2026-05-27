@@ -60,6 +60,7 @@ boolean_subtract_meshes(const fv_surface_mesh<double, uint64_t> &parent_mesh,
 template <class BooleanOp>
 bool
 compute_boolean_procedure(const char *procedure_name,
+                          bool return_empty_without_parent,
                           const std::optional<fv_surface_mesh<double, uint64_t>> &parent_mesh,
                           const Sketch &sketch,
                           const Sketch::extrusion_options_t &options,
@@ -72,7 +73,7 @@ compute_boolean_procedure(const char *procedure_name,
     }
 
     if(!parent_mesh.has_value()){
-        if(std::string(procedure_name) == "carve"){
+        if(return_empty_without_parent){
             result_mesh = make_empty_mesh();
         }else{
             result_mesh = std::move(extruded_mesh);
@@ -345,6 +346,7 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
         {
             fv_surface_mesh<double, uint64_t> mesh;
             if(!compute_boolean_procedure("extend",
+                                          false,
                                           parent_mesh,
                                           current.sketch,
                                           current.procedure.extrusion_options,
@@ -360,6 +362,7 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
         {
             fv_surface_mesh<double, uint64_t> mesh;
             if(!compute_boolean_procedure("carve",
+                                          true,
                                           parent_mesh,
                                           current.sketch,
                                           current.procedure.extrusion_options,
