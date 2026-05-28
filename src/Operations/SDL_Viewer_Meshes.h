@@ -23,10 +23,10 @@ struct opengl_mesh {
     GLuint vbo = 0;
     GLuint nbo = 0;
     GLuint ebo = 0;
-    GLuint hover_vao = 0;
-    GLuint hover_vbo = 0;
-    GLuint hover_nbo = 0;
-    GLuint hover_face_index_vbo = 0;
+    GLuint primitive_face_index_bo = 0;
+    GLuint primitive_face_index_tex = 0;
+    GLuint primitive_edge_index_bo = 0;
+    GLuint primitive_edge_index_tex = 0;
 
     GLsizei N_indices = 0;
     GLsizei N_vertices = 0;
@@ -36,7 +36,8 @@ struct opengl_mesh {
     opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
                 bool reverse_normals = false);
     void draw(bool render_wireframe = false);
-    void draw_hover_highlight() const;
+    GLuint primitive_face_index_texture() const;
+    GLuint primitive_edge_index_texture() const;
     const std::vector<vec3<double>>& normalized_vertices() const;
     ~opengl_mesh() noexcept;
 
@@ -132,7 +133,6 @@ public:
     const mesh_t* source_mesh() const;
 
     void render(GLuint shader_program,
-                GLuint hover_shader_program,
                 display_options_t &display_options,
                 const viewport_t &viewport,
                 const input_state_t &input_state);
@@ -174,8 +174,6 @@ private:
     void update_navigation(display_options_t &display_options,
                            const viewport_t &viewport,
                            const input_state_t &input_state);
-    void draw_hover_highlight(GLuint shader_program,
-                              const matrices_t &matrices) const;
 
     const mesh_t *mesh_ptr_ = nullptr;
     std::unique_ptr<opengl_mesh> mesh_gpu_;

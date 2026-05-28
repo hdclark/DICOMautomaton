@@ -1237,16 +1237,6 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Note: the following will throw if the default shader fails to compile and link.
     auto custom_shader = compile_shader_program(vert_shader_src, frag_shader_src, shader_log);
-    const auto face_highlight_shader_preset = get_glsl_face_highlight_shader_preset();
-    std::array<char, 2048> face_highlight_vert_shader_src = string_to_array(
-        "#version " + glsl_version + "\n" + face_highlight_shader_preset.vertex_shader );
-    std::array<char, 2048> face_highlight_frag_shader_src = string_to_array(
-        "#version " + glsl_version + "\n" + face_highlight_shader_preset.fragment_shader );
-    std::array<char, 2048> face_highlight_shader_log;
-    auto sketch_face_highlight_shader = compile_shader_program(face_highlight_vert_shader_src,
-                                                               face_highlight_frag_shader_src,
-                                                               face_highlight_shader_log);
-
     // -------------------------------- Functors for various things ---------------------------------------
 
     // Create an OpenGL texture from an image.
@@ -8684,8 +8674,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 {
                     auto &active = builder.active_node();
                     int proc_idx = static_cast<int>(active.procedure.kind);
-                    const char *proc_items[] = { "clear", "noop", "extrusion", "through_hole" };
-                    if(ImGui::Combo("Procedure", &proc_idx, proc_items, 4)){
+                    const char *proc_items[] = { "clear", "noop", "extrusion", "through_hole", "extend", "carve" };
+                    if(ImGui::Combo("Procedure", &proc_idx, proc_items, 6)){
                         active.procedure.kind = static_cast<sketch_procedure_kind_t>(proc_idx);
                     }
                 }
@@ -12373,7 +12363,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         struct mesh_widget_render_request_t {
             Mesh_Widget *widget = nullptr;
             GLuint shader_program = 0;
-            GLuint hover_shader_program = 0;
             Mesh_Widget::display_options_t *display_options = nullptr;
             Mesh_Widget::viewport_t viewport;
             Mesh_Widget::input_state_t input_state;
@@ -12425,13 +12414,11 @@ bool SDL_Viewer(Drover &DICOM_data,
         const auto queue_mesh_widget_render = [&queued_mesh_widget_renders](ImDrawList *draw_list,
                                                                             Mesh_Widget &widget,
                                                                             GLuint shader_program,
-                                                                            GLuint hover_shader_program,
                                                                             Mesh_Widget::display_options_t &display_options,
                                                                             const Mesh_Widget::viewport_t &viewport,
                                                                             const Mesh_Widget::input_state_t &input_state) -> void {
             queued_mesh_widget_renders.push_back(mesh_widget_render_request_t{ &widget,
                                                                                shader_program,
-                                                                               hover_shader_program,
                                                                                &display_options,
                                                                                viewport,
                                                                                input_state });
@@ -12439,7 +12426,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             draw_list->AddCallback([](const ImDrawList*, const ImDrawCmd *cmd) -> void {
                 auto *request_ptr = static_cast<mesh_widget_render_request_t*>(cmd->UserCallbackData);
                 request_ptr->widget->render(request_ptr->shader_program,
-                                            request_ptr->hover_shader_program,
                                             *(request_ptr->display_options),
                                             request_ptr->viewport,
                                             request_ptr->input_state);
@@ -12558,7 +12544,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 queue_mesh_widget_render(draw_list,
                                          drover_mesh_widget,
                                          custom_shader->get_program_ID(),
-                                         0U,
                                          mesh_display_transform,
                                          viewport,
                                          input_state);
@@ -12585,7 +12570,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                        &sketch_builder_mesh_display_transform,
                                                        &need_to_reload_sketch_builder_mesh_preview,
                                                        &custom_shader,
-                                                       &sketch_face_highlight_shader,
                                                        &display_mesh_viewer_controls,
                                                        &apply_mesh_keyboard_navigation,
                                                        &sketch_mesh_face_adoption,
@@ -12679,7 +12663,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 queue_mesh_widget_render(draw_list,
                                          sketch_builder_mesh_widget,
                                          custom_shader->get_program_ID(),
-                                         sketch_face_highlight_shader->get_program_ID(),
                                          sketch_builder_mesh_display_transform,
                                          viewport,
                                          input_state);
