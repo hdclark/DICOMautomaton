@@ -6,7 +6,6 @@
 #include <cmath>
 #include <limits>
 #include <map>
-#include <set>
 #include <stdexcept>
 #include <tuple>
 #include <vector>
@@ -245,18 +244,17 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
         }
     };
     std::map<edge_pair_t, uint32_t> unique_edges;
+    uint32_t next_edge_idx = 0U;
     for(const auto &f : meshes.faces){
         for(std::size_t k = 0U; k < f.size(); ++k){
             auto v0 = f[k];
             auto v1 = f[(k + 1U) % f.size()];
             if(v1 < v0) std::swap(v0, v1);
-            unique_edges.emplace(edge_pair_t{ v0, v1 }, 0U);
-        }
-    }
-    {
-        uint32_t edge_idx = 0U;
-        for(auto &edge : unique_edges){
-            edge.second = edge_idx++;
+            const auto [it, inserted] = unique_edges.try_emplace(edge_pair_t{ v0, v1 }, next_edge_idx);
+            (void)it;
+            if(inserted){
+                ++next_edge_idx;
+            }
         }
     }
     this->N_euler = static_cast<int64_t>(this->N_vertices)
@@ -299,8 +297,8 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
     std::vector<vec3<float>> vertices;
     vertices.reserve(this->N_vertices);
     this->normalized_vertices_.reserve(this->N_vertices);
-    // The normalized mesh is fit into a sphere of radius 1/sqrt(3), which keeps the
-    // axis-aligned unit cube inside the default orthographic view volume.
+    // The normalized mesh is fit into the unit sphere, which leaves its axis-aligned
+    // bounding cube with half-extent 1/sqrt(3) inside the default orthographic view.
     const auto normalization_denom = std::max<double>(0.5 * max_range * std::sqrt(3.0),
                                                       std::numeric_limits<double>::epsilon());
     for(const auto &v : meshes.vertices){

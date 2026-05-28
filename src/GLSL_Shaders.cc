@@ -2,18 +2,24 @@
 
 #include "GLSL_Shaders.h"
 
+#include <cstdint>
+#include <limits>
+#include <string>
+
 std::vector<glsl_shader_preset> get_glsl_shader_presets(){
     std::vector<glsl_shader_preset> presets;
 
-    const std::string hover_fragment_helpers = R"(
-uniform uint hovered_face_index;
-uniform uint hovered_edge_index;
-uniform usamplerBuffer primitive_face_indices;
-uniform usamplerBuffer primitive_edge_indices;
-
-const uint INVALID_HOVER_INDEX = 4294967295u;
-const vec3 HOVER_LIGHT_POSITION = vec3(1.0, 2.0, 3.0);
-
+    const auto invalid_hover_index = std::to_string(std::numeric_limits<uint32_t>::max()) + "u";
+    const std::string hover_fragment_helpers =
+        "uniform uint hovered_face_index;\n"
+        "uniform uint hovered_edge_index;\n"
+        "uniform usamplerBuffer primitive_face_indices;\n"
+        "uniform usamplerBuffer primitive_edge_indices;\n"
+        "\n"
+        "const uint INVALID_HOVER_INDEX = " + invalid_hover_index + ";\n"
+        "const vec3 HOVER_LIGHT_POSITION = vec3(1.0, 2.0, 3.0);\n"
+        "\n"
+        R"(
 bool primitive_has_hovered_edge(){
     if(hovered_edge_index == INVALID_HOVER_INDEX){
         return false;
