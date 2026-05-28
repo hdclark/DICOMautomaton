@@ -250,8 +250,7 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
             auto v0 = f[k];
             auto v1 = f[(k + 1U) % f.size()];
             if(v1 < v0) std::swap(v0, v1);
-            const auto [it, inserted] = unique_edges.try_emplace(edge_pair_t{ v0, v1 }, next_edge_idx);
-            (void)it;
+            const bool inserted = unique_edges.try_emplace(edge_pair_t{ v0, v1 }, next_edge_idx).second;
             if(inserted){
                 ++next_edge_idx;
             }
@@ -297,8 +296,9 @@ opengl_mesh::opengl_mesh(const fv_surface_mesh<double, uint64_t> &meshes,
     std::vector<vec3<float>> vertices;
     vertices.reserve(this->N_vertices);
     this->normalized_vertices_.reserve(this->N_vertices);
-    // The normalized mesh is fit into the unit sphere, which leaves its axis-aligned
-    // bounding cube with half-extent 1/sqrt(3) inside the default orthographic view.
+    // The normalized mesh is fit into the unit sphere. Dividing the maximum half-extent
+    // by sqrt(3) leaves each axis at +/-1/sqrt(3), so the bounding cube stays within
+    // the unit sphere and the default orthographic view volume.
     const auto normalization_denom = std::max<double>(0.5 * max_range * std::sqrt(3.0),
                                                       std::numeric_limits<double>::epsilon());
     for(const auto &v : meshes.vertices){

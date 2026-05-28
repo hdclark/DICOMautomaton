@@ -9,7 +9,8 @@
 std::vector<glsl_shader_preset> get_glsl_shader_presets(){
     std::vector<glsl_shader_preset> presets;
 
-    const auto invalid_hover_index = std::to_string(std::numeric_limits<uint32_t>::max()) + "u";
+    static const std::string invalid_hover_index =
+        std::to_string(std::numeric_limits<uint32_t>::max()) + "u";
     const std::string hover_fragment_helpers =
         "uniform uint hovered_face_index;\n"
         "uniform uint hovered_edge_index;\n"
