@@ -26,7 +26,7 @@ struct opengl_mesh {
     GLuint hover_vao = 0;
     GLuint hover_vbo = 0;
     GLuint hover_nbo = 0;
-    GLuint hover_fbo = 0;
+    GLuint hover_face_index_vbo = 0;
 
     GLsizei N_indices = 0;
     GLsizei N_vertices = 0;
