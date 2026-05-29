@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
+
+# This script installs dependencies and then builds and installs DICOMautomaton.
+# It can be used for continuous integration (CI), development, and deployment (CD).
+
+set -eux
+
+# Prepare alternative mirrors.
+curl -o /etc/pacman.d/mirrorlist "https://archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on"
+sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
+
+# Disable signature checking.
+#
+# Note: This may not be needed -- it is only sometimes needed for very old base images.
+sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
+       -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
+
+
+# Create an unprivileged user for building packages.
+# 
+# Note: The 'archlinux' Docker container currently contains user 'aurbuild' and has yay installed already.
+#       It won't hurt to add a new build user in case it is missing.
+useradd -m -r -d /var/empty builduser
+mkdir -p /var/empty/
+chown -R builduser:builduser /var/empty/
+printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
+printf '\n''root ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
+
+retry_count=0
+retry_limit=5
+until
+    pacman -Syu --noconfirm --needed git which sed debugedit fakeroot sudo
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
+
+git config --global --add safe.directory "*"
+
+# Neuter makepkg so it can build packages as root (note: still emits a futile error though).
+sed -i -e 's/.*exit.*E_ROOT.*//g' $(which makepkg)
+
+## Download an AUR helper in case it is needed later.
+##
+## Usage: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
+##
+## Note: later versions of yay seem to require systemd components, so harder to run inside unprivileged docker :(.
+#if ! command -v yay &>/dev/null ; then
+#    cd /tmp
+#    yay_version='12.4.2'
+#    yay_arch="$(uname -m)"
+#    wget "https://github.com/Jguer/yay/releases/download/v${yay_version}/yay_${yay_version}_${yay_arch}.tar.gz"
+#    tar -axf yay_*tar.gz
+#    mv yay_*/yay /tmp/
+#    rm -rf yay_*
+#    chmod 777 yay
+#    su - builduser -c "cd /tmp && ./yay -S --mflags --skipinteg --noconfirm yay-bin"
+#    rm -rf /tmp/yay
+#fi
+
+git clone --depth=1 'https://aur.archlinux.org/trizen.git'
+( cd trizen &&
+  makepkg -si --noconfirm --needed --noprogressbar --skipchecksums --skipinteg --skippgpcheck --force --nocolor &&
+  cd .. &&
+  rm -rf trizen
+
+  trizen --nocolors --quiet --noconfirm -S trizen
+)
+# Examples of building something from the AUR:
+#su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
+#trizen --nocolors --quiet --noconfirm -S example-git
+
+
+# Use the centralized package list script.
+GET_PACKAGES="/dcma/scripts/get_packages.sh"
+if [ ! -f "${GET_PACKAGES}" ] ; then
+    GET_PACKAGES="/dcma_scripts/get_packages.sh"
+fi
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os arch --tier development)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch --tier dcma_deps)"
+
+retry_count=0
+retry_limit=5
+until
+    `# Install build dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_BUILD_TOOLS} && \
+    `# Development tools ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_DEVELOPMENT} && \
+    `# Ygor dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_DCMA_DEPS}
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
+rm -rf /var/cache/pacman/pkg/* || true
+
+
+# Install Ygor.
+#
+# Option 1: install a binary package.
+#mkdir -pv /ygor
+#cd /ygor
+#pacman -U ./Ygor*deb
+#
+# Option 2: clone the latest upstream commit.
+mkdir -pv /ygor
+cd /ygor
+git clone https://github.com/hdclark/Ygor .
+chown -R builduser:builduser .
+git config --global --add safe.directory /ygor
+su - builduser -c "cd /ygor && ./compile_and_install.sh -b build"
+git reset --hard
+git clean -fxd :/ 
+
+
+# Install Explicator.
+#
+# Option 1: install a binary package.
+#mkdir -pv /explicator
+#cd /explicator
+#pacman -U ./Explicator*deb
+#
+# Option 2: clone the latest upstream commit.
+mkdir -pv /explicator
+cd /explicator
+git clone https://github.com/hdclark/explicator .
+chown -R builduser:builduser .
+git config --global --add safe.directory /explicator
+su - builduser -c "cd /explicator && ./compile_and_install.sh -b build"
+git reset --hard
+git clean -fxd :/ 
+
+
+# Install YgorClustering.
+mkdir -pv /ygorcluster
+cd /ygorcluster
+git clone https://github.com/hdclark/YgorClustering .
+chown -R builduser:builduser .
+git config --global --add safe.directory /ygorcluster
+su - builduser -c "cd /ygorcluster && ./compile_and_install.sh -b build"
+git reset --hard
+git clean -fxd :/ 
+
+
+# Install DICOMautomaton.
+#
+# Option 1: install a binary package.
+#mkdir -pv /dcma
+#cd /dcma
+#apt-get install --yes -f ./DICOMautomaton*deb 
+#
+# Option 2: clone the latest upstream commit.
+#mkdir -pv /dcma
+#cd /dcma
+#git clone https://github.com/hdclark/DICOMautomaton .
+#   ...
+#
+# Option 3: use the working directory.
+mkdir -pv /dcma
+cd /dcma
+chown -R builduser:builduser .
+git config --global --add safe.directory /dcma
+sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/PKGBUILD
+su - builduser -c "cd /dcma && REPOROOT='/dcma/' makepkg --syncdeps --install --clean --needed --noconfirm"
+git reset --hard
+git clean -fxd :/ 
+

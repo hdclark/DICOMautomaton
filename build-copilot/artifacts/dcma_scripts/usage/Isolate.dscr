@@ -1,0 +1,22 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+GenerateSyntheticImages(
+    NumberOfImages = '5',
+    # Metadata = '',
+){};
+
+GenerateSyntheticImages(
+    NumberOfImages = '10',
+    Metadata = 'key@value',
+){};
+
+GenerateSyntheticImages(
+    NumberOfImages = '15',
+    Metadata = 'key@value',
+){};
+
+Isolate(
+    ImageSelection = 'key@.*value.*',
+){
+    DeleteImages( ImageSelection = 'all', ) {};
+};

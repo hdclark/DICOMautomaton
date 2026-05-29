@@ -1,0 +1,20 @@
+# metadata: AbscissaScaling = None
+# metadata: DistributionMax = 0.306269
+# metadata: DistributionMean = 0.070207
+# metadata: DistributionMin = 0.003774
+# metadata: HistogramType = Cumulative
+# metadata: LineName = heart_abs
+# metadata: Modality = Histogram
+# metadata: NormalizedROIName = Heart
+# metadata: OrdinateScaling = None
+# metadata: PatientID = na
+# metadata: ROIName = heart
+# metadata: UserComment = heart
+0 0 766305 0
+0.05 0 389871.25 0
+0.1 0 181033.75 0
+0.15 0 85528.75 0
+0.2 0 32560 0
+0.25 0 8802.5 0
+0.3 0 175 0
+0.35 0 0 0

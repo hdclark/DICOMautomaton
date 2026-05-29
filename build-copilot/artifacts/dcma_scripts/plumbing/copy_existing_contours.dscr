@@ -1,0 +1,20 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used to convert contours into an bitmap image for editing purposes.
+# Used in the SDL_Viewer operation contouring mode.
+
+HighlightROIs(
+    Method = 'receding_squares',
+    ExteriorVal = '0.0',
+    InteriorVal = '1.0',
+    ExteriorOverwrite = 'true',
+    InteriorOverwrite = 'true',
+    ContourOverlap = $contour_overlap_method,
+    ROILabelRegex = '.*',
+    ImageSelection = 'last',
+
+    #Channel = '-1',
+    #Inclusivity = 'center',
+    #NormalizedROILabelRegex = '.*',
+){};
+

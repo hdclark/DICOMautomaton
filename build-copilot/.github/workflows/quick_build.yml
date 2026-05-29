@@ -1,0 +1,52 @@
+# This is a definition file for GitHub CI.
+
+name: Quick Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  quick_build_ubuntu_x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: install_dependencies
+        run: |
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends \
+               git cmake make g++ rsync \
+               libz-dev \
+               libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev libboost-serialization-dev \
+               libasio-dev \
+               patchelf file wget ca-certificates
+             git config --global --add safe.directory '*' || true
+      - name: build
+        run: |
+             ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
+             ./compile_and_install.sh -m -u
+      - name: create_appimage
+        run: |
+             ./scripts/extract_system_appimage.sh
+             rm -rf ci_artifacts
+             mkdir -pv ci_artifacts
+             appimage="$(find . -maxdepth 1 -name 'DICOMautomaton*AppImage' -print -quit)"
+             if [ -z "${appimage}" ] ; then
+                  printf 'Expected an AppImage but none was found.\n' >&2
+                  exit 1
+             fi
+             mv -- "${appimage}" ci_artifacts/DICOMautomaton-latest-x86_64-quick.AppImage
+             find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      - name: deploy_to_github
+        uses: actions/upload-artifact@v4
+        with:
+          name: "DICOMautomaton-quick-x86_64-AppImage"
+          if-no-files-found: error
+          path: |
+                ci_artifacts/DICOMautomaton-latest-x86_64-quick.AppImage
+                ci_artifacts/DICOMautomaton-latest-x86_64-quick.AppImage.sha256sum

@@ -1,0 +1,19 @@
+# NOTE: This Dockerfile should be interepretted relative to the DICOMautomaton repo root.
+
+#FROM --platform=linux/amd64 alpine:latest
+FROM --platform=linux/amd64 amd64/alpine
+
+LABEL maintainer="https://www.halclark.ca" \
+      description="DICOMautomaton Alpine Linux build base (x86_64)."
+
+WORKDIR /scratch_base
+COPY docker/build_bases/alpine /scratch_base
+COPY scripts /dcma_scripts
+COPY appimagekit_artifacts /appimagekit_artifacts
+COPY linuxdeploy_artifacts /linuxdeploy_artifacts
+
+# Ensure something in the image can interpret bash she-bangs.
+RUN apk add --no-cache bash
+
+RUN /scratch_base/implementation_alpine.sh
+

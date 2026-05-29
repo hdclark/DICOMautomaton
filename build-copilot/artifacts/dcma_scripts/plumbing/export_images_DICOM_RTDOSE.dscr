@@ -1,0 +1,32 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# Export the selected image array as a DICOM RTDOSE volumetric image.
+
+SelectFilename(
+    Key = 'selected_filename',
+    Extension = '.dcm',
+){};
+
+# Check if there are images present, and notify explicitly if not.
+Coalesce(){
+    SelectionIsPresent(
+        ImageSelection = $img_arr_selection,
+    ){};
+
+    Negate(){
+        NotifyUser(
+            Notifications = 'tray("medium", "Image are not present or selection is not valid")',
+        ){};
+    };
+};
+
+DICOMExportImagesAsDose(
+    ImageSelection = $img_arr_selection,
+    Filename = $selected_filename,
+    ParanoiaLevel = 'medium',
+){};
+
+NotifyUser(
+    Notifications = 'tray("low", "File exported as $selected_filename")',
+){};
+

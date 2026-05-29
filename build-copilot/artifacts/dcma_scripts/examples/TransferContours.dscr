@@ -1,0 +1,86 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script transfers an ROI (contours) that are defined on one set of images
+# to another set of images which spatially overlap.
+#
+# For example, contours defined on sagittal or coronal slices that need to be
+# transferred to axial slices. Another example is multi-sequence MR image
+# studies where one image set may be used to extract anatomical detail and
+# another image set needs to use ROI contours to perform analysis.
+
+# Query user interactively for inputs.
+Ignore(){
+    ModifyParameters(
+        Action = 'remove("orig_roi_name");
+                  remove("new_roi_name");
+                  remove("dest_img_arr");',
+    ){};
+};
+
+QueryUserInteractively(
+    Queries = 'string("orig_roi_name", "Which ROI should be transferred? (Note: ROILabelRegex syntax is accepted)", "unspecified")',
+){};
+
+QueryUserInteractively(
+    Queries = 'string("new_roi_name", "What should the new ROI be called?", "unspecified")',
+){};
+
+QueryUserInteractively(
+    Queries = 'string("dest_img_arr", "Which image array destination?", "last")',
+){};
+
+
+# Confirm the ROI contours and image array are present.
+SelectionIsPresent(
+    ROILabelRegex = $orig_roi_name,
+){};
+
+SelectionIsPresent(
+    ImageSelection = $dest_img_arr,
+){};
+
+
+# Convert from contours to mesh by direct stitching.
+#
+# Beware: this conversion can potentially result in non-manifold meshes.
+Ignore(){
+    DeleteMeshes(
+        MeshSelection = 'MeshLabel@wip_transfer',
+    ){};
+};
+
+ConvertContoursToMeshes(
+    ROILabelRegex = $orig_roi_name,
+    MeshLabel = 'wip_transfer',
+    Method = 'direct',
+){};
+
+SelectionIsPresent(
+    MeshSelection = 'MeshLabel@wip_transfer',
+){};
+
+
+# Ensure, as much as possible, that the mesh is watertight.
+#
+# Note that this might fail if the mesh is badly non-manifold.
+MakeMeshesManifold(
+    MeshLabel = 'wip_transfer_manifold',
+    MeshSelection = 'MeshLabel@wip_transfer',
+){};
+
+DeleteMeshes(
+    MeshSelection = 'MeshLabel@wip_transfer',
+){};
+
+
+# Slice the manifold mesh.
+ConvertMeshesToContours(
+    ROILabel = $new_roi_name,
+    ImageSelection = $dest_img_arr,
+    MeshSelection = 'MeshLabel@wip_transfer_manifold',
+){};
+
+DeleteMeshes(
+    MeshSelection = 'MeshLabel@wip_transfer_manifold',
+){};
+

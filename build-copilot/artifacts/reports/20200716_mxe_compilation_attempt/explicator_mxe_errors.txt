@@ -1,0 +1,16 @@
+/explicator/src/Files.cc: In function 'bool explicator_internals::Does_Dir_Exist_And_Can_Be_Read(const string&)':
+/explicator/src/Files.cc:31:48: error: 'alphasort' was not declared in this scope
+   31 |     int n    = scandir(dir.c_str(), &eps, one, alphasort);
+      |                                                ^~~~~~~~~
+/explicator/src/Files.cc:31:16: error: 'scandir' was not declared in this scope; did you mean 'srand'?
+   31 |     int n    = scandir(dir.c_str(), &eps, one, alphasort);
+      |                ^~~~~~~
+      |                srand
+/mxe/usr/bin/x86_64-w64-mingw32.static.gcc9-ar: CMakeFiles/explicator.dir/Files.cc.obj: No such file or directory
+make[2]: *** No rule to make target 'lib/libexplicator.dll.a', needed by 'bin/explicator_print_weights_thresholds.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libexplicator.dll.a', needed by 'bin/explicator_cross_verify.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libexplicator.dll.a', needed by 'bin/explicator_lexicon_dogfooder.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libexplicator.dll.a', needed by 'bin/explicator_translate_string_levenshtein.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libexplicator.dll.a', needed by 'bin/explicator_translate_string_jarowinkler.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libexplicator.dll.a', needed by 'bin/explicator_translate_string.exe'.  Stop.
+make[2]: *** No rule to make target 'lib/libexplicator.dll.a', needed by 'bin/explicator_translate_string_all_general.exe'.  Stop.

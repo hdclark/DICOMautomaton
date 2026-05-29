@@ -1,0 +1,32 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# Export the selected image array as a set of DICOM CT images.
+
+SelectFilename(
+    Key = 'selected_filename',
+    Extension = '.tgz',
+){};
+
+# Check if there are images present, and notify explicitly if not.
+Coalesce(){
+    SelectionIsPresent(
+        ImageSelection = $img_arr_selection,
+    ){};
+
+    Negate(){
+        NotifyUser(
+            Notifications = 'tray("medium", "Image are not present or selection is not valid")',
+        ){};
+    };
+};
+
+DICOMExportImagesAsCT(
+    ImageSelection = $img_arr_selection,
+    Filename = $selected_filename,
+    ParanoiaLevel = 'medium',
+){};
+
+NotifyUser(
+    Notifications = 'tray("low", "File exported as $selected_filename")',
+){};
+

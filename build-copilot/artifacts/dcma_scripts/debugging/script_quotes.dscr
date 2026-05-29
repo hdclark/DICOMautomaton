@@ -1,0 +1,153 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used for debugging.
+
+# This script tests how quotes can be used in scripts.
+
+# Using variables to eliminate quoting in the function call.
+var000 = simple text without quotes;
+var001 = 'simple text in single quotes';
+var002 = "simple text in double quotes";
+var003 = 'complicated \e\s\c\a\p\e\d text in single quotes';
+var004 = "complicated \e\s\c\a\p\e\d text in double quotes";
+var005 = "'complicated text in double quotes with inner single quotes'";
+var006 = '"complicated text in single quotes with inner double quotes"';
+
+var010 = multiline text
+         without quotes;
+var011 = 'multiline text
+         in single quotes';
+var012 = "multiline text
+         in double quotes";
+var013 = 'multiline text with newline escape \
+         in double quotes';
+var014 = "multiline text with newline escape \
+         in double quotes";
+
+noop(
+    param000 = var000,
+    param001 = var001,
+    param002 = var002,
+    param003 = var003,
+    param004 = var004,
+    param005 = var005,
+    param006 = var006,
+
+    param010 = var010,
+    param011 = var011,
+    param012 = var012,
+    param013 = var013,
+    param014 = var014,
+){};
+
+# Passing parameters directly.
+noop(
+    param100 = simple text without quotes,
+    param101 = 'simple text in single quotes',
+    param102 = "simple text in double quotes",
+    param103 = 'complicated \e\s\c\a\p\e\d text in single quotes',
+    param104 = "complicated \e\s\c\a\p\e\d text in double quotes",
+    param105 = "'complicated text in double quotes with inner single quotes'",
+    param106 = '"complicated text in single quotes with inner double quotes"',
+
+    param110 = multiline text
+               without quotes,
+    param111 = 'multiline text
+               in single quotes',
+    param112 = "multiline text
+               in double quotes",
+    param113 = 'multiline text with newline escape \
+               in double quotes',
+    param114 = "multiline text with newline escape \
+               in double quotes",
+){};
+
+# Defining variables inside a function body.
+noop(){
+    var200 = simple text without quotes;
+    var201 = 'simple text in single quotes';
+    var202 = "simple text in double quotes";
+    var203 = 'complicated \e\s\c\a\p\e\d text in single quotes';
+    var204 = "complicated \e\s\c\a\p\e\d text in double quotes";
+    var205 = "'complicated text in double quotes with inner single quotes'";
+    var206 = '"complicated text in single quotes with inner double quotes"';
+
+    var210 = multiline text
+             without quotes;
+    var211 = 'multiline text
+             in single quotes';
+    var212 = "multiline text
+             in double quotes";
+    var213 = 'multiline text with newline escape \
+             in double quotes';
+    var214 = "multiline text with newline escape \
+             in double quotes";
+};
+
+# Testing quoting inside nested functions.
+noop(){
+    noop(
+        param300 = simple text without quotes,
+        param301 = 'simple text in single quotes',
+        param302 = "simple text in double quotes",
+        param303 = 'complicated \e\s\c\a\p\e\d text in single quotes',
+        param304 = "complicated \e\s\c\a\p\e\d text in double quotes",
+        param305 = "'complicated text in double quotes with inner single quotes'",
+        param306 = '"complicated text in single quotes with inner double quotes"',
+
+        param310 = multiline text
+                   without quotes,
+        param311 = 'multiline text
+                   in single quotes',
+        param312 = "multiline text
+                   in double quotes",
+        param313 = 'multiline text with newline escape \
+                   in double quotes',
+        param314 = "multiline text with newline escape \
+                   in double quotes",
+    );
+};
+
+noop(){
+    noop(){
+        var400 = simple text without quotes;
+        var401 = 'simple text in single quotes';
+        var402 = "simple text in double quotes";
+        var403 = 'complicated \e\s\c\a\p\e\d text in single quotes';
+        var404 = "complicated \e\s\c\a\p\e\d text in double quotes";
+        var405 = "'complicated text in double quotes with inner single quotes'";
+        var406 = '"complicated text in single quotes with inner double quotes"';
+
+        var410 = multiline text
+                 without quotes;
+        var411 = 'multiline text
+                 in single quotes';
+        var412 = "multiline text
+                 in double quotes";
+        var413 = 'multiline text with newline escape \
+                 in double quotes';
+        var414 = "multiline text with newline escape \
+                 in double quotes";
+    };
+};
+
+# Variables can hold function names too.
+noop(){
+  function_var = 'noop';
+  function_var(){};
+};
+
+# Miscellaneous tests.
+noop(
+    var0000 = \e\s\c\a\p\e\s outside of quotes are not honoured,
+
+    var0001 = unquoted' 'text' 'is' 'considered' 'verbatim,
+    var0001 = unquoted" "text" "is" "considered" "verbatim,
+    var0002 = unquoted text is considered 'verbatim',
+    var0003 = 'unquoted' text is considered verbatim,
+    var0004 = "unquoted" text is considered verbatim,
+    var0005 = 'unquoted' text is considered 'verbatim',
+
+    var0006 = 'unquoted text cannot have commas, but quoted text can.',
+){};
+

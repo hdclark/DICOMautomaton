@@ -1,0 +1,391 @@
+# This is a definition file for GitLab CI.
+
+default:
+  timeout: 360m
+  retry: 1
+
+stages:
+  - check
+  - build
+  - test
+  - deploy
+
+#######################################################################################################################
+### Checking stages.
+#######################################################################################################################
+# These stages perform simple checks without compiling.
+
+# URL reachability testing.
+check_ci_url_reachability_debian_stable:
+  stage: check
+  tags: [dcma, docker, linux]
+  needs: []
+  allow_failure: true
+  interruptible: true
+  image:
+    name: "debian:stable"
+    pull_policy: [always, if-not-present]
+  before_script:
+    - |
+      cp -R ./docker/builders/ci /scratch
+      cp -R . /dcma
+      ./scripts/enable_swapfile.sh
+      export DEBIAN_FRONTEND="noninteractive"
+      apt-get update --yes
+      apt-get install --yes --no-install-recommends coreutils binutils findutils grep sed curl wget git ca-certificates
+      git config --global --add safe.directory '*' || true
+  script:
+    - |
+      ./scripts/check_markdown_document_url_reachability.sh /dcma/documentation/reference_guide.md
+      ./scripts/check_markdown_document_url_reachability.sh /dcma/README.md
+      git clone --depth=1 'https://github.com/hdclark/DICOMautomaton.wiki.git' /dcma_wiki/
+      find /dcma_wiki/ -type f -iname '*.md' -exec ./scripts/check_markdown_document_url_reachability.sh '{}' \+
+
+
+#######################################################################################################################
+### Building stages.
+#######################################################################################################################
+# These stages test the Docker implementation scripts for installing and building all needed dependencies, building
+# DICOMautomaton, testing the built binaries (within the compilation environment), and then building an AppImage.
+
+# CI build on Debian buster.
+# Notes: reduced (or missing) optimization, some components may be missing.
+build_ci_debian_buster:
+  stage: build
+  tags: [dcma, docker, linux]
+  needs: []
+  image:
+    name: "hdclark/dcma_build_base_debian_buster:latest"
+    pull_policy: [always, if-not-present]
+  before_script:
+    - "cp -R ./docker/builders/ci /scratch"
+    - "cp -R . /dcma"
+    - "./scripts/enable_swapfile.sh"
+  script:
+    - |
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
+      ./docker/builders/debian_buster/implementation_debian_buster.sh
+      ./integration_tests/Run.sh -v
+      ./scripts/extract_system_appimage.sh
+  artifacts:
+    paths:
+      - "AppDir"
+      - "DICOMautomaton*AppImage"
+    expire_in: 55 hours
+
+# CI build on Arch Linux.
+# Notes: reduced (or missing) optimization, some components may be missing.
+build_ci_arch:
+  stage: build
+  tags: [dcma, docker, linux]
+  needs: []
+  image:
+    name: "archlinux:latest"
+    pull_policy: [always, if-not-present]
+  before_script:
+    - "cp -R ./docker/builders/ci /scratch"
+    - "cp -R . /dcma"
+    - "./scripts/enable_swapfile.sh"
+  script:
+    - |
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
+      ./docker/builders/ci/implementation_ci_arch.sh
+      ./integration_tests/Run.sh -v
+      ./scripts/extract_system_appimage.sh
+  artifacts:
+    paths:
+      - "AppDir"
+      - "DICOMautomaton*AppImage"
+    expire_in: 55 hours
+
+# Perform a cross-compile with MXE.
+# Notes: reduced (or missing) optimization, some components may be missing.
+cross_compile_mxe:
+  stage: build
+  tags: [dcma, docker, linux]
+  needs: []
+  image:
+    name: "hdclark/dcma_build_base_mxe:latest"
+    pull_policy: [if-not-present, always]
+  before_script:
+    - "cp -R . /dcma"
+    - "./scripts/enable_swapfile.sh"
+  script:
+    - |
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
+      ./docker/builders/mxe/implementation_mxe.sh
+      rsync -avP /out/ ./Windows/
+      strip ./Windows/usr/bin/*exe
+      strip ./Windows/usr/lib/*a
+      ( cd ./Windows/usr/bin/ && mv opengl32.dll opengl32_disabled.dll ) || true
+  artifacts:
+    paths:
+      - "Windows"
+    expire_in: 55 hours
+
+## CI build on MacOS.
+## Notes: some components may be missing.
+#build_ci_macos:
+#  stage: build
+#  tags: [dcma, macos]
+#  needs: []
+#  allow_failure: true
+#  interruptible: true
+#  variables:
+#    BID: "$CI_COMMIT_SHORT_SHA"
+#  script:
+#    - |
+#      ./docker/builders/macos/implementation_macos.sh "${CI_PROJECT_DIR}/${BID}"_workroot "${CI_PROJECT_DIR}/${BID}"_installroot
+#      ./scripts/gather_macos_dylibs.sh "${CI_PROJECT_DIR}/${BID}"_installroot "${CI_PROJECT_DIR}/${BID}"_artifacts
+#      rm -rf ci_artifacts && mkdir -pv ci_artifacts && cd ci_artifacts
+#      mv "${CI_PROJECT_DIR}/${BID}"_artifacts artifacts
+#      tar --xz -cf DICOMautomaton-latest-macos_x86_64.txz artifacts
+#      rm -rf artifacts/
+#      export short_sha="$(git rev-parse --short HEAD || printf 'unknown')"
+#      cp DICOMautomaton-latest-macos_x86_64.txz DICOMautomaton-${short_sha}-macos_x86_64.txz
+#      find ./ -iname '*.txz' -print -execdir bash -c 'shasum -a 256 "$@" > "$@".sha256sum' bash '{}' \;
+#      cd ..
+#      rm -rf deploy_key
+#      echo "$HALCLARKCA_DEPLOY_KEY_BASE64" | base64 -d > deploy_key
+#      chmod 600 deploy_key
+#      for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
+#      rm -rf deploy_key
+#  after_script:
+#    - |
+#      rm -rf "${CI_PROJECT_DIR}/${BID}"_workroot
+#      rm -rf "${CI_PROJECT_DIR}/${BID}"_installroot
+#      rm -rf deploy_key
+#  artifacts:
+#    paths:
+#      - ci_artifacts/DICOMautomaton-latest-macos_x86_64.txz
+#      - ci_artifacts/DICOMautomaton-latest-macos_x86_64.txz.sha256sum
+#    expire_in: 55 hours
+
+#######################################################################################################################
+### Testing stages.
+#######################################################################################################################
+# These stages test the use of AppImage build artifacts on pristine systems. They basically test portability of the
+# AppImage distribution.
+
+# Same-system testing.
+test_ci_debian_buster_on_debian_stable:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["build_ci_debian_buster"]
+  image:
+    name: "debian:stable"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
+    - "dicomautomaton_dispatcher -h"
+    - "./integration_tests/Run.sh -v"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+test_ci_debian_buster_on_debian_oldstable:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["build_ci_debian_buster"]
+  image:
+    name: "debian:oldstable"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
+    - "dicomautomaton_dispatcher -h"
+    - "./integration_tests/Run.sh -v"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+test_ci_arch_on_arch:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["build_ci_arch"]
+  image:
+    name: "archlinux:latest"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
+    - "dicomautomaton_dispatcher -h"
+    - "./integration_tests/Run.sh -v"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+# Cross-system testing.
+test_ci_debian_buster_on_arch:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["build_ci_debian_buster"]
+  image:
+    name: "archlinux:latest"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
+    - "dicomautomaton_dispatcher -h"
+    - "./integration_tests/Run.sh -v"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+test_ci_debian_buster_on_ubuntu_latest:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["build_ci_debian_buster"]
+  image:
+    name: "ubuntu:latest"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
+    - "dicomautomaton_dispatcher -h"
+    #- git clone 'https://github.com/hdclark/DICOMautomaton'
+    #- cd DICOMautomaton
+    - "./integration_tests/Run.sh -v"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+test_ci_debian_buster_on_fedora_latest:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["build_ci_debian_buster"]
+  image:
+    name: "fedora:latest"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    #- "wget --no-check-certificate 'http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage'"
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    # Explicitly preload libraries using a wrapper.
+    - |
+      printf '%s\n' '#!/usr/bin/env bash' >> /usr/bin/dicomautomaton_dispatcher
+      #printf '%s $@\n' "LD_LIBRARY_PATH=$(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
+      printf '%s "$@"\n' "/usr/lib64/ld-linux-x86-64.so.2 --library-path $(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
+      chmod 777 /usr/bin/dicomautomaton_dispatcher
+    # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
+    - "dicomautomaton_dispatcher -h"
+    #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
+    #- "cd DICOMautomaton"
+    - "./integration_tests/Run.sh -v"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+# Cross-compilation testing.
+test_cross_compile_mxe_on_debian_stable:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["cross_compile_mxe"]
+  image:
+    name: "debian:stable"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "export DEBIAN_FRONTEND='noninteractive'"
+    - "apt-get update --yes"
+    - "apt-get install --yes --no-install-recommends git ca-certificates rsync mesa-utils"
+    - "dpkg --add-architecture i386"
+    - "apt-get update --yes"
+    - "apt-get install --yes wine32 wine64"
+    # Debugging note: to download the latest sources and Windows CI binaries:
+    #- "apt-get install --yes wget unzip vim"
+    #- "git clone https://github.com/hdclark/DICOMautomaton && cd DICOMautomaton"
+    #- "wget 'https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=cross_compile_mxe' -O dcma.zip"
+    #- "unzip dcma.zip"
+    # Opt to use the bundled software opengl32.dll, just in case the host doesn't provide any opengl implementation.
+    - "( cd ./Windows/usr/bin/ && mv opengl32_disabled.dll opengl32.dll ) || true"
+    # Wrap the Windows binary with wine calls so it is transparent to the caller.
+    - "chmod 777 Windows/usr/bin/*"
+    - "rsync -a ./Windows/usr/ /usr/"
+    - "echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher"
+    - "echo 'exec wine /usr/bin/dicomautomaton_dispatcher.exe \"$@\"' >> /usr/bin/dicomautomaton_dispatcher"
+    - "chmod 777 /usr/bin/dicomautomaton_dispatcher"
+    # Ensure it can be run and then run tests.
+    - "dicomautomaton_dispatcher -h"
+    - "./integration_tests/Run.sh -v"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+# Unit tests
+test_units_debian_buster_on_debian_stable:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["build_ci_debian_buster"]
+  image:
+    name: "debian:stable"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
+    - "dicomautomaton_dispatcher -h"
+    - "dicomautomaton_dispatcher -t"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+#######################################################################################################################
+### Deployment stages.
+#######################################################################################################################
+
+deploy_ci_debian_buster:
+  stage: deploy
+  tags: [dcma, docker, linux]
+  needs: ["test_ci_debian_buster_on_debian_stable"]
+  script:
+    - "echo 'Deployment placeholder successful'"

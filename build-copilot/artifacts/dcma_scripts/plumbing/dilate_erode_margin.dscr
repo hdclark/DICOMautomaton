@@ -1,0 +1,28 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script applys either an erosion or dilation to an image, effectively creating a margin.
+# Used in the SDL_Viewer operation contouring mode.
+
+whole_img_contours_name = '___whole_image';
+
+ContourWholeImages(
+    ROILabel = whole_img_contours_name,
+    ImageSelection = 'last',
+    #EncircleMethod = 'whole',
+){};
+
+ReduceNeighbourhood(
+    ImageSelection = 'last',
+    ROILabelRegex = whole_img_contours_name,
+    Neighbourhood = 'spherical',
+    Reduction = $reduction,
+    MaxDistance = $max_distance,
+    #Channel = '0',
+    #NormalizedROILabelRegex = '.*',
+){};
+
+DeleteContours(
+    ROILabelRegex = whole_img_contours_name,
+    #NormalizedROILabelRegex = '.*',
+){};
+

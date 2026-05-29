@@ -1,0 +1,30 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# Export the selected image array by copying the original files.
+
+SelectDirectory(
+    Key = 'selected_dirname',
+){};
+
+# Check if there are images present, and notify explicitly if not.
+Coalesce(){
+    SelectionIsPresent(
+        ImageSelection = $img_arr_selection,
+    ){};
+
+    Negate(){
+        NotifyUser(
+            Notifications = 'tray("medium", "Images are not present or selection is not valid")',
+        ){};
+    };
+};
+
+ExportOriginalFiles(
+    ImageSelection = $img_arr_selection,
+    RootDirectory = $selected_dirname,
+){};
+
+NotifyUser(
+    Notifications = 'tray("low", "Files exported to $selected_dirname")',
+){};
+

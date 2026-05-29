@@ -1,0 +1,40 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+
+GenerateVirtualDataPointCloudV1(){};
+
+CopyPoints(
+    PointSelection = 'last',
+){};
+
+GenerateWarp(
+    Transforms = 'translate(10.0, 20.0, 30.0)',
+    TransformName = 'unspecified',
+    # Metadata = '',
+){};
+
+WarpPoints(
+    PointSelection = 'last',
+    TransformSelection = 'last',
+){};
+
+SamplePoints(
+    PointSelection = 'last',
+    Fraction = '0.75',
+    Seed = '-1',
+){};
+
+ConvertPointsToMeshes(
+    PointSelection = 'last; #-1',
+    CubeWidth = '5.0',
+){};
+
+
+DeletePoints(
+    PointSelection = 'last; #-1',
+){};
+
+DeleteWarps(
+    TransformSelection = 'last',
+){};
+

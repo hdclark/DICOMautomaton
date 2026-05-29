@@ -1,0 +1,117 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+DeleteLineSamples(
+    LineSelection = 'all',
+){};
+
+ExtractImageHistograms(
+    ImageSelection = 'last',
+    Channel = '-1',
+    ROILabelRegex = '.*',
+    ROISelection = 'all',
+    NormalizedROILabelRegex = '.*',
+    ContourOverlap = 'ignore',
+    Inclusivity = 'center',
+    Grouping = 'separate',
+    Lower = '-inf',
+    Upper = 'inf',
+    # GroupLabel = '',
+    # dDose = '0.1',
+    BinCount = '500',
+    # UserComment = '',
+){};
+
+DeleteLineSamples(
+    LineSelection = 'HistogramType@Differential',
+){};
+
+CountObjects(
+    Key = 'N_histograms',
+    # NormalizedROILabelRegex = '.*',
+    # ROILabelRegex = '.*',
+    # ROISelection = 'all',
+    # ImageSelection = 'last',
+    LineSelection = 'all',
+    # MeshSelection = 'last',
+    # PointSelection = 'last',
+    # TableSelection = 'last',
+){};
+
+DeleteTable(
+    TableSelection = 'TableLabel@Image ROI Statistics',
+){};
+
+GenerateTable(
+    TableLabel = 'Image ROI Statistics',
+){};
+
+For(
+    Key = 'i',
+    Inclusivity = 'exclusive',
+    # EachOf = '',
+    Begin = '0',
+    End = '$${N_histograms}',
+    Increment = '1',
+){
+
+    SelectionIsPresent(
+        # NormalizedROILabelRegex = '.*',
+        # ROILabelRegex = '.*',
+        # ROISelection = 'all',
+        # ImageSelection = 'last',
+        LineSelection = '#$${i}',
+        # MeshSelection = 'last',
+        # PointSelection = 'last',
+        # TableSelection = 'last',
+    ){};
+    
+    
+    PromoteMetadata(
+        KeySelection = 'LineName',
+        NewKey = 'n',
+        # DefaultValue = 'N/A',
+        # ValueSeparator = '\',
+        # ROILabelRegex = '.*',
+        # ROISelection = 'all',
+        # NormalizedROILabelRegex = '.*',
+        # ImageSelection = 'last',
+        LineSelection = '#$${i}',
+        # MeshSelection = 'last',
+        # PointSelection = 'last',
+        # TransformSelection = 'last',
+        # TableSelection = 'last',
+        # RTPlanSelection = 'last',
+    ){};
+    
+    AnalyzeHistograms(
+        LineSelection = '#$${i}',
+        #SummaryFilename = '',
+        Constraints = 'x : Imean',
+        ReferenceDose = 'nan',
+        # UserComment = '',
+        # Description = '',
+        # MetadataColumns = '',
+    ){};
+    
+    ModifyParameters(
+        Actions = 'define("Intensity mean for ROI $${n}", "$${x}")',
+    ){};
+            
+    ConvertParametersToTable(
+        KeySelection = 'Intensity mean for ROI .*',
+        TableSelection = 'last',
+        TableLabel = 'unspecified',
+        EmitHeader = 'true',
+        Shape = 'tall',
+    ){};
+    
+    ModifyParameters(
+        Actions = 'remove("Intensity mean for ROI $${n}"); remove("x"); remove("n");',
+    ){};
+    
+}; # For
+
+ModifyParameters(
+    Actions = 'remove("N_histograms");',
+){};
+

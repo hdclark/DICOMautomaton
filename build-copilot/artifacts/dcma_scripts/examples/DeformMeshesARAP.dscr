@@ -1,0 +1,29 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+
+GenerateMeshes(
+    Objects = 'sphere(5.0)',
+    MeshLabel = 'unspecified',
+    Resolution = '1.0, 1.0, 1.0',
+){};
+
+
+DeformMeshesARAP(
+    MeshSelection = 'last',
+    MaxIterations = '100',
+    ConvergenceThreshold = '1e-6',
+    UseCotangentWeights = 'true',
+    HardConstraints = 'proximity(0,0,100,  0,0,15);
+                       proximity(0,0,-100, 0,0,-15);
+                       proximity(100,0,0,  15,0,0);
+                       proximity(-100,0,0, -15,0,0);
+                       proximity(0,100,0,  0,15,0);
+                       proximity(0,-100,0, 0,-15,0);',
+    SoftConstraints = 'proximity(0,100,100,   0,15,15,   1.0);
+                       proximity(0,-100,-100, 0,-15,-15, 2.0);
+                       proximity(0,100,-100, 0,15,-15,   5.0);
+                       proximity(0,-100,100, 0,-15,15,   10.0);',
+    MeshLabel = 'deformed',
+){};
+
+
