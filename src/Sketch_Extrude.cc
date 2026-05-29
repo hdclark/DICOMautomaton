@@ -888,7 +888,9 @@ bool build_extruded_surface_mesh(const Sketch &sketch,
             if(cap_meshes != nullptr) cap_meshes->clear();
             return false;
         }
-        mesh.recreate_involved_face_index();
+
+        mesh.merge_duplicate_vertices(1.0E-6);
+        mesh.remove_disconnected_vertices();
 
         // Post-process the extruded mesh to remove internal faces and ensure
         // consistent normal orientation.

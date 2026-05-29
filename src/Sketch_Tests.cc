@@ -39,6 +39,55 @@ static Sketch::plane_frame_t default_oblique_plane(){
     return out;
 }
 
+struct mesh_edge_key_t {
+    uint64_t a;
+    uint64_t b;
+
+    bool operator<(const mesh_edge_key_t &other) const {
+        return std::tie(a, b) < std::tie(other.a, other.b);
+    }
+};
+
+static void add_closed_polyline(Sketch &sketch,
+                                const std::vector<vec3<double>> &points,
+                                Sketch::geometry_tag_t tag = Sketch::geometry_tag_t::normal){
+    REQUIRE( points.size() >= 3U );
+    for(std::size_t i = 0U; i < points.size(); ++i){
+        sketch.add_line(points.at(i), points.at((i + 1U) % points.size()), tag);
+    }
+}
+
+static void require_closed_manifold_edge_handshake(const fv_surface_mesh<double, uint64_t> &mesh){
+    REQUIRE( !mesh.faces.empty() );
+
+    std::map<mesh_edge_key_t, std::size_t> directed_edge_counts;
+    std::map<mesh_edge_key_t, std::size_t> undirected_edge_counts;
+    for(const auto &face : mesh.faces){
+        REQUIRE( face.size() == 3U );
+        for(std::size_t i = 0U; i < face.size(); ++i){
+            const auto a = face.at(i);
+            const auto b = face.at((i + 1U) % face.size());
+            REQUIRE( a != b );
+            ++directed_edge_counts[mesh_edge_key_t{ a, b }];
+            if(a < b){
+                ++undirected_edge_counts[mesh_edge_key_t{ a, b }];
+            }else{
+                ++undirected_edge_counts[mesh_edge_key_t{ b, a }];
+            }
+        }
+    }
+
+    for(const auto &[edge, count] : undirected_edge_counts){
+        CHECK( count == 2U );
+        const auto forward_it = directed_edge_counts.find(mesh_edge_key_t{ edge.a, edge.b });
+        const auto reverse_it = directed_edge_counts.find(mesh_edge_key_t{ edge.b, edge.a });
+        const auto forward_count = (forward_it == directed_edge_counts.end()) ? 0U : forward_it->second;
+        const auto reverse_count = (reverse_it == directed_edge_counts.end()) ? 0U : reverse_it->second;
+        CHECK( forward_count == 1U );
+        CHECK( reverse_count == 1U );
+    }
+}
+
 }
 
 TEST_CASE("Sketch stores indexed primitives"){
@@ -862,6 +911,7 @@ TEST_CASE("Sketch extrusion produces uniformly oriented capped meshes"){
     REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
     REQUIRE( !mesh.vertices.empty() );
     REQUIRE( !mesh.faces.empty() );
+    require_closed_manifold_edge_handshake(mesh);
 
     double min_z = std::numeric_limits<double>::infinity();
     double max_z = -std::numeric_limits<double>::infinity();
@@ -918,6 +968,7 @@ TEST_CASE("Sketch extrusion supports taper angles and cap mesh export"){
     std::vector<fv_surface_mesh<double, uint64_t>> cap_meshes;
     REQUIRE( sketch.build_extruded_surface_mesh(options, mesh, &cap_meshes) );
     REQUIRE( cap_meshes.size() == 2U );
+    require_closed_manifold_edge_handshake(mesh);
 
     double near_radius = 0.0;
     double far_radius = 0.0;
@@ -1074,6 +1125,7 @@ TEST_CASE("Sketch extrusion stitches line loops and preserves holes in end caps"
     fv_surface_mesh<double, uint64_t> mesh;
     REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
     REQUIRE( !mesh.faces.empty() );
+    require_closed_manifold_edge_handshake(mesh);
 
     bool saw_cap_face = false;
     bool saw_annulus_face = false;
@@ -1124,6 +1176,7 @@ TEST_CASE("Sketch extrusion preserves oblique sketch plane embedding"){
     std::vector<fv_surface_mesh<double, uint64_t>> cap_meshes;
     REQUIRE( sketch.build_extruded_surface_mesh(options, mesh, &cap_meshes) );
     REQUIRE( cap_meshes.size() == 2U );
+    require_closed_manifold_edge_handshake(mesh);
 
     const auto normal = sketch.plane().normal();
     bool saw_near_cap = false;
@@ -1230,6 +1283,7 @@ TEST_CASE("Sketch extrusion normalizes nested loop winding for constrained caps"
 
     fv_surface_mesh<double, uint64_t> mesh;
     REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
+    require_closed_manifold_edge_handshake(mesh);
 
     bool saw_outer_annulus = false;
     bool saw_inner_island = false;
@@ -1277,28 +1331,7 @@ TEST_CASE("Sketch extrusion mesh has no internal faces after post-processing"){
     fv_surface_mesh<double, uint64_t> mesh;
     REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
     REQUIRE( !mesh.faces.empty() );
-
-    // Build edge -> face count map to check for non-manifold edges.
-    struct edge_key_t {
-        uint64_t a, b;
-        bool operator<(const edge_key_t &other) const {
-            return std::tie(a, b) < std::tie(other.a, other.b);
-        }
-    };
-    std::map<edge_key_t, std::size_t> edge_counts;
-    for(const auto &face : mesh.faces){
-        REQUIRE( face.size() == 3U );
-        for(int k = 0; k < 3; ++k){
-            edge_key_t ek{ face[k], face[(k+1) % 3] };
-            if(ek.a > ek.b) std::swap(ek.a, ek.b);
-            ++edge_counts[ek];
-        }
-    }
-
-    // Every edge should appear in at most 2 faces in a manifold mesh.
-    for(const auto &[ek, count] : edge_counts){
-        CHECK( count <= 2U );
-    }
+    require_closed_manifold_edge_handshake(mesh);
 
     // Face normals should be consistently oriented (cap normals point in +/- z).
     int near_cap_faces = 0;
@@ -1325,6 +1358,69 @@ TEST_CASE("Sketch extrusion mesh has no internal faces after post-processing"){
     }
     CHECK( near_cap_faces > 0 );
     CHECK( far_cap_faces > 0 );
+}
+
+TEST_CASE("Sketch extrusion of a square loop is a closed manifold mesh"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    add_closed_polyline(sketch, {
+        vec3<double>(-2.0, -2.0, 0.0),
+        vec3<double>( 2.0, -2.0, 0.0),
+        vec3<double>( 2.0,  2.0, 0.0),
+        vec3<double>(-2.0,  2.0, 0.0),
+    });
+
+    Sketch::extrusion_options_t options;
+    options.into_frame_length = 2.0;
+    options.out_of_frame_length = 2.0;
+
+    fv_surface_mesh<double, uint64_t> mesh;
+    REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
+    require_closed_manifold_edge_handshake(mesh);
+}
+
+TEST_CASE("Sketch extrusion of a simple closed polyline is a closed manifold mesh"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    add_closed_polyline(sketch, {
+        vec3<double>(-4.0, -1.0, 0.0),
+        vec3<double>(-1.5, -3.0, 0.0),
+        vec3<double>( 2.5, -2.0, 0.0),
+        vec3<double>( 4.0,  1.5, 0.0),
+        vec3<double>( 0.0,  4.0, 0.0),
+        vec3<double>(-3.5,  2.5, 0.0),
+    });
+
+    Sketch::extrusion_options_t options;
+    options.into_frame_length = 1.5;
+    options.out_of_frame_length = 2.5;
+
+    fv_surface_mesh<double, uint64_t> mesh;
+    REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
+    require_closed_manifold_edge_handshake(mesh);
+}
+
+TEST_CASE("Sketch extrusion of multiple disjoint closed shapes is manifold on every seam"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    sketch.add_circle(vec3<double>(-5.0, 0.0, 0.0),
+                      vec3<double>(-3.0, 0.0, 0.0),
+                      Sketch::geometry_tag_t::normal);
+    add_closed_polyline(sketch, {
+        vec3<double>(3.0, -2.0, 0.0),
+        vec3<double>(6.0, -2.0, 0.0),
+        vec3<double>(6.0,  2.0, 0.0),
+        vec3<double>(3.0,  2.0, 0.0),
+    });
+
+    Sketch::extrusion_options_t options;
+    options.into_frame_length = 3.0;
+    options.out_of_frame_length = 1.0;
+    options.curve_segments = 24U;
+
+    fv_surface_mesh<double, uint64_t> mesh;
+    REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
+    require_closed_manifold_edge_handshake(mesh);
 }
 
 TEST_CASE("Sketch tangent constraint with arc and line converges reliably"){
