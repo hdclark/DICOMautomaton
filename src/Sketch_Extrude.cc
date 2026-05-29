@@ -12,6 +12,7 @@
 #include <map>
 #include <numeric>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -138,6 +139,66 @@ static void append_triangle(fv_surface_mesh<double, uint64_t> &mesh,
     mesh.faces.emplace_back(std::vector<uint64_t>{ a, b, c });
 }
 
+struct mesh_edge_key_t {
+    uint64_t a;
+    uint64_t b;
+
+    bool operator<(const mesh_edge_key_t &other) const {
+        return std::tie(a, b) < std::tie(other.a, other.b);
+    }
+};
+
+static void validate_manifold_edge_handshake(const fv_surface_mesh<double, uint64_t> &mesh){
+    std::map<mesh_edge_key_t, std::size_t> directed_edge_counts;
+    std::map<mesh_edge_key_t, std::size_t> undirected_edge_counts;
+
+    for(std::size_t face_idx = 0U; face_idx < mesh.faces.size(); ++face_idx){
+        const auto &face = mesh.faces.at(face_idx);
+        if(face.size() != 3U){
+            std::ostringstream ss;
+            ss << "Extrusion produced a non-triangular face at index " << face_idx;
+            throw std::runtime_error(ss.str());
+        }
+
+        for(std::size_t i = 0U; i < face.size(); ++i){
+            const auto a = face.at(i);
+            const auto b = face.at((i + 1U) % face.size());
+            if(a == b){
+                std::ostringstream ss;
+                ss << "Extrusion produced a degenerate edge in face " << face_idx;
+                throw std::runtime_error(ss.str());
+            }
+
+            ++directed_edge_counts[mesh_edge_key_t{ a, b }];
+            if(a < b){
+                ++undirected_edge_counts[mesh_edge_key_t{ a, b }];
+            }else{
+                ++undirected_edge_counts[mesh_edge_key_t{ b, a }];
+            }
+        }
+    }
+
+    for(const auto &[edge, handshake_count] : undirected_edge_counts){
+        if(handshake_count != 2U){
+            std::ostringstream ss;
+            ss << "Extrusion produced a non-manifold edge handshake between vertices "
+               << edge.a << " and " << edge.b << " with " << handshake_count
+               << " incident faces";
+            throw std::runtime_error(ss.str());
+        }
+
+        const auto forward = directed_edge_counts[mesh_edge_key_t{ edge.a, edge.b }];
+        const auto reverse = directed_edge_counts[mesh_edge_key_t{ edge.b, edge.a }];
+        if((forward != 1U) || (reverse != 1U)){
+            std::ostringstream ss;
+            ss << "Extrusion produced an inconsistent manifold edge handshake between vertices "
+               << edge.a << " and " << edge.b << " with directed counts "
+               << forward << " and " << reverse;
+            throw std::runtime_error(ss.str());
+        }
+    }
+}
+
 // Post-process an extruded surface mesh to remove internal faces and ensure
 // consistent normal orientation. Internal faces are those whose edges are
 // shared by 3+ faces (non-manifold T-junctions). Among such faces, we keep
@@ -145,19 +206,12 @@ static void append_triangle(fv_surface_mesh<double, uint64_t> &mesh,
 // discard the rest. After cleanup, face normals are re-oriented to be
 // consistent across the mesh, pointing outward from the interior.
 static void remove_internal_mesh_faces(fv_surface_mesh<double, uint64_t> &mesh){
-    struct edge_key_t {
-        uint64_t a, b;
-        bool operator<(const edge_key_t &other) const {
-            return std::tie(a, b) < std::tie(other.a, other.b);
-        }
-    };
-
-    std::map<edge_key_t, std::vector<std::size_t>> edge_faces;
+    std::map<mesh_edge_key_t, std::vector<std::size_t>> edge_faces;
     for(std::size_t fi = 0U; fi < mesh.faces.size(); ++fi){
         const auto &f = mesh.faces[fi];
         if(f.size() != 3U) continue;
         for(int k = 0; k < 3; ++k){
-            edge_key_t ek{ f[k], f[(k+1) % 3] };
+            mesh_edge_key_t ek{ f[k], f[(k+1) % 3] };
             if(ek.a > ek.b) std::swap(ek.a, ek.b);
             edge_faces[ek].push_back(fi);
         }
@@ -212,7 +266,7 @@ static void remove_internal_mesh_faces(fv_surface_mesh<double, uint64_t> &mesh){
         const auto &f = mesh.faces[fi];
         if(f.size() != 3U) continue;
         for(int k = 0; k < 3; ++k){
-            edge_key_t ek{ f[k], f[(k+1) % 3] };
+            mesh_edge_key_t ek{ f[k], f[(k+1) % 3] };
             if(ek.a > ek.b) std::swap(ek.a, ek.b);
             edge_faces[ek].push_back(fi);
         }
@@ -839,6 +893,7 @@ bool build_extruded_surface_mesh(const Sketch &sketch,
         // Post-process the extruded mesh to remove internal faces and ensure
         // consistent normal orientation.
         remove_internal_mesh_faces(mesh);
+        validate_manifold_edge_handshake(mesh);
 
         return true;
     }catch(const std::exception &e){
