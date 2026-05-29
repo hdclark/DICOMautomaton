@@ -1,6 +1,0 @@
-#!/usr/bin/env -S dicomautomaton_dispatcher -v
-
-DeleteImages(
-    ImageSelection = '!numerous'
-){};
-
