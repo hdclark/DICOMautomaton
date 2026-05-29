@@ -1317,7 +1317,83 @@ TEST_CASE("Sketch extrusion normalizes nested loop winding for constrained caps"
     CHECK( saw_inner_island );
 }
 
-TEST_CASE("Sketch extrusion mesh has no internal faces after post-processing"){
+TEST_CASE("Sketch extrusion stitches only pruned boundary edges"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    add_closed_polyline(sketch, {
+        vec3<double>(-6.0, -6.0, 0.0),
+        vec3<double>( 6.0, -6.0, 0.0),
+        vec3<double>( 6.0,  6.0, 0.0),
+        vec3<double>(-6.0,  6.0, 0.0),
+    });
+    add_closed_polyline(sketch, {
+        vec3<double>(-4.0, -4.0, 0.0),
+        vec3<double>(-4.0,  4.0, 0.0),
+        vec3<double>( 4.0,  4.0, 0.0),
+        vec3<double>( 4.0, -4.0, 0.0),
+    });
+    add_closed_polyline(sketch, {
+        vec3<double>(-2.0, -2.0, 0.0),
+        vec3<double>( 2.0, -2.0, 0.0),
+        vec3<double>( 2.0,  2.0, 0.0),
+        vec3<double>(-2.0,  2.0, 0.0),
+    });
+
+    Sketch::extrusion_options_t options;
+    options.into_frame_length = 2.0;
+    options.out_of_frame_length = 2.0;
+
+    fv_surface_mesh<double, uint64_t> mesh;
+    REQUIRE( sketch.build_extruded_surface_mesh(options, mesh) );
+    require_closed_manifold_edge_handshake(mesh);
+
+    bool saw_outer_wall = false;
+    bool saw_hole_wall = false;
+    bool saw_island_wall = false;
+    for(const auto &face : mesh.faces){
+        REQUIRE( face.size() == 3U );
+        const auto &a = mesh.vertices.at(face.at(0));
+        const auto &b = mesh.vertices.at(face.at(1));
+        const auto &c = mesh.vertices.at(face.at(2));
+
+        const bool is_cap = (std::abs(a.z + 2.0) <= 1.0E-6 && std::abs(b.z + 2.0) <= 1.0E-6 && std::abs(c.z + 2.0) <= 1.0E-6)
+                         || (std::abs(a.z - 2.0) <= 1.0E-6 && std::abs(b.z - 2.0) <= 1.0E-6 && std::abs(c.z - 2.0) <= 1.0E-6);
+        if(is_cap) continue;
+
+        const auto pa = sketch.project(a);
+        const auto pb = sketch.project(b);
+        const auto pc = sketch.project(c);
+        const auto min_u = std::min({ pa.u, pb.u, pc.u });
+        const auto max_u = std::max({ pa.u, pb.u, pc.u });
+        const auto min_v = std::min({ pa.v, pb.v, pc.v });
+        const auto max_v = std::max({ pa.v, pb.v, pc.v });
+
+        const bool on_outer = (std::abs(min_u + 6.0) <= 1.0E-6 && std::abs(max_u + 6.0) <= 1.0E-6)
+                           || (std::abs(min_u - 6.0) <= 1.0E-6 && std::abs(max_u - 6.0) <= 1.0E-6)
+                           || (std::abs(min_v + 6.0) <= 1.0E-6 && std::abs(max_v + 6.0) <= 1.0E-6)
+                           || (std::abs(min_v - 6.0) <= 1.0E-6 && std::abs(max_v - 6.0) <= 1.0E-6);
+        const bool on_hole = (std::abs(min_u + 4.0) <= 1.0E-6 && std::abs(max_u + 4.0) <= 1.0E-6)
+                          || (std::abs(min_u - 4.0) <= 1.0E-6 && std::abs(max_u - 4.0) <= 1.0E-6)
+                          || (std::abs(min_v + 4.0) <= 1.0E-6 && std::abs(max_v + 4.0) <= 1.0E-6)
+                          || (std::abs(min_v - 4.0) <= 1.0E-6 && std::abs(max_v - 4.0) <= 1.0E-6);
+        const bool on_island = (std::abs(min_u + 2.0) <= 1.0E-6 && std::abs(max_u + 2.0) <= 1.0E-6)
+                            || (std::abs(min_u - 2.0) <= 1.0E-6 && std::abs(max_u - 2.0) <= 1.0E-6)
+                            || (std::abs(min_v + 2.0) <= 1.0E-6 && std::abs(max_v + 2.0) <= 1.0E-6)
+                            || (std::abs(min_v - 2.0) <= 1.0E-6 && std::abs(max_v - 2.0) <= 1.0E-6);
+
+        CHECK( on_outer || on_hole || on_island );
+        saw_outer_wall = saw_outer_wall || on_outer;
+        saw_hole_wall = saw_hole_wall || on_hole;
+        saw_island_wall = saw_island_wall || on_island;
+    }
+
+    CHECK( saw_outer_wall );
+    CHECK( saw_hole_wall );
+    CHECK( saw_island_wall );
+}
+
+TEST_CASE("Sketch extrusion mesh has no internal faces by construction"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
     sketch.add_circle(vec3<double>(0.0, 0.0, 0.0),

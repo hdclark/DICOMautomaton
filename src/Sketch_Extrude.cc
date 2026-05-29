@@ -150,6 +150,12 @@ struct mesh_edge_key_t {
     }
 };
 
+static mesh_edge_key_t make_mesh_edge_key(uint64_t a,
+                                          uint64_t b){
+    if(a < b) return mesh_edge_key_t{ a, b };
+    return mesh_edge_key_t{ b, a };
+}
+
 static void validate_manifold_edge_handshake(const fv_surface_mesh<double, uint64_t> &mesh){
     std::map<mesh_edge_key_t, std::size_t> directed_edge_counts;
     std::map<mesh_edge_key_t, std::size_t> undirected_edge_counts;
@@ -201,129 +207,11 @@ static void validate_manifold_edge_handshake(const fv_surface_mesh<double, uint6
     }
 }
 
-// Post-process an extruded surface mesh to remove internal faces and ensure
-// consistent normal orientation. Internal faces are those whose edges are
-// shared by 3+ faces (non-manifold T-junctions). Among such faces, we keep
-// the two with the most distinct normals (i.e., the outer surface pair) and
-// discard the rest. After cleanup, face normals are re-oriented to be
-// consistent across the mesh, pointing outward from the interior.
-static void remove_internal_mesh_faces(fv_surface_mesh<double, uint64_t> &mesh){
-    std::map<mesh_edge_key_t, std::vector<std::size_t>> edge_faces;
-    for(std::size_t fi = 0U; fi < mesh.faces.size(); ++fi){
-        const auto &f = mesh.faces[fi];
-        if(f.size() != 3U) continue;
-        for(int k = 0; k < 3; ++k){
-            mesh_edge_key_t ek{ f[k], f[(k+1) % 3] };
-            if(ek.a > ek.b) std::swap(ek.a, ek.b);
-            edge_faces[ek].push_back(fi);
-        }
-    }
-
-    auto face_normal = [&](std::size_t fi) -> vec3<double> {
-        const auto &f = mesh.faces[fi];
-        const auto &v0 = mesh.vertices[ f[0] ];
-        const auto &v1 = mesh.vertices[ f[1] ];
-        const auto &v2 = mesh.vertices[ f[2] ];
-        return (v1 - v0).Cross(v2 - v0);
-    };
-
-    std::vector<bool> keep(mesh.faces.size(), true);
-
-    for(const auto &[ek, fis] : edge_faces){
-        if(fis.size() < 3U) continue;
-        std::size_t best_i = 0U, best_j = 1U;
-        double min_dot = 1.0;
-        for(std::size_t ii = 0U; ii < fis.size(); ++ii){
-            const auto ni = face_normal(fis[ii]).unit();
-            for(std::size_t jj = ii + 1U; jj < fis.size(); ++jj){
-                const auto nj = face_normal(fis[jj]).unit();
-                const auto d = std::abs(ni.Dot(nj));
-                if(d < min_dot){
-                    min_dot = d;
-                    best_i = ii;
-                    best_j = jj;
-                }
-            }
-        }
-        for(std::size_t ii = 0U; ii < fis.size(); ++ii){
-            if((ii != best_i) && (ii != best_j)){
-                keep[fis[ii]] = false;
-            }
-        }
-    }
-
-    std::vector<std::vector<uint64_t>> new_faces;
-    new_faces.reserve(mesh.faces.size());
-    for(std::size_t fi = 0U; fi < mesh.faces.size(); ++fi){
-        if(keep[fi]){
-            new_faces.push_back(std::move(mesh.faces[fi]));
-        }
-    }
-    mesh.faces.swap(new_faces);
-
-    if(mesh.faces.empty()) return;
-
-    edge_faces.clear();
-    for(std::size_t fi = 0U; fi < mesh.faces.size(); ++fi){
-        const auto &f = mesh.faces[fi];
-        if(f.size() != 3U) continue;
-        for(int k = 0; k < 3; ++k){
-            mesh_edge_key_t ek{ f[k], f[(k+1) % 3] };
-            if(ek.a > ek.b) std::swap(ek.a, ek.b);
-            edge_faces[ek].push_back(fi);
-        }
-    }
-
-    std::vector<int8_t> orientation(mesh.faces.size(), 0);
-    orientation[0] = 1;
-
-    std::vector<std::vector<std::size_t>> adj(mesh.faces.size());
-    for(const auto &[ek, fis] : edge_faces){
-        if(fis.size() == 2U){
-            adj[fis[0]].push_back(fis[1]);
-            adj[fis[1]].push_back(fis[0]);
-        }
-    }
-
-    std::vector<std::size_t> stack;
-    stack.reserve(mesh.faces.size());
-    stack.push_back(0U);
-    while(!stack.empty()){
-        const auto fi = stack.back();
-        stack.pop_back();
-        const auto &f = mesh.faces[fi];
-        for(const auto nfi : adj[fi]){
-            if(orientation[nfi] != 0) continue;
-            const auto &nf = mesh.faces[nfi];
-            bool found = false;
-            for(int fk = 0; fk < 3 && !found; ++fk){
-                auto fv0 = f[fk];
-                auto fv1 = f[(fk+1) % 3];
-                if(fv0 > fv1) std::swap(fv0, fv1);
-                for(int nk = 0; nk < 3; ++nk){
-                    auto nv0 = nf[nk];
-                    auto nv1 = nf[(nk+1) % 3];
-                    if(nv0 > nv1) std::swap(nv0, nv1);
-                    if(fv0 == nv0 && fv1 == nv1){
-                        const bool same_dir = (f[fk] == nf[nk] && f[(fk+1) % 3] == nf[(nk+1) % 3]);
-                        orientation[nfi] = same_dir ? (-orientation[fi]) : orientation[fi];
-                        stack.push_back(nfi);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    for(std::size_t fi = 0U; fi < mesh.faces.size(); ++fi){
-        if(orientation[fi] < 0){
-            std::reverse(std::begin(mesh.faces[fi]), std::end(mesh.faces[fi]));
-        }
-    }
-
-    mesh.recreate_involved_face_index();
-}
+struct planar_cap_topology_t {
+    std::vector<vec2<double>> vertices_2d;
+    std::vector<std::array<uint64_t, 3U>> triangles;
+    std::vector<std::pair<uint64_t, uint64_t>> boundary_edges;
+};
 
 struct extruded_path_t {
     std::vector<vec3<double>> points;
@@ -346,16 +234,6 @@ static std::vector<vec3<double>> deduplicate_polyline_points(const std::vector<v
         closed = true;
     }
     if(closed_out != nullptr) *closed_out = closed;
-    return out;
-}
-
-static std::vector<Sketch::projection_t> project_polyline(const Sketch &sketch,
-                                                          const std::vector<vec3<double>> &polyline){
-    std::vector<Sketch::projection_t> out;
-    out.reserve(polyline.size());
-    for(const auto &point : polyline){
-        out.push_back(sketch.project(point));
-    }
     return out;
 }
 
@@ -579,55 +457,230 @@ static std::vector<extruded_path_t> collect_extruded_paths(const Sketch &sketch,
     return paths;
 }
 
-static void append_extruded_polyline_sides(const Sketch &sketch,
-                                           const extruded_path_t &path,
-                                           const Sketch::projection_t &scale_centre,
-                                           double near_offset,
-                                           double far_offset,
-                                           double near_scale,
-                                           double far_scale,
-                                           fv_surface_mesh<double, uint64_t> &mesh){
-    if(path.points.size() < 2U) return;
-    if(path.closed && (path.points.size() < 3U)) return;
+static bool build_planar_cap_topology(const std::vector<std::vector<vec2<double>>> &raw_closed_loops,
+                                      const std::vector<vec2<double>> &cap_vertices_2d,
+                                      const std::vector<std::vector<uint64_t>> &cap_edges_2d,
+                                      planar_cap_topology_t &topology){
+    topology = {};
+    if(raw_closed_loops.empty() || (cap_vertices_2d.size() < 3U)) return false;
 
-    const auto normal = sketch.plane().normal();
-    const auto projected_points = project_polyline(sketch, path.points);
-    const uint64_t base_vertex = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &projected_point : projected_points){
-        const auto near_point = sketch.lift(scale_projection_about(projected_point, scale_centre, near_scale));
-        const auto far_point = sketch.lift(scale_projection_about(projected_point, scale_centre, far_scale));
-        mesh.vertices.emplace_back(near_point + normal * near_offset);
-        mesh.vertices.emplace_back(far_point + normal * far_offset);
+    const auto closed_loops = normalize_closed_loops(raw_closed_loops);
+    if(closed_loops.empty()) return false;
+
+    double min_x = cap_vertices_2d.front().x;
+    double max_x = cap_vertices_2d.front().x;
+    double min_y = cap_vertices_2d.front().y;
+    double max_y = cap_vertices_2d.front().y;
+    for(const auto &point : cap_vertices_2d){
+        min_x = std::min(min_x, point.x);
+        max_x = std::max(max_x, point.x);
+        min_y = std::min(min_y, point.y);
+        max_y = std::max(max_y, point.y);
     }
+    const auto span = std::max(max_x - min_x, max_y - min_y);
+    const auto padding = std::max(span * 0.5, 1.0);
 
-    bool closed_ccw = true;
-    if(path.closed){
-        closed_ccw = (signed_polygon_area(project_polyline_vec2(sketch, path.points)) >= 0.0L);
+    auto cdt_vertices_2d = cap_vertices_2d;
+    const auto box_base = static_cast<uint64_t>(cdt_vertices_2d.size());
+    cdt_vertices_2d.emplace_back(min_x - padding, min_y - padding);
+    cdt_vertices_2d.emplace_back(max_x + padding, min_y - padding);
+    cdt_vertices_2d.emplace_back(max_x + padding, max_y + padding);
+    cdt_vertices_2d.emplace_back(min_x - padding, max_y + padding);
+
+    auto cdt_edges_2d = cap_edges_2d;
+    cdt_edges_2d.push_back(std::vector<uint64_t>{ box_base + 0U, box_base + 1U });
+    cdt_edges_2d.push_back(std::vector<uint64_t>{ box_base + 1U, box_base + 2U });
+    cdt_edges_2d.push_back(std::vector<uint64_t>{ box_base + 2U, box_base + 3U });
+    cdt_edges_2d.push_back(std::vector<uint64_t>{ box_base + 3U, box_base + 0U });
+
+    YLOGDEBUG("Sending " << cdt_vertices_2d.size() << " vertices and " << cdt_edges_2d.size()
+                         << " edge constraints for constrained Delaunay triangulation");
+    fv_surface_mesh<double, uint64_t> planar_caps;
+    const std::vector<vec2<double>> *triangulation_vertices = &cdt_vertices_2d;
+    bool requires_pruning = true;
+    try{
+        planar_caps = Constrained_Delaunay_Triangulation_2<double, uint64_t>(cdt_vertices_2d, cdt_edges_2d);
+    }catch(const std::exception &e){
+        planar_caps.faces.clear();
+        YLOGWARN("Delaunay triangulation failed: " << e.what());
     }
-
-    const auto emit_side_faces = [&](uint64_t i, uint64_t j) -> void {
-        const auto near_i = base_vertex + (i * 2U);
-        const auto far_i = near_i + 1U;
-        const auto near_j = base_vertex + (j * 2U);
-        const auto far_j = near_j + 1U;
-        if(!path.closed || closed_ccw){
-            append_triangle(mesh, near_i, near_j, far_j);
-            append_triangle(mesh, near_i, far_j, far_i);
-        }else{
-            append_triangle(mesh, near_i, far_j, near_j);
-            append_triangle(mesh, near_i, far_i, far_j);
+    if(planar_caps.faces.empty()){
+        try{
+            YLOGWARN("Attempting fallback triangulation via monotone decomposition");
+            const auto monotone_pieces = Monotone_Decomposition_2<double, uint64_t>(raw_closed_loops);
+            planar_caps = Triangulate_Monotone_Decomposition<double, uint64_t>(raw_closed_loops, monotone_pieces, false);
+            triangulation_vertices = &cap_vertices_2d;
+            requires_pruning = false;
+        }catch(const std::exception &e){
+            planar_caps.faces.clear();
+            YLOGWARN("Triangulation via monotone decomposition failed: " << e.what());
         }
+    }
+    if(planar_caps.faces.empty()) return false;
+
+    std::map<mesh_edge_key_t, bool> constraint_edges;
+    for(const auto &edge : cap_edges_2d){
+        if(edge.size() != 2U) continue;
+        if(edge.at(0) == edge.at(1)) continue;
+        constraint_edges[make_mesh_edge_key(edge.at(0), edge.at(1))] = true;
+    }
+    std::map<mesh_edge_key_t, bool> outside_seed_edges;
+    outside_seed_edges[make_mesh_edge_key(box_base + 0U, box_base + 1U)] = true;
+    outside_seed_edges[make_mesh_edge_key(box_base + 1U, box_base + 2U)] = true;
+    outside_seed_edges[make_mesh_edge_key(box_base + 2U, box_base + 3U)] = true;
+    outside_seed_edges[make_mesh_edge_key(box_base + 3U, box_base + 0U)] = true;
+
+    struct planar_triangle_t {
+        std::array<uint64_t, 3U> vertices;
+        std::array<std::optional<std::size_t>, 3U> neighbors;
+        int classification = -1; // 0 = outside, 1 = inside.
+        bool outside_seed = false;
     };
 
-    for(uint64_t i = 0U; (i + 1U) < static_cast<uint64_t>(path.points.size()); ++i){
-        emit_side_faces(i, i + 1U);
+    std::vector<planar_triangle_t> planar_triangles;
+    planar_triangles.reserve(planar_caps.faces.size());
+    for(const auto &face : planar_caps.faces){
+        if(face.size() != 3U){
+            YLOGWARN("Skipping face with " << face.size() << " vertices");
+            continue;
+        }
+        auto triangle = std::array<uint64_t, 3U>{
+            static_cast<uint64_t>(face.at(0)),
+            static_cast<uint64_t>(face.at(1)),
+            static_cast<uint64_t>(face.at(2))
+        };
+        const auto orientation = signed_triangle_orientation(triangulation_vertices->at(triangle.at(0)),
+                                                             triangulation_vertices->at(triangle.at(1)),
+                                                             triangulation_vertices->at(triangle.at(2)));
+        if(orientation == 0) continue;
+        if(orientation < 0){
+            std::swap(triangle.at(1), triangle.at(2));
+        }
+        planar_triangles.push_back(planar_triangle_t{ triangle, {}, requires_pruning ? -1 : 1, false });
     }
-    if(path.closed){
-        emit_side_faces(static_cast<uint64_t>(path.points.size() - 1U), 0U);
+    if(planar_triangles.empty()) return false;
+
+    std::map<mesh_edge_key_t, std::vector<std::pair<std::size_t, std::size_t>>> edge_to_triangles;
+    for(std::size_t tri_idx = 0U; tri_idx < planar_triangles.size(); ++tri_idx){
+        const auto &triangle = planar_triangles.at(tri_idx).vertices;
+        for(std::size_t edge_idx = 0U; edge_idx < 3U; ++edge_idx){
+            const auto a = triangle.at(edge_idx);
+            const auto b = triangle.at((edge_idx + 1U) % 3U);
+            edge_to_triangles[make_mesh_edge_key(a, b)].emplace_back(tri_idx, edge_idx);
+        }
     }
+
+    for(const auto &[edge_key, refs] : edge_to_triangles){
+        if(refs.size() == 1U){
+            if(requires_pruning && (outside_seed_edges.count(edge_key) != 0U)){
+                planar_triangles.at(refs.front().first).outside_seed = true;
+            }
+            continue;
+        }
+        if(refs.size() != 2U){
+            std::ostringstream ss;
+            ss << "Cap triangulation produced a non-manifold planar edge between vertices "
+               << edge_key.a << " and " << edge_key.b;
+            throw std::runtime_error(ss.str());
+        }
+        planar_triangles.at(refs.at(0).first).neighbors.at(refs.at(0).second) = refs.at(1).first;
+        planar_triangles.at(refs.at(1).first).neighbors.at(refs.at(1).second) = refs.at(0).first;
+    }
+
+    std::vector<std::size_t> stack;
+    stack.reserve(planar_triangles.size());
+    if(requires_pruning){
+        for(std::size_t tri_idx = 0U; tri_idx < planar_triangles.size(); ++tri_idx){
+            if(!planar_triangles.at(tri_idx).outside_seed) continue;
+            planar_triangles.at(tri_idx).classification = 0;
+            stack.push_back(tri_idx);
+        }
+
+        while(!stack.empty()){
+            const auto tri_idx = stack.back();
+            stack.pop_back();
+            const auto &triangle = planar_triangles.at(tri_idx).vertices;
+            for(std::size_t edge_idx = 0U; edge_idx < 3U; ++edge_idx){
+                const auto neighbor = planar_triangles.at(tri_idx).neighbors.at(edge_idx);
+                if(!neighbor.has_value()) continue;
+
+                auto next_classification = planar_triangles.at(tri_idx).classification;
+                const auto a = triangle.at(edge_idx);
+                const auto b = triangle.at((edge_idx + 1U) % 3U);
+                if(constraint_edges.count(make_mesh_edge_key(a, b)) != 0U){
+                    next_classification = (next_classification == 0) ? 1 : 0;
+                }
+
+                auto &neighbor_triangle = planar_triangles.at(neighbor.value());
+                if(neighbor_triangle.classification < 0){
+                    neighbor_triangle.classification = next_classification;
+                    stack.push_back(neighbor.value());
+                }
+            }
+        }
+
+        for(auto &triangle : planar_triangles){
+            if(triangle.classification >= 0) continue;
+            const auto &a = triangulation_vertices->at(triangle.vertices.at(0));
+            const auto &b = triangulation_vertices->at(triangle.vertices.at(1));
+            const auto &c = triangulation_vertices->at(triangle.vertices.at(2));
+            const vec2<double> centroid((a.x + b.x + c.x) / 3.0,
+                                        (a.y + b.y + c.y) / 3.0);
+            triangle.classification = point_in_normalized_loops(centroid, closed_loops) ? 1 : 0;
+        }
+    }
+
+    const auto invalid_index = std::numeric_limits<uint64_t>::max();
+    std::vector<uint64_t> vertex_remap(cap_vertices_2d.size(), invalid_index);
+    for(const auto &triangle : planar_triangles){
+        if(triangle.classification != 1) continue;
+        std::array<uint64_t, 3U> remapped_triangle;
+        for(std::size_t i = 0U; i < 3U; ++i){
+            const auto old_idx = triangle.vertices.at(i);
+            if(old_idx >= cap_vertices_2d.size()){
+                throw std::runtime_error("Pruned cap triangulation retained an auxiliary bounding-box vertex");
+            }
+            auto &new_idx = vertex_remap.at(old_idx);
+            if(new_idx == invalid_index){
+                new_idx = static_cast<uint64_t>(topology.vertices_2d.size());
+                topology.vertices_2d.push_back(cap_vertices_2d.at(old_idx));
+            }
+            remapped_triangle.at(i) = new_idx;
+        }
+        topology.triangles.push_back(remapped_triangle);
+    }
+
+    if(topology.triangles.empty()) return false;
+
+    std::map<mesh_edge_key_t, std::size_t> inside_edge_counts;
+    std::map<mesh_edge_key_t, std::pair<uint64_t, uint64_t>> boundary_edge_orientation;
+    for(const auto &triangle : topology.triangles){
+        for(std::size_t edge_idx = 0U; edge_idx < 3U; ++edge_idx){
+            const auto a = triangle.at(edge_idx);
+            const auto b = triangle.at((edge_idx + 1U) % 3U);
+            const auto edge_key = make_mesh_edge_key(a, b);
+            ++inside_edge_counts[edge_key];
+            boundary_edge_orientation[edge_key] = std::make_pair(a, b);
+        }
+    }
+
+    for(const auto &[edge_key, count] : inside_edge_counts){
+        if(count == 1U){
+            topology.boundary_edges.push_back(boundary_edge_orientation.at(edge_key));
+            continue;
+        }
+        if(count != 2U){
+            std::ostringstream ss;
+            ss << "Pruned cap triangulation produced a non-manifold planar edge between vertices "
+               << edge_key.a << " and " << edge_key.b;
+            throw std::runtime_error(ss.str());
+        }
+    }
+
+    return !topology.boundary_edges.empty();
 }
 
-static void append_extruded_end_caps(const Sketch &sketch,
+static bool append_extruded_end_caps(const Sketch &sketch,
                                      const std::vector<extruded_path_t> &paths,
                                      const Sketch::projection_t &scale_centre,
                                      double near_offset,
@@ -656,125 +709,43 @@ static void append_extruded_end_caps(const Sketch &sketch,
             });
         }
     }
-    if(raw_closed_loops.empty() || (cap_vertices_2d.size() < 3U)) return;
+    if(raw_closed_loops.empty() || (cap_vertices_2d.size() < 3U)) return false;
 
-    const auto closed_loops = normalize_closed_loops(raw_closed_loops);
-    if(closed_loops.empty()) return;
-
-    YLOGDEBUG("Sending " << cap_vertices_2d.size() << " vertices and " << cap_edges_2d.size() 
-                         << " edge constraints for constrained Delaunay triangulation");
-    fv_surface_mesh<double, uint64_t> planar_caps;
-    try{
-        planar_caps = Constrained_Delaunay_Triangulation_2<double, uint64_t>(cap_vertices_2d, cap_edges_2d);
-    }catch(const std::exception &e){
-        planar_caps.faces.clear();
-        YLOGWARN("Delaunay triangulation failed: " << e.what());
+    planar_cap_topology_t planar_topology;
+    if(!build_planar_cap_topology(raw_closed_loops, cap_vertices_2d, cap_edges_2d, planar_topology)){
+        return false;
     }
-    if(planar_caps.faces.empty()){
-        try{
-            YLOGWARN("Attempting fallback triangulation via monotone decomposition");
-            const auto monotone_pieces = Monotone_Decomposition_2<double, uint64_t>(raw_closed_loops);
-            planar_caps = Triangulate_Monotone_Decomposition<double, uint64_t>(raw_closed_loops, monotone_pieces, false);
-        }catch(const std::exception &e){
-            planar_caps.faces.clear();
-            YLOGWARN("Triangulation via monotone decomposition failed: " << e.what());
-        }
-    }
-    if(planar_caps.faces.empty()) return;
 
     const auto normal = sketch.plane().normal();
     fv_surface_mesh<double, uint64_t> near_cap_mesh;
     fv_surface_mesh<double, uint64_t> far_cap_mesh;
     const uint64_t near_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : cap_vertices_2d){
+    for(const auto &point : planar_topology.vertices_2d){
         const auto projected_point = to_projection(point);
         const auto scaled_near = sketch.lift(scale_projection_about(projected_point, scale_centre, near_scale));
         mesh.vertices.emplace_back(scaled_near + normal * near_offset);
         near_cap_mesh.vertices.emplace_back(scaled_near + normal * near_offset);
     }
     const uint64_t far_base = static_cast<uint64_t>(mesh.vertices.size());
-    for(const auto &point : cap_vertices_2d){
+    for(const auto &point : planar_topology.vertices_2d){
         const auto projected_point = to_projection(point);
         const auto scaled_far = sketch.lift(scale_projection_about(projected_point, scale_centre, far_scale));
         mesh.vertices.emplace_back(scaled_far + normal * far_offset);
         far_cap_mesh.vertices.emplace_back(scaled_far + normal * far_offset);
     }
 
-    struct cap_face_candidate_t {
-        uint64_t i0;
-        uint64_t i1;
-        uint64_t i2;
-        double area_sign;
-    };
-    std::vector<cap_face_candidate_t> cap_candidates;
-    for(const auto &face : planar_caps.faces){
-        if(face.size() != 3U){
-            // Skip any non-triangular faces from the Delaunay triangulation.
-            // In particular, quad (4-vertex) faces would produce internal
-            // non-manifold geometry and must not be added to the surface mesh.
-            YLOGWARN("Skipping face with " << face.size() << " vertices"); 
-            continue;
-        }
-        const auto &a = cap_vertices_2d.at(face.at(0));
-        const auto &b = cap_vertices_2d.at(face.at(1));
-        const auto &c = cap_vertices_2d.at(face.at(2));
-        const vec2<double> centroid((a.x + b.x + c.x) / 3.0,
-                                    (a.y + b.y + c.y) / 3.0);
-        if(!point_in_normalized_loops(centroid, closed_loops)) continue;
-
-        const auto orientation = signed_triangle_orientation(a, b, c);
-        if(orientation == 0) continue;
-
-        const auto i0 = static_cast<uint64_t>(face.at(0));
-        const auto i1 = static_cast<uint64_t>(face.at(1));
-        const auto i2 = static_cast<uint64_t>(face.at(2));
-        cap_candidates.push_back(cap_face_candidate_t{ i0, i1, i2, static_cast<double>(orientation) });
+    for(const auto &triangle : planar_topology.triangles){
+        append_triangle(mesh, far_base + triangle.at(0), far_base + triangle.at(1), far_base + triangle.at(2));
+        append_triangle(mesh, near_base + triangle.at(0), near_base + triangle.at(2), near_base + triangle.at(1));
+        append_triangle(far_cap_mesh, triangle.at(0), triangle.at(1), triangle.at(2));
+        append_triangle(near_cap_mesh, triangle.at(0), triangle.at(2), triangle.at(1));
     }
 
-    if(cap_candidates.empty()) return;
-
-    int64_t pos_count = 0;
-    int64_t neg_count = 0;
-    for(const auto &cand : cap_candidates){
-        if(cand.area_sign > 0.0) ++pos_count;
-        else ++neg_count;
+    for(const auto &[i, j] : planar_topology.boundary_edges){
+        append_triangle(mesh, near_base + i, near_base + j, far_base + j);
+        append_triangle(mesh, near_base + i, far_base + j, far_base + i);
     }
 
-    if(pos_count >= neg_count){
-        for(const auto &cand : cap_candidates){
-            const auto i0 = cand.i0;
-            const auto i1 = cand.i1;
-            const auto i2 = cand.i2;
-            if(cand.area_sign > 0.0){
-                append_triangle(mesh, far_base + i0, far_base + i1, far_base + i2);
-                append_triangle(mesh, near_base + i0, near_base + i2, near_base + i1);
-                append_triangle(far_cap_mesh, i0, i1, i2);
-                append_triangle(near_cap_mesh, i0, i2, i1);
-            }else{
-                append_triangle(mesh, far_base + i0, far_base + i2, far_base + i1);
-                append_triangle(mesh, near_base + i0, near_base + i1, near_base + i2);
-                append_triangle(far_cap_mesh, i0, i2, i1);
-                append_triangle(near_cap_mesh, i0, i1, i2);
-            }
-        }
-    }else{
-        for(const auto &cand : cap_candidates){
-            const auto i0 = cand.i0;
-            const auto i1 = cand.i1;
-            const auto i2 = cand.i2;
-            if(cand.area_sign < 0.0){
-                append_triangle(mesh, far_base + i0, far_base + i2, far_base + i1);
-                append_triangle(mesh, near_base + i0, near_base + i1, near_base + i2);
-                append_triangle(far_cap_mesh, i0, i2, i1);
-                append_triangle(near_cap_mesh, i0, i1, i2);
-            }else{
-                append_triangle(mesh, far_base + i0, far_base + i1, far_base + i2);
-                append_triangle(mesh, near_base + i0, near_base + i2, near_base + i1);
-                append_triangle(far_cap_mesh, i0, i1, i2);
-                append_triangle(near_cap_mesh, i0, i2, i1);
-            }
-        }
-    }
     if(cap_meshes != nullptr){
         cap_meshes->clear();
         if(!near_cap_mesh.faces.empty()){
@@ -786,6 +757,7 @@ static void append_extruded_end_caps(const Sketch &sketch,
             cap_meshes->push_back(std::move(far_cap_mesh));
         }
     }
+    return !mesh.faces.empty();
 }
 
 } // anonymous namespace
@@ -862,27 +834,15 @@ bool build_extruded_surface_mesh(const Sketch &sketch,
             return false;
         }
 
-        bool emitted_geometry = false;
-        for(const auto &path : paths){
-            append_extruded_polyline_sides(sketch,
-                                           path,
-                                           scale_centre,
-                                           near_offset,
-                                           far_offset,
-                                           near_scale,
-                                           far_scale,
-                                           mesh);
-            emitted_geometry = emitted_geometry || !path.points.empty();
-        }
-        append_extruded_end_caps(sketch,
-                                 paths,
-                                 scale_centre,
-                                 near_offset,
-                                 far_offset,
-                                 near_scale,
-                                 far_scale,
-                                 mesh,
-                                 cap_meshes);
+        const bool emitted_geometry = append_extruded_end_caps(sketch,
+                                                               paths,
+                                                               scale_centre,
+                                                               near_offset,
+                                                               far_offset,
+                                                               near_scale,
+                                                               far_scale,
+                                                               mesh,
+                                                               cap_meshes);
 
         if(!emitted_geometry || mesh.faces.empty()){
             store_error(error_message, "Sketch does not contain any extrudable primitives");
@@ -890,14 +850,8 @@ bool build_extruded_surface_mesh(const Sketch &sketch,
             if(cap_meshes != nullptr) cap_meshes->clear();
             return false;
         }
-
-        // Post-process the extruded mesh to remove internal faces and ensure
-        // consistent normal orientation.
-        const double duplicate_vertex_merge_eps = 1.0E-6;
-        mesh.merge_duplicate_vertices(duplicate_vertex_merge_eps);
-        mesh.remove_disconnected_vertices();
-        remove_internal_mesh_faces(mesh);
         validate_manifold_edge_handshake(mesh);
+        mesh.recreate_involved_face_index();
 
         return true;
     }catch(const std::exception &e){
