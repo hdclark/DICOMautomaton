@@ -1,0 +1,12 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used for debugging.
+
+# This script demonstrates function names with disallowed characters.
+
+names_must_only_include_a-z_A-Z_and_1-9_chars();
+
+name with spaces();
+
+name_with_+_symbol();
+

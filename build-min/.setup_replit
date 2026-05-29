@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+# This script is used to setup a useable compilation toolchain for DICOMautomaton development on https://repl.it .
+# There are some access peculiarities on repl.it that require workarounds to get an up-to-date toolchain capable of
+# compiling test programs. After running this script, which could take a long time to complete, standalone
+# development files should be able to be compiled using repl.it.
+
+set -eu
+
+# Try ensure only a single script runs at a time.
+lock_file="$HOME/.apt/setup_script_running.lock"
+if [ -f "${lock_file}" ] ; then
+    printf 'Setup script is running. Refusing to run.' 1>&2
+    exit 1
+fi
+trap "{ rm -f '${lock_file}' ; }" EXIT # Clean-up the lock file when we exit.
+mkdir -pv $HOME/.apt/
+touch "${lock_file}"
+
+# Install some typical development packages.
+(
+    #install-pkg libeigen3-dev libnlopt-dev libboost-dev libcgal-dev libgsl-dev libsfml-dev
+    install-pkg libeigen3-dev libnlopt-dev libboost-dev
+) | tee -a $HOME/.apt/stage_1_pkg_installation.log
+touch $HOME/.apt/completed_stage_1_pkg_installation
+
+# Provide a more recent CMake binary.
+(
+    wget "https://github.com/Kitware/CMake/releases/download/v3.17.5/cmake-3.17.5-Linux-x86_64.sh" -O $HOME/.apt/cmake.sh
+    mkdir -pv $HOME/.apt/cmake
+    bash $HOME/.apt/cmake.sh --skip-license --prefix=$HOME/.apt/cmake
+    rm -rf $HOME/.apt/cmake.sh
+) | tee -a $HOME/.apt/stage_2_cmake_installation.log
+export PATH="$HOME/.apt/cmake/bin:$PATH"
+touch $HOME/.apt/completed_stage_2_cmake_installation
+
+## Provide a newer clang.
+#(
+#    wget 'https://github.com/llvm/llvm-project/releases/download/llvmorg-10.0.0/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04.tar.xz' -O $HOME/.apt/clang.tar.xz
+#    tar -C $HOME -axf $HOME/.apt/clang.tar.xz
+#    rm -rf $HOME/.apt/clang.tar.xz
+#) | tee -a $HOME/.apt/stage_3_clang_installation.log
+#export PATH="$HOME/.apt/clang+llvm-10.0.0-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH"
+touch $HOME/.apt/completed_stage_3_clang_installation
+
+# Compile Ygor and install locally to support using Ygor classes.
+(
+    rm -rf $HOME/.apt/ygor
+    git clone 'https://github.com/hdclark/Ygor' $HOME/.apt/ygor
+    mkdir -pv $HOME/.apt/ygor/build
+    # -DCMAKE_FIND_ROOT_PATH=$HOME/.apt/include 
+    cd $HOME/.apt/ygor/build && \
+      CC="clang" CXX="clang++" \
+      CXXFLAGS="-I$HOME/.apt/usr/include" \
+      PKG_CONFIG_PATH="$HOME/.apt/usr/share/pkgconfig/:$HOME/.apt/usr/lib/x86_64-linux-gnu/pkgconfig/" \
+      cmake \
+        -DCMAKE_INSTALL_PREFIX="$HOME/.apt/usr" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DWITH_EIGEN=1 \
+        -DWITH_GNU_GSL=0 \
+        $HOME/.apt/ygor
+    cd $HOME/.apt/ygor/build && make VERBOSE=1
+    cd $HOME/.apt/ygor/build && make install #DESTDIR=$HOME/
+) | tee -a $HOME/.apt/stage_4_ygor_installation.log
+touch $HOME/.apt/completed_stage_4_ygor_installation
+
+# Indicate that the setup has been completed.
+touch $HOME/.apt/setup_complete
+

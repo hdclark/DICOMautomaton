@@ -1,0 +1,93 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script transfers an ROI (contours) that are defined on one set of images
+# to another set of images which spatially overlap.
+#
+# This script assumes the source contours and destination image have the same
+# orientation (e.g., axial), but have different spacing. For example, when 
+# contours are generated on detailed, thin anatomical images, and the contours
+# need to be transferred to thicker images, such as diffusion images.
+
+# Query user interactively for inputs.
+Ignore(){
+    ModifyParameters(
+        Action = 'remove("orig_roi_name");
+                  remove("new_roi_name");
+                  remove("dest_img_arr");',
+    ){};
+};
+
+QueryUserInteractively(
+    Queries = 'string("orig_roi_name", "Which ROI(s) should be transferred? (Note: ROILabelRegex syntax is accepted)", ".*")',
+){};
+
+QueryUserInteractively(
+    Queries = 'string("new_roi_name", "What should the new ROI be called?", "unspecified")',
+){};
+
+QueryUserInteractively(
+    Queries = 'string("dest_img_arr", "Which image array destination? (Note: you can refer to the Nth image array via #N syntax)", "last")',
+){};
+
+
+# Confirm the ROI contours and image array are present.
+SelectionIsPresent(
+    ROILabelRegex = $orig_roi_name,
+){};
+
+SelectionIsPresent(
+    ImageSelection = $dest_img_arr,
+){};
+
+
+# Create a mutable copy of the image array to work with.
+CopyImages(
+    ImageSelection = '${dest_img_arr}',
+){};
+
+
+# For each image slice, convert the contours to a mask.
+HighlightROIs(
+    Channel = '0',
+    ImageSelection = 'last',
+    ContourOverlap = 'ignore',
+    Inclusivity = 'center',
+    Method = 'receding_squares',
+    ExteriorVal = '0.0',
+    InteriorVal = '1.0',
+    ExteriorOverwrite = 'true',
+    InteriorOverwrite = 'true',
+    #NormalizedROILabelRegex = '.*',
+    ROILabelRegex = '${orig_roi_name}',
+    #ROISelection = 'all',
+){};
+
+
+# Convert the mask back to contours.
+ConvertImagesToContours(
+    ROILabel = '${new_roi_name}',
+    Lower = '0.5',
+    Upper = 'inf',
+    Channel = '0',
+    ImageSelection = 'last',
+    Method = 'marching-squares',
+    #SimplifyMergeAdjacent = 'false',
+){};
+
+
+# Remove the mask.
+DeleteImages(
+    ImageSelection = 'last',
+){};
+
+
+# Remove the user input parameters.
+Ignore(){
+    ModifyParameters(
+        Action = 'remove("orig_roi_name");
+                  remove("new_roi_name");
+                  remove("dest_img_arr");',
+    ){};
+};
+
+

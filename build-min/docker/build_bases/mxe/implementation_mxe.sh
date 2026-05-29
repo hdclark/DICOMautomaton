@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
+
+# This script prepares a build environment using MXE and then cross-compiles DICOMautomaton dependencies.
+
+
+set -eux
+
+export DEBIAN_FRONTEND="noninteractive"
+sed -i -e 's@oldoldstable@bullseye@g' \
+       -e 's@oldstable@bullseye@g' \
+       -e 's@stable@bullseye@g'  /etc/apt/sources.list
+
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os mxe --tier build_tools)"
+
+retry_count=0
+retry_limit=5
+until
+    apt-get -y update && \
+    `# Install MXE build dependencies ` \
+    apt-get -y install ${PKGS_BUILD_TOOLS}
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
+
+
+# See <https://mxe.cc/#tutorial> and <https://mxe.cc/#requirements-debian> for more information. Perform the following
+# instructions inside a recent `Debian` `Docker` container (or VM, instance, or bare metal installation). The following
+# is essentially a lightly customized version of the MXE tutorial.
+
+git clone 'https://github.com/mxe/mxe.git' /mxe
+cd /mxe
+
+# Add custom package.
+#git clone 'https://github.com/hdclark/mxe.git' /mxe_custom
+#cp /mxe{_custom,}/src/thrift.mk
+mkdir -p /mxe/pkg/ /mxe/src/
+mv /thrift-0.18.1.tar.gz /mxe/pkg/
+mv /thrift.mk /mxe/src/
+
+# Remove components we won't need to reduce setup time.
+rm -rf src/qt* src/ocaml* src/sdl2_* || true
+sed -i -e 's/qtbase//' src/cgal.mk || true
+
+#export TOOLCHAIN="x86_64-w64-mingw32.shared"
+export TOOLCHAIN="x86_64-w64-mingw32.static"
+
+# Build the MXE environment. Note this could take hours.
+# Builds a gcc5.5 compiler toolchain by default.
+#make -j4 --keep-going || true
+# Should build gcc9, but still builds gcc5.5 (default).
+#make -j4 --keep-going MXE_TARGETS="${TOOLCHAIN}.gcc9" || true
+# Works, but was purportedly deprecated in 2018.
+#echo 'override MXE_PLUGIN_DIRS += plugins/gcc9' >> settings.mk  # Update compiler version.
+
+# Make everything.
+#make -j4 --keep-going MXE_TARGETS="${TOOLCHAIN}" MXE_PLUGIN_DIRS=plugins/gcc9 || true
+
+# Make a specific subset.
+#
+# Note: ideally we would download pre-compiled binaries, but not everything we need is available (see below).
+make -j"$(nproc)" --keep-going \
+  MXE_USE_CCACHE="" \
+  `# MXE_SILENT_NO_NETWORK="1" ` `# Workaround for qtbase build fail. See https://github.com/mxe/mxe/issues/2590 ` \
+  MXE_TARGETS="${TOOLCHAIN}" \
+  MXE_PLUGIN_DIRS=plugins/gcc12 \
+  gmp mpfr boost eigen sdl2 glew nlopt mesa cgal thrift sqlite lua protobuf #wt
+
+export PATH="/mxe/usr/bin:$PATH"
+
+# Report the compiler version for debugging.
+"${TOOLCHAIN}-g++" --version
+
+unset `env | \
+  grep -vi '^EDITOR=\|^HOME=\|^LANG=\|MXE\|^PATH=' | \
+  grep -vi 'PKG_CONFIG\|PROXY\|^PS1=\|^TERM=\|TOOLCHAIN=' | \
+  cut -d '=' -f1 | tr '\n' ' '`
+
+
+# Cross-compiled libraries and upstream packages are installed with the `/mxe/usr/${TOOLCHAIN}/` prefix. Installation to
+# a custom prefix will simplify extraction of final build artifacts. Note that the `MXE` `CMake` wrapper will properly
+# source from the `MXE` prefix directory, so we only need to tell the toolchain where to look for custom dependencies.
+
+git clone 'https://github.com/hdclark/Ygor' /ygor
+git clone 'https://github.com/hdclark/YgorClustering' /ygorclustering
+git clone 'https://github.com/hdclark/Explicator' /explicator
+
+mkdir -pv /out/usr/{bin,lib,include,share}
+
+# Provide harmless duplicates if the std::filesystem bug is present.
+#
+# Note: this can be removed when libstdc++fs.a no longer needs to be linked explicitly. TODO.
+if [ ! -f /mxe/usr/"${TOOLCHAIN}"/lib/libstdc++fs.a ] ; then
+    cp /mxe/usr/"${TOOLCHAIN}"/lib/{libm.a,libstdc++fs.a} || true
+fi
+if [ ! -f /mxe/usr/"${TOOLCHAIN}"/lib/libstdc++fs.so ] ; then
+    touch /mxe/usr/"${TOOLCHAIN}"/lib/libstdc++fs.so || true
+fi
+
+# Confirm the search locations reflect the toolchain prefix.
+"${TOOLCHAIN}-g++" -print-search-dirs
+
+# Install missing dependencies.
+# Asio.
+( mkdir -pv /asio &&
+  cd /asio &&
+  wget 'https://sourceforge.net/projects/asio/files/latest/download' -O asio.tgz &&
+  ( tar -axf asio.tgz || unzip asio.tgz ) &&
+  cd asio-*/ &&
+  cp -v -R include/asio/ include/asio.hpp /mxe/usr/"${TOOLCHAIN}"/include/  )
+
+## CGAL header-only.
+#( mkdir -pv /cgal &&
+#  cd /cgal &&
+#  wget 'https://github.com/CGAL/cgal/releases/download/v5.5.1/CGAL-5.5.1.tar.xz' -O cgal.txz &&
+#  ( tar -axf cgal.txz || unzip cgal.txz ) &&
+#  cd CGAL-*/ &&
+#  cp -v -R include/CGAL/ /mxe/usr/"${TOOLCHAIN}"/include/ &&
+#  mkdir -pv /mxe/usr/"${TOOLCHAIN}"/cmake/ &&
+#  cp -v -R cmake/modules /mxe/usr/"${TOOLCHAIN}"/cmake/ &&
+#  mkdir -pv /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ &&
+#  cp -v -R lib/cmake/CGAL /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ )
+
+# Workaround for MXE's SFML pkg-config files missing the standard modules.
+"${TOOLCHAIN}-pkg-config" --cflags --libs sdl2 glew
+
+# Compile the portable pieces.
+for repo_dir in /ygor /ygorclustering /explicator ; do
+    cd "$repo_dir"
+    rm -rf build/
+    mkdir build
+    cd build 
+    #"${TOOLCHAIN}-cmake" -E env CXXFLAGS='-I/out/include' \
+    #"${TOOLCHAIN}-cmake" -E env LDFLAGS="-L/out/lib" \
+    #"${TOOLCHAIN}-cmake" \
+    #  -DCMAKE_CXX_FLAGS='-I/out/include' \
+
+    "${TOOLCHAIN}-cmake" \
+      -DCMAKE_INSTALL_PREFIX=/usr/ \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DWITH_LINUX_SYS=OFF \
+      -DWITH_EIGEN=ON \
+      -DWITH_GNU_GSL=OFF \
+      -DBUILD_SHARED_LIBS=OFF \
+      ../
+    make -j"$(nproc)" --ignore-errors VERBOSE=1 2>&1 | tee ../build_log 
+    make install DESTDIR="/mxe/usr/${TOOLCHAIN}/"
+
+    # Make the artifacts available elsewhere for easier access.
+    make install DESTDIR="/out"
+    rsync -avP /out/usr/ "/mxe/usr/${TOOLCHAIN}/"
+
+    cd "$repo_dir"
+    git reset --hard || true
+    git clean -fxd :/ || true
+done
+
+# Ensure the toolchain environment variables are passed to future sessions.
+env |
+  grep -i 'MXE\|^PATH=\|PKG_CONFIG\|PROXY\|TOOLCHAIN=' | \
+  sed -e 's/^/export /' \
+  >> /etc/profile.d/mxe_toolchain.sh
+

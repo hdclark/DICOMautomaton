@@ -1,0 +1,51 @@
+# Compiled Object files
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Data files
+sycl/data
+
+# Compiled Static libraries
+*.la
+*.a
+settings.json
+
+# Executables
+automaton
+overlaydosedata
+pacs_ingress
+pacs_refresh
+pacs_verify_filesystem_store
+petct_perfusion_analysis*
+rpc_example_client
+rpc_example_server
+
+# Typical build directory and artifacts.
+build/
+compile_commands.json
+dcma_integration_testing/
+
+# LLM build tool artifacts
+build_llm/
+build_conan/
+.linuxbrew/
+.conan/
+__pycache__/
+.venv/
+
+# vim temporary files.
+*.swp
+
+# Directories with cached AppImage tooling artifacts.
+appimagekit_artifacts/
+linuxdeploy_artifacts/
+
+# MXE packages used for building Docker images.
+thrift-0.18.1.tar.gz
+thrift.mk
+
+
+.aider*

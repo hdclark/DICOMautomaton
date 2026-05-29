@@ -1,0 +1,34 @@
+exit
+
+Lightly modified `explicator_translate_string` from Explicator project to disregard exceptions associated with invalid
+lexicon files during initial loading. Tested prediction of string 'test' against fuzzed lexicon files.
+
+             american fuzzy lop 2.52b (explicator_translate_string)
+
+┌─ process timing ─────────────────────────────────────┬─ overall results ─────┐
+│        run time : 3 days, 2 hrs, 50 min, 18 sec      │  cycles done : 2      │
+│   last new path : 0 days, 16 hrs, 47 min, 58 sec     │  total paths : 1268   │
+│ last uniq crash : none seen yet                      │ uniq crashes : 0      │
+│  last uniq hang : none seen yet                      │   uniq hangs : 0      │
+├─ cycle progress ────────────────────┬─ map coverage ─┴───────────────────────┤
+│  now processing : 1248* (98.42%)    │    map density : 2.76% / 3.10%         │
+│ paths timed out : 0 (0.00%)         │ count coverage : 4.89 bits/tuple       │
+├─ stage progress ────────────────────┼─ findings in depth ────────────────────┤
+│  now trying : interest 8/8          │ favored paths : 49 (3.86%)             │
+│ stage execs : 81.6k/182k (44.78%)   │  new edges on : 97 (7.65%)             │
+│ total execs : 61.0M                 │ total crashes : 0 (0 unique)           │
+│  exec speed : 52.46/sec (slow!)     │  total tmouts : 51.4k (57 unique)      │
+├─ fuzzing strategy yields ───────────┴───────────────┬─ path geometry ────────┤
+│   bit flips : 33/2.77M, 14/2.77M, 5/2.77M           │    levels : 15         │
+│  byte flips : 0/346k, 0/259k, 0/265k                │   pending : 736        │
+│ arithmetics : 15/14.3M, 0/4.26M, 0/783k             │  pend fav : 0          │
+│  known ints : 1/1.17M, 1/6.04M, 0/10.2M             │ own finds : 1265       │
+│  dictionary : 0/0, 0/0, 1/11.2M                     │  imported : n/a        │
+│       havoc : 1195/3.66M, 0/0                       │ stability : 100.00%    │
+│        trim : 3.33%/117k, 26.03%                    ├────────────────────────┘
+^C────────────────────────────────────────────────────┘          [cpu000: 40%]
+
++++ Testing aborted by user +++
+[+] We're done here. Have a nice day!
+
+

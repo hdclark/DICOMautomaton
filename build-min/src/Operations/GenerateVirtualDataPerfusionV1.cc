@@ -1,0 +1,317 @@
+//GenerateVirtualDataPerfusionV1.cc - A part of DICOMautomaton 2016. Written by hal clark.
+
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <limits>
+#include <list>
+#include <map>
+#include <memory>
+#include <stdexcept>
+#include <string>    
+#include <cstdint>
+
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "Explicator.h"
+
+#include "../Imebra_Shim.h"
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "GenerateVirtualDataPerfusionV1.h"
+
+OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(){
+    OperationDoc out;
+    out.name = "GenerateVirtualDataPerfusionV1";
+
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: generator");
+    out.tags.emplace_back("category: perfusion");
+    out.tags.emplace_back("category: virtual phantom");
+
+    out.desc = 
+        "This operation generates data suitable for testing perfusion modeling operations. There are no specific checks in"
+        " this code. Another operation performs the actual validation. You might be able to manually verify if the perfusion"
+        " model admits a simple solution.";
+
+    return out;
+}
+
+bool GenerateVirtualDataPerfusionV1(Drover &DICOM_data,
+                                      const OperationArgPkg&,
+                                      std::map<std::string, std::string>& /*InvocationMetadata*/,
+                                      const std::string& FilenameLex){
+
+    Explicator X(FilenameLex);
+
+    using loaded_imgs_storage_t = decltype(DICOM_data.image_data);
+    std::list<loaded_imgs_storage_t> loaded_imgs_storage;
+    std::shared_ptr<Contour_Data> loaded_contour_data_storage = std::make_shared<Contour_Data>();
+
+
+    // The test images are divided into sections. Some sections are for testing purposes, and others provide fake data
+    // for the perfusion models (i.e., AIF and VIF).
+    int64_t Rows = 20;
+    int64_t Columns = 20;
+    int64_t Channels = 1;
+
+    const double SliceThickness = 1.0;
+    const double SliceLocation  = 1.0;
+    const double SpacingBetweenSlices = 1.0;
+    const vec3<double> ImageAnchor(0.0, 0.0, 0.0);
+    const vec3<double> ImagePosition(100.0,100.0,100.0);
+    const vec3<double> ImageOrientationColumn = vec3<double>(1.0,0.0,0.0).unit();
+    const vec3<double> ImageOrientationRow = vec3<double>(0.0,1.0,0.0).unit();
+    const double ImagePixeldy = 1.0; //Spacing between adjacent rows.
+    const double ImagePixeldx = 1.0; //Spacing between adjacent columns.
+    const double ImageThickness = 1.0;
+
+    //int64_t InstanceNumber = 1; //Gets bumped for each image.
+    int64_t SliceNumber    = 1; //Gets bumped at each temporal bump.
+    int64_t ImageIndex     = 1; //For PET series. Not sure when to bump...
+    //const int64_t AcquisitionNumber = 1;
+
+    // Temporal metadata.
+    //int64_t TemporalPositionIdentifier = 1;
+    //int64_t TemporalPositionIndex      = 1;
+    int64_t NumberOfTemporalPositions  = 40;
+    //int64_t FrameTime = 1;
+    double dt = 2.5;
+    const std::string ContentDate = "20160706";
+    const std::string ContentTime = "123056";
+
+    // Other metadata.
+    //const double RescaleSlope = 1.0;
+    //const double RescaleIntercept = 0.0;
+    const std::string OriginFilename = "/dev/null";
+    const std::string PatientID = "VirtualDataPatientVersion1";
+    const std::string StudyInstanceUID = Generate_Random_UID(31);
+    const std::string SeriesInstanceUID = Generate_Random_UID(31);
+    const std::string FrameOfReferenceUID = Generate_Random_UID(60);
+    const std::string SOPClassUID = "1.2.840.10008.5.1.4.1.1.2"; // CT Image IOD.
+    const std::string Modality = "CT";
+
+
+    // --- The virtual 'signal' image series ---
+    loaded_imgs_storage.emplace_back();
+    SliceNumber = 1;
+    for(int64_t time_index = 0; time_index < NumberOfTemporalPositions; ++time_index, ++SliceNumber){
+        const double t = dt * time_index;
+        //int64_t FrameReferenceTime = t * 1000.0;
+
+        const std::string SOPInstanceUID = Generate_Random_UID(60);
+
+        auto out = std::make_unique<Image_Array>();
+        out->imagecoll.images.emplace_back();
+
+        out->imagecoll.images.back().metadata["Filename"] = OriginFilename;
+
+        out->imagecoll.images.back().metadata["PatientID"] = PatientID;
+        out->imagecoll.images.back().metadata["StudyInstanceUID"] = StudyInstanceUID;
+        out->imagecoll.images.back().metadata["SeriesInstanceUID"] = SeriesInstanceUID;
+        out->imagecoll.images.back().metadata["SOPInstanceUID"] = SOPInstanceUID;
+        out->imagecoll.images.back().metadata["SOPClassUID"] = SOPClassUID;
+
+        out->imagecoll.images.back().metadata["dt"] = std::to_string(t);
+        out->imagecoll.images.back().metadata["Rows"] = std::to_string(Rows);
+        out->imagecoll.images.back().metadata["Columns"] = std::to_string(Columns);
+        out->imagecoll.images.back().metadata["SliceThickness"] = std::to_string(SliceThickness);
+        out->imagecoll.images.back().metadata["SliceNumber"] = std::to_string(SliceNumber);
+        out->imagecoll.images.back().metadata["SliceLocation"] = std::to_string(SliceLocation);
+        out->imagecoll.images.back().metadata["ImageIndex"] = std::to_string(ImageIndex);
+        out->imagecoll.images.back().metadata["SpacingBetweenSlices"] = std::to_string(SpacingBetweenSlices);
+        out->imagecoll.images.back().metadata["ImagePositionPatient"] = std::to_string(ImagePosition.x) + "\\"
+                                                                      + std::to_string(ImagePosition.y) + "\\"
+                                                                      + std::to_string(ImagePosition.z);
+        out->imagecoll.images.back().metadata["ImageOrientationPatient"] = std::to_string(ImageOrientationRow.x) + "\\"
+                                                                         + std::to_string(ImageOrientationRow.y) + "\\"
+                                                                         + std::to_string(ImageOrientationRow.z) + "\\"
+                                                                         + std::to_string(ImageOrientationColumn.x) + "\\"
+                                                                         + std::to_string(ImageOrientationColumn.y) + "\\"
+                                                                         + std::to_string(ImageOrientationColumn.z);
+        out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(ImagePixeldy) + "\\" + std::to_string(ImagePixeldx);
+        out->imagecoll.images.back().metadata["FrameOfReferenceUID"] = FrameOfReferenceUID;
+
+        out->imagecoll.images.back().metadata["StudyTime"] = ContentTime;
+        out->imagecoll.images.back().metadata["SeriesTime"] = ContentTime;
+        out->imagecoll.images.back().metadata["AcquisitionTime"] = ContentTime;
+        out->imagecoll.images.back().metadata["ContentTime"] = ContentTime;
+
+        out->imagecoll.images.back().metadata["StudyDate"] = ContentDate;
+        out->imagecoll.images.back().metadata["SeriesDate"] = ContentDate;
+        out->imagecoll.images.back().metadata["AcquisitionDate"] = ContentDate;
+        out->imagecoll.images.back().metadata["ContentDate"] = ContentDate;
+
+        out->imagecoll.images.back().metadata["Modality"] = Modality;
+
+        // ---
+
+        out->imagecoll.images.back().init_orientation(ImageOrientationRow,ImageOrientationColumn);
+        out->imagecoll.images.back().init_buffer(Rows, Columns, Channels);
+        out->imagecoll.images.back().init_spatial(ImagePixeldx,ImagePixeldy,ImageThickness, ImageAnchor, ImagePosition);
+
+        for(int64_t row = 0; row < Rows; ++row){
+            for(int64_t col = 0; col < Columns; ++col){
+                for(int64_t chnl = 0; chnl < Channels; ++chnl){
+
+                    float OutgoingPixelValue = std::numeric_limits<float>::quiet_NaN();
+
+                    //Strip 1: linear-changing spatially, constant temporally.
+                    if(isininc(0,row,3)){
+                        OutgoingPixelValue = static_cast<float>(col);
+
+                    //Strip 2: constant spatially, linear-changing temporally.
+                    }else if(isininc(4,row,7)){
+                        OutgoingPixelValue = static_cast<float>(t);
+
+                    //Strip 3: constant spatially, square-changing temporally.
+                    }else if(isininc(8,row,11)){
+                        OutgoingPixelValue = static_cast<float>(t*t / 250.0);
+
+                    //Strip 4: constant spatially, Gaussian temporally.
+                    }else if(isininc(12,row,15)){
+                        const double sigma  = 20.0; //seconds.
+                        const double centre = 50.0; //seconds.
+                        const auto exparg = -1.0 * std::pow(t-centre, 2.0) / std::pow(sigma, 2.0);
+                        OutgoingPixelValue = static_cast<float>( std::exp(exparg) );
+
+                    //Strip 5: AIF and VIF; constant spatially, Gaussian temporally.
+                    }else if(isininc(16,row,19)){
+                        //The AIF.
+                        if(col < 10){
+                            const double sigma  = 10.0; //seconds.
+                            const double centre = 25.0; //seconds.
+                            const auto exparg = -1.0 * std::pow(t-centre, 2.0) / std::pow(sigma, 2.0);
+                            OutgoingPixelValue = static_cast<float>( std::exp(exparg) );
+
+                        //The VIF.
+                        }else{
+                            const double sigma  = 10.0; //seconds.
+                            const double centre = 45.0; //seconds.
+                            const auto exparg = -1.0 * std::pow(t-centre, 2.0) / std::pow(sigma, 2.0);
+                            OutgoingPixelValue = static_cast<float>( std::exp(exparg) );
+                        }
+
+                    }else{
+                        throw std::runtime_error("Image dimensions have been changed without changing the pixel definitions.");
+                    }
+
+                    out->imagecoll.images.back().reference(row,col,chnl) = OutgoingPixelValue;
+                } //Loop over channels.
+            } //Loop over columns.
+        } //Loop over rows.
+
+        loaded_imgs_storage.back().push_back( std::move( out ) );
+    }
+
+
+    //Collate each group of images into a single set, if possible. Also stuff the correct contour data in the same set.
+    for(auto &loaded_img_set : loaded_imgs_storage){
+        if(loaded_img_set.empty()) continue;
+
+        auto collated_imgs = Collate_Image_Arrays(loaded_img_set);
+        if(!collated_imgs){
+            throw std::runtime_error("Unable to collate images. Virtual data should never cause this error.");
+        }
+
+        DICOM_data.image_data.emplace_back(std::move(collated_imgs));
+    }
+
+
+    //Create contours.
+    {
+        auto output = std::make_unique<Contour_Data>();
+
+        //Get an image to base contours on. (This just make it slightly easier to specify contours.)
+        auto animgcoll = std::ref(DICOM_data.image_data.back()->imagecoll);
+        auto animg = std::ref(DICOM_data.image_data.back()->imagecoll.images.front());
+
+        int64_t ROINumberNidus = 1;
+
+        //AIF.
+        {
+            const std::string ROIName = "Abdominal_Aorta";
+            const auto ROINumber = ROINumberNidus++;
+
+            contour_collection<double> cc;
+            {
+                contour_of_points<double> shtl;
+                shtl.closed = true;
+                shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/0 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/0 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/9 ));
+                shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/9 ));
+                shtl.Reorient_Counter_Clockwise();
+                shtl.metadata = animgcoll.get().get_common_metadata({});
+                shtl.metadata["ROIName"] = ROIName;
+                shtl.metadata["NormalizedROIName"] = X(ROIName);
+                shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
+                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
+                cc.contours.push_back(std::move(shtl));
+            }
+            output->ccs.emplace_back( );
+            output->ccs.back() = cc;
+        }
+
+
+        //VIF.
+        {
+            const std::string ROIName = "Hepatic_Portal_Vein";
+            const auto ROINumber = ROINumberNidus++;
+
+            contour_collection<double> cc;
+            {
+                contour_of_points<double> shtl;
+                shtl.closed = true;
+                shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/10 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/10 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/19 ));
+                shtl.points.push_back(animg.get().position(/*row=*/16, /*column=*/19 ));
+                shtl.Reorient_Counter_Clockwise();
+                shtl.metadata = animgcoll.get().get_common_metadata({});
+                shtl.metadata["ROIName"] = ROIName;
+                shtl.metadata["NormalizedROIName"] = X(ROIName);
+                shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
+                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
+                cc.contours.push_back(std::move(shtl));
+            }
+            output->ccs.emplace_back( );
+            output->ccs.back() = cc;
+        }
+
+
+        //Body.
+        {
+            const std::string ROIName = "Body";
+            const auto ROINumber = ROINumberNidus++;
+
+            contour_collection<double> cc;
+            {
+                contour_of_points<double> shtl;
+                shtl.closed = true;
+                shtl.points.push_back(animg.get().position(/*row=*/ 0, /*column=*/ 0 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/ 0 ));
+                shtl.points.push_back(animg.get().position(/*row=*/19, /*column=*/19 ));
+                shtl.points.push_back(animg.get().position(/*row=*/ 0, /*column=*/19 ));
+                shtl.Reorient_Counter_Clockwise();
+                shtl.metadata = animgcoll.get().get_common_metadata({});
+                shtl.metadata["ROIName"] = ROIName;
+                shtl.metadata["NormalizedROIName"] = X(ROIName);
+                shtl.metadata["MinimumSeparation"] = animg.get().metadata["ImageThickness"];
+                shtl.metadata["ROINumber"] = std::to_string(ROINumber);
+                cc.contours.push_back(std::move(shtl));
+            }
+            output->ccs.emplace_back( );
+            output->ccs.back() = cc;
+        }
+
+
+        DICOM_data.contour_data = std::move(output);
+    }
+
+    return true;
+}

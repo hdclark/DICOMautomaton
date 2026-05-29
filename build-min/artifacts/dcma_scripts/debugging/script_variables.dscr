@@ -1,0 +1,138 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used for debugging.
+
+# This script tests how variables can be used in scripts.
+
+# Defining variables.
+var000 = 123;
+var001 = "123";
+var002 = simple text without quotes;
+var003 = 'simple text in single quotes';
+var004 = "simple text in double quotes";
+var005 = 'complicated \e\s\c\a\p\e\d text in single quotes';
+var006 = "complicated \e\s\c\a\p\e\d text in double quotes";
+var007 = "'complicated text in double quotes with inner single quotes'";
+var008 = '"complicated text in single quotes with inner double quotes"';
+
+var010 = multiline text
+         without quotes;
+var011 = 'multiline text
+         in single quotes';
+var012 = "multiline text
+         in double quotes";
+var013 = 'multiline text with newline escape \
+         in double quotes';
+var014 = "multiline text with newline escape \
+         in double quotes";
+
+# Passing variables as parameters.
+noop(
+    param000 = var000,
+    param001 = var001,
+    param002 = var002,
+    param003 = var003,
+    param004 = var004,
+    param005 = var005,
+    param006 = var006,
+    param007 = var007,
+    param008 = var008,
+
+    param010 = var010,
+    param011 = var011,
+    param012 = var012,
+    param013 = var013,
+    param014 = var014,
+){};
+
+# Passing variables as parameters in a nested function.
+noop(){
+    noop(
+        param000 = var000,
+        param001 = var001,
+        param002 = var002,
+        param003 = var003,
+        param004 = var004,
+        param005 = var005,
+        param006 = var006,
+        param007 = var007,
+        param008 = var008,
+
+        param010 = var010,
+        param011 = var011,
+        param012 = var012,
+        param013 = var013,
+        param014 = var014,
+    ){};
+};
+
+# Defining variables inside a function block, and passing them as parmeters to
+# a child operations.
+noop(){
+    var100 = 123;
+    var101 = "123";
+    var102 = simple text without quotes;
+    var103 = 'simple text in single quotes';
+    var104 = "simple text in double quotes";
+    var105 = 'complicated \e\s\c\a\p\e\d text in single quotes';
+    var106 = "complicated \e\s\c\a\p\e\d text in double quotes";
+    var107 = "'complicated text in double quotes with inner single quotes'";
+    var108 = '"complicated text in single quotes with inner double quotes"';
+
+    var110 = multiline text
+             without quotes;
+    var111 = 'multiline text
+             in single quotes';
+    var112 = "multiline text
+             in double quotes";
+    var113 = 'multiline text with newline escape \
+             in double quotes';
+    var114 = "multiline text with newline escape \
+             in double quotes";
+
+    noop(
+        param000 = var100,
+        param001 = var101,
+        param002 = var102,
+        param003 = var103,
+        param004 = var104,
+        param005 = var105,
+        param006 = var106,
+        param007 = var107,
+        param008 = var108,
+
+        param010 = var110,
+        param011 = var111,
+        param012 = var112,
+        param013 = var113,
+        param014 = var114,
+    ){};
+};
+
+# Variables can be updated.
+var200 = 123;
+noop( x = var200 ){};
+
+var200 = 456;
+noop( x = var200 ){};
+
+# Variables respect scope.
+noop(){
+    var200 = 789;
+    noop( x = var200 );
+
+    noop(){
+        noop(){
+            var200 = 'abc';
+            noop(x = var200 );
+        };
+    };
+    noop(x = var200 );
+};
+noop( x = var200 ){};
+
+# Variables can refer to other variables, but only shallow copies are made.
+var300 = 123;
+var301 = var300;
+noop( x = var301 ){};
+

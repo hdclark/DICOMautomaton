@@ -1,0 +1,215 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script demonstrates how to use the ModifyLineSamples operation methods.
+
+GenerateVirtualDataLineSampleV1(){};
+
+Isolate(
+    Lineselection = 'last',
+){
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'abscissa-offset();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'ordinate-offset();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'average-coincident-values(0.5);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'purge-redundant-samples(0.5, 1.23);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'rank-abscissa();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'rank-ordinate();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'swap-abscissa-and-ordinate();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'select-abscissa-range(-1.23, 2.34);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'abscissa-offset(); ordinate-offset(); crossings(0.5);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'peaks();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'resample-equal-spacing(100);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'multiply-scalar(1.25);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'sum-scalar(-1.23);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'absolute-ordinate();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'purge-nonfinite();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'histogram(100);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'histogram(100,1);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'moving-average-two-sided-15-sample();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'moving-average-two-sided-23-sample();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'moving-average-two-sided-equal-weighting(5);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'moving-average-two-sided-gaussian-weighting(1.23);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'moving-median-filter-two-sided-equal-weighting(5);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'moving-median-filter-two-sided-gaussian-weighting(1.23);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'moving-median-filter-two-sided-triangular-weighting(5);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'moving-variance-two-sided(5);',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'derivative-forward-finite-differences();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'derivative-backward-finite-differences();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'derivative-centered-finite-differences();',
+    ){};
+
+    CopyLineSamples(
+        LineSelection = 'first',
+    ){};
+    ModifyLineSamples(
+        Methods = 'local-signed-curvature-three-sample();',
+    ){};
+
+};
+

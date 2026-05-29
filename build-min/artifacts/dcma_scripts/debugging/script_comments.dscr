@@ -1,0 +1,71 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used for debugging.
+
+# This script tests how comments in scripts are parsed.
+
+# Comment.
+
+noop(); # Comment.
+
+noop() # Comment.
+; # Comment.
+
+noop( # Comment.
+    # Comment.
+); # Comment.
+
+noop(){}; # Comment.
+
+noop(){ # Comment.
+    # Comment.
+}; # Comment.
+
+noop() # Comment.
+# Comment.
+{ # Comment.
+    # Comment.
+}; # Comment.
+
+noop( # Comment.
+     a = 123, # Comment.
+     # Comment.
+     b = 456, # Comment.
+     # Comment.
+     c = '# not a comment', # Comment.
+     # Comment.
+     d = "# not a comment", # Comment.
+     # Comment.
+    ); # Comment.
+
+noop(){ # Comment.
+    # Comment.
+    noop(){}; # Comment.
+    # Comment.
+}; # Comment.
+
+noop(){ # Comment.
+    # Comment.
+    noop(){ # Comment.
+        # Comment.
+        noop(){ # Comment.
+            # Comment.
+            noop( # Comment.
+                  a = 123, # Comment.
+                  # Comment.
+                  b = 456, # Comment.
+                  # Comment.
+                  c = '# not a comment', # Comment.
+                  # Comment.
+                  d = "# not a comment", # Comment.
+                  # Comment.
+                ){ # Comment.
+            # Comment.
+            }; # Comment.
+            # Comment.
+        }; # Comment.
+        # Comment.
+    }; # Comment.
+    # Comment.
+}; # Comment.
+

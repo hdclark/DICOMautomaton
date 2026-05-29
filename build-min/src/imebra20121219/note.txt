@@ -1,0 +1,11 @@
+exit
+
+This version of Imebra corresponds to commit 8292c2bad137b1aec4833fae8141ea6bc878694 which has a commit date of Wed Dec
+19 19:55:53 2012 +0100.
+
+It has been altered slightly, mostly to placate compiler warnings and modernization for C++11 (e.g., 0 --> nullptr,
+auto_ptr --> unique_ptr).
+
+This commit is licensed under a '2-clause BSD'-like license that is compatible with the GPLv3 license of DICOMautomaton.
+Later versions of Imebra are licensed under GPL, but this version is not.
+

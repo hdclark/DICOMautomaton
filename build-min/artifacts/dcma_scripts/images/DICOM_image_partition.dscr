@@ -1,0 +1,83 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+FirstOf(){
+
+    # Prospectively include the SeriesDescription and StudyDate,
+    # and a few other common tags which can help reduce grouping
+    # of derived objects together with the original images.
+    GroupImages(
+        ImageSelection = 'all',
+        KeysCommon = 'PatientID;
+                      StudyInstanceUID;
+                      SeriesInstanceUID;
+                      FrameOfReferenceUID;
+                      Modality;
+                      SeriesNumber;
+                      StudyDate;
+                      SeriesDescription;
+                      ImageType',
+        Strict = 'true',
+        #AutoSelectKeysCommon = 'false',
+        #Enforce = ''
+    ){};
+
+    # Include just the SeriesNumber, which can help differentiate
+    # 4DCTs, perfusion images, diffusion images, etc.
+    #
+    # The FrameOfReferenceUID is also omitted since it can sometimes
+    # be absent for derived/composite images.
+    GroupImages(
+        ImageSelection = 'all',
+        KeysCommon = 'PatientID;
+                      StudyInstanceUID;
+                      SeriesInstanceUID;
+                      Modality;
+                      SeriesNumber',
+        Strict = 'true',
+    ){};
+
+    # Try the core DICOM identifiers with a few common extras,
+    # but still attempt to be strict.
+    GroupImages(
+        ImageSelection = 'all',
+        KeysCommon = 'PatientID;
+                      StudyInstanceUID;
+                      SeriesInstanceUID;
+                      FrameOfReferenceUID;
+                      Modality',
+        Strict = 'true',
+    ){};
+
+    # Fallback on the only core DICOM identifiers, which should be
+    # present for "real-world" data. However, don't be strict in
+    # case the data is not "real-world."
+    GroupImages(
+        ImageSelection = 'all',
+        KeysCommon = 'PatientID;
+                      StudyInstanceUID;
+                      SeriesInstanceUID',
+        Strict = 'false',
+    ){};
+
+};
+
+# Sort images according to the SeriesNumber, which is how they are
+# commonly displayed at the time of acquisition.
+#
+# Note: ideally we would use the AcquisitionTime, but it often is
+# unhelpfully set to a placeholder time (e.g., StudyTime).
+OrderImages(
+    ImageSelection = 'all',
+    Variant = 'external',
+    Key = 'SeriesNumber',
+){};
+
+# Sort within each partition using the instance number. This helps
+# deal with non-axial images, though it can be impacted by collection
+# procedure.
+OrderImages(
+    ImageSelection = 'Modality@MR',
+    Variant = 'internal',
+    Key = 'InstanceNumber',
+){};
+

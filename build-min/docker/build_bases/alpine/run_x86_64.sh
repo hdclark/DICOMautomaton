@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -eux
+
+#sudo docker run -it --rm --network=host --platform=linux/amd64 amd64/alpine
+sudo docker run -it --rm --network=host --platform=linux/amd64 dcma_build_base_alpine_x86_64
+

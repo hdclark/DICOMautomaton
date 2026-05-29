@@ -1,0 +1,19 @@
+ply
+format ascii 1.0
+comment metadata: PointName = cube_corners_with_normals
+element vertex 8
+property float x
+property float y
+property float z
+property float nx
+property float ny
+property float nz
+end_header
+-0.5 -0.5 -0.5 -0.5773503 -0.5773503 -0.5773503 
+0.5 -0.5 -0.5 0.3333333 -0.6666667 -0.6666667 
+-0.5 0.5 -0.5 -0.6666667 0.3333333 -0.6666667 
+0.5 0.5 -0.5 0.6666667 0.6666667 -0.3333333 
+-0.5 -0.5 0.5 -0.6666667 -0.6666667 0.3333333 
+0.5 -0.5 0.5 0.6666667 -0.3333333 0.6666667 
+-0.5 0.5 0.5 -0.3333333 0.6666667 0.6666667 
+0.5 0.5 0.5 0.5773503 0.5773503 0.5773503 

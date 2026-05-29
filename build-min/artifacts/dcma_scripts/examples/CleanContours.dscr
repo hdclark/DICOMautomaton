@@ -1,0 +1,110 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script 'cleans' contours, which means small contouring artifact 'islands'
+# are removed, adjacent duplicate vertices (within a single contour) are
+# removed, and excessively detailed contours are simplified.
+#
+# Note that this script *replaces* original contours with cleaned counterparts
+# when the simplification process succeeds. Otherwise, the original contours
+# remain unaltered.
+
+
+# Consider each contour ROI separately.
+ForEachDistinct(
+    KeysCommon = 'ROIName',
+    IncludeNA = 'false',
+){
+
+    # Operate within a transaction to ensure contours remain present even if
+    # this process fails.
+    Ignore(){
+        Transaction(){
+
+            # Remove any potentially conflicting variable in the parameter
+            # table.
+
+            Ignore(){
+                ModifyParameters(
+                    Actions = 'remove("gROIName");',
+                ){};
+            };
+
+            # Store the contour ROI name in the parameter table.
+            PromoteMetadata(
+                KeySelection = 'ROIName',
+                NewKey = 'gROIName',
+                # DefaultValue = 'N/A',
+                # ValueSeparator = '\',
+                ROISelection = 'all',
+            ){};
+
+            # Rename the contours so they are more convenient to select.
+            ModifyContourMetadata(
+                ROILabelRegex = '.*',
+                KeyValues = 'ROIName@original_${gROIName}',
+            ){};
+
+            # Create a copy and rename. These are the contours we will alter.
+            CopyContours(
+                ROILabelRegex = 'original_.*',
+                ROILabel = 'unspecified',
+            ){};
+            ModifyContourMetadata(
+                ROILabelRegex = '^(?!original_).*',
+                KeyValues = 'ROIName@cleaned_${gROIName}',
+            ){};
+
+            # Modify the contours.
+            #
+            # This is done in a transaction in case simplification results in
+            # geometrically unsound contours.
+            Transaction(){
+
+                # Remove small 'island' contours.
+                PurgeContours(
+                    ROILabelRegex = 'cleaned_.*',
+                    AreaBelow = '5.0',
+                    PerimeterBelow = '5.0',
+                    VertexCountBelow = '4',
+                ){};
+
+                # Simplify each individual contour: remove near-duplicate
+                # vertices.
+                SimplifyContours(
+                    ROILabelRegex = 'cleaned_.*',
+                    FractionalAreaTolerance = '0.001',
+                    SimplificationMethod = 'vert-removal',
+                ){};
+
+                # Simplify each individual contour: collapse adjacent vertices.
+                SimplifyContours(
+                    ROILabelRegex = 'cleaned_.*',
+                    FractionalAreaTolerance = '0.001',
+                    SimplificationMethod = 'vert-collapse',
+                ){};
+
+            }; # Transaction.
+
+            # Remove the original contours.
+            DeleteContours(
+                ROILabelRegex = 'original_.*',
+            ){};
+
+            # Rename the modified contours to usurp the original contours'
+            # place.
+            ModifyContourMetadata(
+                ROILabelRegex = 'cleaned_.*',
+                KeyValues = 'ROIName@${gROIName}',
+            ){};
+
+            # Remove the global parameter table entry.
+            Ignore(){
+                ModifyParameters(
+                    Actions = 'remove("gROIName");',
+                ){};
+            };
+        }; # Transaction.
+    }; # Ignore.
+
+}; # ForEachDistinct
+

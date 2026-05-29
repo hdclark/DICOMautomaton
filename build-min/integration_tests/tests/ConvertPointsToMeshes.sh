@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+set -eux
+set -o pipefail
+
+# Test that ConvertPointsToMeshes creates a surface mesh from a point cloud.
+
+printf 'Test 1: Basic invocation with default cube width\n' |
+  tee -a fullstdout
+"${DCMA_BIN}" \
+  -v \
+  -o GenerateVirtualDataPointCloudV1 \
+  -o ConvertPointsToMeshes \
+  -o TestConditions \
+    -p Conditions='surface_mesh_count(1)'
+
+printf 'Test 2: Invocation with custom cube width\n' |
+  tee -a fullstdout
+"${DCMA_BIN}" \
+  -v \
+  -o GenerateVirtualDataPointCloudV1 \
+  -o ConvertPointsToMeshes:CubeWidth=2.0 \
+  -o TestConditions \
+    -p Conditions='surface_mesh_count(1)'
+
+printf 'Test 3: Ygor convex hull method\n' |
+  tee -a fullstdout
+"${DCMA_BIN}" \
+  -v \
+  -o GenerateVirtualDataPointCloudV1 \
+  -o ConvertPointsToMeshes:Method=ygor-convexhull \
+  -o TestConditions \
+    -p Conditions='surface_mesh_count(1)'
+
+printf 'All tests passed!\n'
