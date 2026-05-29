@@ -197,7 +197,7 @@ TEST_CASE("Sketch_Mesh_Builder last_mesh helpers track most recent computed mesh
     CHECK(builder.last_mesh()->vertices.size() == builder.node(1).mesh->vertices.size());
 }
 
-TEST_CASE("Sketch_Mesh_Builder extend handles boolean failures without throwing"){
+TEST_CASE("Sketch_Mesh_Builder extend succeeds with manifold extrusions"){
     Sketch_Mesh_Builder builder;
     builder.node(0).sketch = make_rectangle_sketch(0.0, 0.0, 8.0, 5.0);
     builder.node(0).procedure.kind = sketch_procedure_kind_t::extrusion;
@@ -214,9 +214,9 @@ TEST_CASE("Sketch_Mesh_Builder extend handles boolean failures without throwing"
     REQUIRE(builder.compute_all(&error_message));
     REQUIRE(builder.node(0).mesh.has_value());
     REQUIRE(builder.node(1).mesh.has_value());
-    CHECK(builder.node(1).mesh->vertices.empty());
-    CHECK(builder.node(1).mesh->faces.empty());
-    CHECK(error_message.find("Boolean extend failed") != std::string::npos);
+    CHECK_FALSE(builder.node(1).mesh->vertices.empty());
+    CHECK_FALSE(builder.node(1).mesh->faces.empty());
+    CHECK(error_message.empty());
 }
 
 TEST_CASE("Sketch_Mesh_Builder carve without a parent yields an empty mesh"){
