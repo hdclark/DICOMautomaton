@@ -7,10 +7,12 @@
 #include <array>
 #include <optional>
 #include <initializer_list>
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -84,6 +86,9 @@ void Deserialize( const int64_t &in, uint32_t &out ){
 
 void Serialize( const uint64_t &in, int64_t &out ){
     // Warning: conversion from uint64_t to int64_t. (Thrift does not have uint64_t.)
+    if(in > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())){
+        throw std::runtime_error("uint64_t value exceeds int64_t range and cannot be serialized via Thrift");
+    }
     out = static_cast<int64_t>(in);
 }
 void Deserialize( const int64_t &in, uint64_t &out ){
