@@ -191,6 +191,11 @@ if(WITH_SFML)
     pkg_check_modules(SFML REQUIRED sfml-graphics sfml-window sfml-system)
 endif()
 
+if(WITH_WT)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(WT REQUIRED IMPORTED_TARGET wt wthttp)
+endif()
+
 if(WITH_SDL)
     set(OpenGL_GL_PREFERENCE GLVND)
     find_package(OpenGL REQUIRED COMPONENTS OpenGL) # Will help pick-up opengl32.a with MXE toolchain.
