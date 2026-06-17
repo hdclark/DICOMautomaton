@@ -114,6 +114,7 @@
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateParameters.h"
+#include "Operations/EstimateEquivalentSquare.h"
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/ExecuteShell.h"
 #include "Operations/ExplodeImages.h"
@@ -412,6 +413,7 @@ known_ops_t Known_Operations(){
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateParameters"] = std::make_pair(OpArgDocEvaluateParameters, EvaluateParameters);
+    out["EstimateEquivalentSquare"] = std::make_pair(OpArgDocEstimateEquivalentSquare, EstimateEquivalentSquare);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
     out["ExecuteShell"] = std::make_pair(OpArgDocExecuteShell, ExecuteShell);
     out["ExplodeImages"] = std::make_pair(OpArgDocExplodeImages, ExplodeImages);
