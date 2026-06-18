@@ -583,7 +583,7 @@ target_link_libraries (dicomautomaton_dispatcher PUBLIC
     $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
     $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
-    $<$<BOOL:${WITH_JANSSON}>:jansson>
+    "$<$<BOOL:${WITH_JANSSON}>:${JANSSON_LIBRARIES}>"
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
     "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
     "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2-static,SDL2::SDL2>>"
@@ -710,7 +710,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
         $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
         "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
-        $<$<BOOL:${WITH_JANSSON}>:jansson>
+        "$<$<BOOL:${WITH_JANSSON}>:${JANSSON_LIBRARIES}>"
         "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
         "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
         "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2-static,SDL2::SDL2>>"
@@ -718,8 +718,7 @@ if(WITH_WT)
         "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
         "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
-        wt
-        wthttp
+        "$<$<BOOL:${WITH_WT}>:${WT_LIBRARIES}>"
         Boost::serialization
         Boost::iostreams
         Boost::thread
