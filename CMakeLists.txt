@@ -94,6 +94,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 
 # FetchContent is available in CMake 3.11+. We require 3.12+ so it is always available.
 include(FetchContent)
+include(cmake/ExternalDependencyFallbacks.cmake)
 
 
 ####################################################################################
@@ -132,20 +133,7 @@ if(WITH_EIGEN)
         pkg_check_modules(EIGEN3 eigen3)
     endif()
     if(NOT Eigen3_FOUND AND NOT EIGEN3_FOUND)
-        if(WITH_FETCHCONTENT_FALLBACK)
-            message(STATUS "Eigen3 not found via find_package/pkg-config; fetching via FetchContent.")
-            FetchContent_Declare(
-                Eigen3
-                GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-                # Pin to the immutable commit SHA for Eigen 3.4.0 to prevent supply-chain
-                # attacks via tag mutation. Verify: git ls-remote --tags on the upstream repo.
-                GIT_TAG        3147391d946bb4b6c68edd901f2add6ac1f31f8c
-            )
-            FetchContent_MakeAvailable(Eigen3)
-            set(Eigen3_FOUND TRUE)
-        else()
-            message(FATAL_ERROR "Eigen3 not found. Install libeigen3-dev or set WITH_FETCHCONTENT_FALLBACK=ON.")
-        endif()
+        dcma_fetch_eigen3()
     endif()
 endif()
 
@@ -154,7 +142,10 @@ if(WITH_CGAL)
         set(CGAL_DO_NOT_WARN_ABOUT_CMAKE_BUILD_TYPE TRUE)
         message(WARNING "If profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.")
     endif()
-    find_package(CGAL REQUIRED COMPONENTS Core)
+    find_package(CGAL COMPONENTS Core QUIET)
+    if(NOT CGAL_FOUND)
+        dcma_fetch_cgal()
+    endif()
 
     # This workaround is for a CGAL v4.13 class and file rename {Implicit,Labeled}_mesh_domain_3.h.
     include(CheckIncludeFileCXX)
@@ -166,20 +157,7 @@ if(WITH_NLOPT)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(NLOPT nlopt)
     if(NOT NLOPT_FOUND)
-        if(WITH_FETCHCONTENT_FALLBACK)
-            message(STATUS "nlopt not found via pkg-config; fetching via FetchContent.")
-            FetchContent_Declare(
-                nlopt
-                GIT_REPOSITORY https://github.com/stevengj/nlopt.git
-                # Pin to the immutable commit SHA for nlopt v2.7.1 to prevent supply-chain
-                # attacks via tag mutation. Verify: git ls-remote --tags on the upstream repo.
-                GIT_TAG        9c7018f617dcf74a6e42f67e0a14869f10e5c957
-            )
-            FetchContent_MakeAvailable(nlopt)
-            set(NLOPT_FOUND TRUE)
-        else()
-            message(FATAL_ERROR "nlopt not found. Install libnlopt-dev or set WITH_FETCHCONTENT_FALLBACK=ON.")
-        endif()
+        dcma_fetch_nlopt()
     endif()
 endif()
 
@@ -188,7 +166,10 @@ if(WITH_SFML)
     if(NOT BUILD_SHARED_LIBS)
         set(SFML_STATIC_LIBRARIES TRUE)
     endif()
-    pkg_check_modules(SFML REQUIRED sfml-graphics sfml-window sfml-system)
+    pkg_check_modules(SFML sfml-graphics sfml-window sfml-system)
+    if(NOT SFML_FOUND)
+        dcma_fetch_sfml()
+    endif()
 endif()
 
 if(WITH_SDL)
@@ -202,7 +183,10 @@ if(WITH_SDL)
     find_package(SDL2 QUIET)
     if(NOT SDL2_FOUND)
         message(STATUS "find_package(SDL2) not found, attempting pkg-config instead")
-        pkg_check_modules(SDL2 REQUIRED sdl2)
+        pkg_check_modules(SDL2 sdl2)
+        if(NOT SDL2_FOUND)
+            dcma_fetch_sdl2()
+        endif()
     endif()
     message(STATUS "Proceeding with SDL2_LIBRARIES = '${SDL2_LIBRARIES}'")
     message(STATUS "Proceeding with SDL2_INCLUDE_DIRS = '${SDL2_INCLUDE_DIRS}'")
@@ -213,22 +197,51 @@ if(WITH_SDL)
         target_link_libraries(SDL2::SDL2 INTERFACE "${SDL2_LIBRARIES}")
     endif()
 
-    pkg_check_modules(GLEW REQUIRED glew)
+    pkg_check_modules(GLEW glew)
+    if(NOT GLEW_FOUND)
+        dcma_fetch_glew()
+    endif()
 endif()
 
 if(WITH_GNU_GSL)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GNU_GSL REQUIRED gsl)
+    pkg_check_modules(GNU_GSL gsl)
+    if(NOT GNU_GSL_FOUND)
+        dcma_fetch_gsl()
+    endif()
 endif()
 
 if(WITH_POSTGRES)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(POSTGRES REQUIRED libpq libpqxx)
+    pkg_check_modules(POSTGRES libpq libpqxx)
+    if(NOT POSTGRES_FOUND)
+        dcma_fetch_libpqxx()
+    endif()
+endif()
+
+if(WITH_JANSSON)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(JANSSON jansson)
+    if(NOT JANSSON_FOUND)
+        dcma_fetch_jansson()
+    endif()
 endif()
 
 if(WITH_THRIFT)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(THRIFT REQUIRED thrift)
+    pkg_check_modules(THRIFT thrift)
+    if(NOT THRIFT_FOUND)
+        dcma_fetch_thrift()
+    endif()
+endif()
+
+if(WITH_WT)
+    find_package(Wt COMPONENTS wt wthttp QUIET)
+    if(Wt_FOUND)
+        set(WT_LIBRARIES wt wthttp)
+    else()
+        dcma_fetch_wt()
+    endif()
 endif()
 
 set(DCMA_SYCL_FALLBACK "Fallback")

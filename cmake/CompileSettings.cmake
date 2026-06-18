@@ -376,6 +376,14 @@ if(WITH_POSTGRES)
     target_include_directories(dcma_compile_settings INTERFACE
         $<BUILD_INTERFACE:${POSTGRES_INCLUDE_DIRS}>)
 endif()
+if(WITH_JANSSON)
+    target_include_directories(dcma_compile_settings INTERFACE
+        $<BUILD_INTERFACE:${JANSSON_INCLUDE_DIRS}>)
+endif()
+if(WITH_WT)
+    target_include_directories(dcma_compile_settings INTERFACE
+        $<BUILD_INTERFACE:${WT_INCLUDE_DIRS}>)
+endif()
 if(WITH_THRIFT)
     target_include_directories(dcma_compile_settings INTERFACE
         $<BUILD_INTERFACE:${THRIFT_INCLUDE_DIRS}>)
