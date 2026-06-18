@@ -12,8 +12,10 @@
 
 #include <YgorLog.h>
 #include <YgorMathIOOBJ.h>
-//#include <YgorMeshesBoolean.h>
+#include <YgorMeshesBoolean.h>
 #include <YgorMeshesBoolean2.h>
+#include <YgorMeshesBoolean3.h>
+#include <YgorMeshesBoolean4.h>
 
 namespace {
 
@@ -48,16 +50,36 @@ build_extruded_mesh(const Sketch &sketch,
 
 fv_surface_mesh<double, uint64_t>
 boolean_union_meshes(const fv_surface_mesh<double, uint64_t> &parent_mesh,
-                     const fv_surface_mesh<double, uint64_t> &child_mesh){
-//    return BooleanUnion(parent_mesh, child_mesh, /*max_depth=*/5, /*boundary_scale=*/0.0);
-    return BooleanUnion2(parent_mesh, child_mesh, /*snap_eps=*/0.0);
+                     const fv_surface_mesh<double, uint64_t> &child_mesh,
+                     sketch_boolean_engine_t engine){
+    switch(engine){
+        case sketch_boolean_engine_t::ygor_1:
+            return BooleanUnion(parent_mesh, child_mesh, /*max_depth=*/5, /*boundary_scale=*/0.0);
+        case sketch_boolean_engine_t::ygor_2:
+            return BooleanUnion2(parent_mesh, child_mesh, /*snap_eps=*/0.0);
+        case sketch_boolean_engine_t::ygor_3:
+            return BooleanUnion3(parent_mesh, child_mesh);
+        case sketch_boolean_engine_t::ygor_4:
+            return BooleanUnion4(parent_mesh, child_mesh);
+    }
+    throw std::invalid_argument("Unknown sketch Boolean engine");
 }
 
 fv_surface_mesh<double, uint64_t>
 boolean_subtract_meshes(const fv_surface_mesh<double, uint64_t> &parent_mesh,
-                        const fv_surface_mesh<double, uint64_t> &child_mesh){
-//    return BooleanSubtraction(parent_mesh, child_mesh, /*max_depth=*/5, /*boundary_scale=*/0.0);
-    return BooleanSubtraction2(parent_mesh, child_mesh, /*snap_eps=*/0.0);
+                        const fv_surface_mesh<double, uint64_t> &child_mesh,
+                        sketch_boolean_engine_t engine){
+    switch(engine){
+        case sketch_boolean_engine_t::ygor_1:
+            return BooleanSubtraction(parent_mesh, child_mesh, /*max_depth=*/5, /*boundary_scale=*/0.0);
+        case sketch_boolean_engine_t::ygor_2:
+            return BooleanSubtraction2(parent_mesh, child_mesh, /*snap_eps=*/0.0);
+        case sketch_boolean_engine_t::ygor_3:
+            return BooleanSubtraction3(parent_mesh, child_mesh);
+        case sketch_boolean_engine_t::ygor_4:
+            return BooleanSubtraction4(parent_mesh, child_mesh);
+    }
+    throw std::invalid_argument("Unknown sketch Boolean engine");
 }
 
 template <class BooleanOp>
@@ -67,6 +89,7 @@ compute_boolean_procedure(const char *procedure_name,
                           const std::optional<fv_surface_mesh<double, uint64_t>> &parent_mesh,
                           const Sketch &sketch,
                           const Sketch::extrusion_options_t &options,
+                          sketch_boolean_engine_t boolean_engine,
                           fv_surface_mesh<double, uint64_t> &result_mesh,
                           std::string *error_message,
                           BooleanOp &&boolean_op){
@@ -85,7 +108,7 @@ compute_boolean_procedure(const char *procedure_name,
     }
 
     try{
-        result_mesh = boolean_op(parent_mesh.value(), extruded_mesh);
+        result_mesh = boolean_op(parent_mesh.value(), extruded_mesh, boolean_engine);
         return true;
     }catch(const std::exception &e){
         YLOGWARN("Sketch mesh builder '" << procedure_name
@@ -115,8 +138,7 @@ compute_boolean_procedure(const char *procedure_name,
         }
     }catch(...){}
 
-    result_mesh = make_empty_mesh();
-    return true;
+    return false;
 }
 
 } // namespace
@@ -146,6 +168,24 @@ bool string_to_sketch_procedure_kind(const std::string &s, sketch_procedure_kind
     return false;
 }
 
+std::string sketch_boolean_engine_to_string(sketch_boolean_engine_t engine){
+    switch(engine){
+        case sketch_boolean_engine_t::ygor_1: return "ygor_1";
+        case sketch_boolean_engine_t::ygor_2: return "ygor_2";
+        case sketch_boolean_engine_t::ygor_3: return "ygor_3";
+        case sketch_boolean_engine_t::ygor_4: return "ygor_4";
+    }
+    return "ygor_2";
+}
+
+bool string_to_sketch_boolean_engine(const std::string &s, sketch_boolean_engine_t &out){
+    if(s == "ygor_1" || s == "YgorMeshesBoolean"){  out = sketch_boolean_engine_t::ygor_1; return true; }
+    if(s == "ygor_2" || s == "YgorMeshesBoolean2"){ out = sketch_boolean_engine_t::ygor_2; return true; }
+    if(s == "ygor_3" || s == "YgorMeshesBoolean3"){ out = sketch_boolean_engine_t::ygor_3; return true; }
+    if(s == "ygor_4" || s == "YgorMeshesBoolean4"){ out = sketch_boolean_engine_t::ygor_4; return true; }
+    return false;
+}
+
 // ---------------------------------------------------------------------------
 // Sketch_Procedure I/O.
 // ---------------------------------------------------------------------------
@@ -155,6 +195,7 @@ bool Sketch_Procedure::write_to(std::ostream &os) const {
 
     os << "procedure_begin\n";
     os << "procedure_kind " << sketch_procedure_kind_to_string(kind) << "\n";
+    os << "boolean_engine " << sketch_boolean_engine_to_string(boolean_engine) << "\n";
     os << "extrusion_into_frame_length " << extrusion_options.into_frame_length << "\n";
     os << "extrusion_out_of_frame_length " << extrusion_options.out_of_frame_length << "\n";
     os << "extrusion_into_frame_angle_degrees " << extrusion_options.into_frame_angle_degrees << "\n";
@@ -182,6 +223,11 @@ bool Sketch_Procedure::read_from(std::istream &is, Sketch_Procedure &out){
         }else if(keyword == "procedure_kind"){
             std::string kind_str;
             if(!(iss >> kind_str) || !string_to_sketch_procedure_kind(kind_str, out.kind)){
+                return false;
+            }
+        }else if(keyword == "boolean_engine"){
+            std::string engine_str;
+            if(!(iss >> engine_str) || !string_to_sketch_boolean_engine(engine_str, out.boolean_engine)){
                 return false;
             }
         }else if(keyword == "extrusion_into_frame_length"){
@@ -367,6 +413,7 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
                                           parent_mesh,
                                           current.sketch,
                                           current.procedure.extrusion_options,
+                                          current.procedure.boolean_engine,
                                           mesh,
                                           error_message,
                                           boolean_union_meshes)){
@@ -383,6 +430,7 @@ bool Sketch_Mesh_Builder::compute_node(std::size_t idx, std::string *error_messa
                                           parent_mesh,
                                           current.sketch,
                                           current.procedure.extrusion_options,
+                                          current.procedure.boolean_engine,
                                           mesh,
                                           error_message,
                                           boolean_subtract_meshes)){
