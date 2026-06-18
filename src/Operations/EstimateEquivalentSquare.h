@@ -8,7 +8,18 @@
 #include "../Structs.h"
 
 
-double EstimateEquivalentSquareForContours(const contour_collection<double> &cc);
+enum class EquivalentSquareHoleDetection {
+    SignedContourOrientation,
+    SimpleOverlap,
+};
+
+bool ContourHasSelfIntersection(const contour_of_points<double> &c);
+bool ContourCollectionsHaveIntersections(const contour_collection<double> &cc);
+bool ContourCollectionIsSimpleNested(const contour_collection<double> &cc);
+
+double EstimateEquivalentSquareForContours(
+    const contour_collection<double> &cc,
+    EquivalentSquareHoleDetection hole_detection = EquivalentSquareHoleDetection::SignedContourOrientation);
 
 OperationDoc OpArgDocEstimateEquivalentSquare();
 
