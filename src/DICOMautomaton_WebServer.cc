@@ -415,13 +415,13 @@ void BaseWebServerApplication::filesUploaded(){
         gb->setFocus(false);
         this->processEvents();
 
-        //Uploaded file loading: Boost.Serialization archives.
+        //Uploaded file loading: Ygor serialization archives.
         if(!UploadedFilesDirsReachable.empty()
         && !Load_From_Boost_Serialization_Files( this->DICOM_data,
                                                  this->InvocationMetadata,
                                                  this->FilenameLex,
                                                  UploadedFilesDirsReachable )){
-            feedback->setText("<p>Failed to load client-provided Boost.Serialization archive. Instance terminated.</p>");
+            feedback->setText("<p>Failed to load client-provided Ygor serialization archive. Instance terminated.</p>");
             return;
         }
 

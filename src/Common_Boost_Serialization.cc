@@ -5,30 +5,15 @@
 #include <string>    
 #include <utility>
 
-#include <boost/serialization/version.hpp>
-#if __has_include(<boost/serialization/library_version_type.hpp>)
-    // Required for Boost 1.74.
-    #include <boost/serialization/library_version_type.hpp> 
-#endif
-#include <boost/archive/basic_archive.hpp>
-//For binary archives.
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/polymorphic_iarchive.hpp>
-#include <boost/archive/polymorphic_oarchive.hpp>
-//For plain-text archives.
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-//For XML archives.
-#include <boost/archive/xml_iarchive.hpp>
-#include <boost/archive/xml_oarchive.hpp>
 #include <filesystem>
 #include <boost/iostreams/filter/gzip.hpp>
 //#include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/math/special_functions/nonfinite_num_facets.hpp>
-#include <boost/serialization/nvp.hpp>
+
+#include "YgorIOgzip.h"
+#include "YgorSerialize.h"
 
 #include "Common_Boost_Serialization.h"
 //#include "YgorMathChebyshevIOBoostSerialization.h"
@@ -71,7 +56,7 @@ Common_Boost_Deserialize_Drover(Drover &out,
 
     //This routine attempts to deserialize an entire Drover class from a single file.
     //
-    // An attempt was made to try parsing every possible combination of the default Boost.Serialization 
+    // An attempt was made to try parsing every possible combination of the default Ygor serialization 
     // archives, namely
     //   - binary
     //   - XML

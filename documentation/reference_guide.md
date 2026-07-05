@@ -206,8 +206,8 @@ required. A Docker script is bundled with DICOMautomaton sources which includes 
 
 #### Description
 
-A program for converting Boost.Serialization archives types which DICOMautomaton can read. These archives need to be
-created by the [BoostSerializeDrover](#boostserializedrover) operation. Some archive types are concise and not portable
+A program for converting Ygor serialization archives types which DICOMautomaton can read. These archives need to be
+created by the [BoostSerializeDrover](#boostserializedrover) operation, which now uses the Ygor serialization layer. Some archive types are concise and not portable
 (i.e., binary archives), or verbose (and thus slow to read and write) and portable (i.e., XML, plain text). To combat
 verbosity, on-the-fly gzip compression and decompression is supported. This program can be used to convert archive
 types.

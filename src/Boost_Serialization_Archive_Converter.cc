@@ -1,6 +1,6 @@
 //Boost_Serialization_Archive_Converter.cc - A part of DICOMautomaton 2016. Written by hal clark.
 //
-// This program can be used to convert Boost.Serialization archives between a variety of formats.
+// This program can be used to convert Ygor serialization archives between a variety of formats.
 //
 
 #include <filesystem>
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]){
                        { "-i file.xml.gz -o file.bin.gz -t 'gzip-binary'",
                          "Convert to a gzipped binary file." }
                      };
-    arger.description = "A program for converting Boost.Serialization archives types which DICOMautomaton can read.";
+    arger.description = "A program for converting Ygor serialization archives types which DICOMautomaton can read.";
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
       YLOGERR("Unrecognized option with argument: '" << optarg << "'");

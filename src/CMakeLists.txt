@@ -258,6 +258,11 @@ set_target_properties(  Font_DCMA_Minimal_obj PROPERTIES POSITION_INDEPENDENT_CO
 add_library(            Doctest_impl_obj OBJECT doctest20251212/doctest_impl.cc )
 set_target_properties(  Doctest_impl_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_executable(serialization_tests
+    Serialization_Tests.cc
+)
+target_link_libraries(serialization_tests PRIVATE dcma_compile_settings)
+
 if(WITH_EIGEN)
     add_library(            MRI_IVIM_obj OBJECT MRI_IVIM.cc )
     set_target_properties(  MRI_IVIM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -382,7 +387,6 @@ target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 target_link_libraries(imebrashim
     Explicator::explicator
     Ygor::ygor
-    Boost::serialization
     Boost::iostreams
     Boost::thread
     "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
@@ -591,7 +595,6 @@ target_link_libraries (dicomautomaton_dispatcher PUBLIC
     "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
     "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
-    Boost::serialization
     Boost::iostreams
     Boost::thread
     "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
@@ -720,7 +723,6 @@ if(WITH_WT)
         "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
         wt
         wthttp
-        Boost::serialization
         Boost::iostreams
         Boost::thread
         "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
@@ -757,7 +759,6 @@ target_link_libraries(dicomautomaton_bsarchive_convert
     Ygor::ygor
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
-    Boost::serialization
     Boost::iostreams
     Boost::thread
     "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"

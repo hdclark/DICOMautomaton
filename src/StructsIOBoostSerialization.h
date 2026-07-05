@@ -1,8 +1,8 @@
 //StructsIOBoostSerialization.h - Written by hal clark in 2016.
 //
-// This file defines routines for using Struct.h classes with Boost.Serialization.
+// This file defines routines for using Struct.h classes with the Ygor serialization shim.
 //
-// This file is optional. If you choose to use it, ensure you link with libboost_serialization.
+// This file is optional. The Ygor serialization shim is selected via YgorSerialize.h.
 //
 // The objects in this file have been 'wrapped' into a boost.serialization name-value pair so that they can be
 // serialized to archives requiring entities to be named (i.e., XML) in addition to the 'easier' formats (i.e.,
@@ -11,18 +11,7 @@
 
 #pragma once
 
-#include <boost/serialization/version.hpp>
-#if __has_include(<boost/serialization/library_version_type.hpp>)
-    // Required for Boost 1.74.
-    #include <boost/serialization/library_version_type.hpp> 
-#endif
-#include <boost/serialization/nvp.hpp> 
-
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/list.hpp>
-//#include <boost/serialization/vector.hpp>
-//#include <boost/serialization/map.hpp>
-#include <boost/serialization/shared_ptr.hpp>
+#include "YgorSerialize.h"
 
 #include "Structs.h"
 

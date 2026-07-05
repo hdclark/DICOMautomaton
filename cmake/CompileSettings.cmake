@@ -28,7 +28,7 @@ add_library(dcma_compile_settings INTERFACE)
 # C++ standard via compile_features (preferred over CMAKE_CXX_STANDARD for
 # per-target control and correct propagation to consumers).
 target_compile_features(dcma_compile_settings INTERFACE cxx_std_17)
-
+target_include_directories(dcma_compile_settings INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 ####################################################################################
 #                              Build-type Flags
