@@ -15,7 +15,7 @@ include(CMakeFindDependencyMacro)
 # Propagate required upstream dependencies so find_package consumers don't
 # need to locate them separately.
 find_dependency(Threads REQUIRED)
-find_dependency(Boost REQUIRED COMPONENTS serialization iostreams thread)
+find_dependency(Boost REQUIRED COMPONENTS iostreams thread)
 
 # Author's upstream support libraries.
 find_dependency(Ygor REQUIRED)

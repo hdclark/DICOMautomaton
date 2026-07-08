@@ -44,7 +44,7 @@
 #include "Explicator.h"
 
 #include "../Colour_Maps.h"
-#include "../Common_Boost_Serialization.h"
+#include "../Common_Serialization.h"
 #include "../Common_Plotting.h"
 
 #ifdef DCMA_USE_GNU_GSL
@@ -726,8 +726,8 @@ bool SFML_Viewer(Drover &DICOM_data,
 
     //Dump a serialization of the current (*entire*) Drover class.
     const auto dump_serialized_drover = [&](){
-            const std::filesystem::path out_fname("/tmp/boost_serialized_drover.xml.gz");
-            const bool res = Common_Boost_Serialize_Drover(DICOM_data, out_fname);
+            const std::filesystem::path out_fname("/tmp/serialized_drover.xml.gz");
+            const bool res = Common_Serialize_Drover(DICOM_data, out_fname);
             if(res){
                 YLOGINFO("Dumped serialization to file " << out_fname.string());
             }else{

@@ -53,7 +53,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "Boost_Serialization_File_Loader.h"
+#include "Serialization_File_Loader.h"
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
 #include "XYZ_File_Loader.h"
@@ -415,13 +415,13 @@ void BaseWebServerApplication::filesUploaded(){
         gb->setFocus(false);
         this->processEvents();
 
-        //Uploaded file loading: Boost.Serialization archives.
+        //Uploaded file loading: Ygor serialization archives.
         if(!UploadedFilesDirsReachable.empty()
-        && !Load_From_Boost_Serialization_Files( this->DICOM_data,
-                                                 this->InvocationMetadata,
-                                                 this->FilenameLex,
-                                                 UploadedFilesDirsReachable )){
-            feedback->setText("<p>Failed to load client-provided Boost.Serialization archive. Instance terminated.</p>");
+        && !Load_From_Serialization_Files( this->DICOM_data,
+                                           this->InvocationMetadata,
+                                           this->FilenameLex,
+                                           UploadedFilesDirsReachable )){
+            feedback->setText("<p>Failed to load client-provided Ygor serialization archive. Instance terminated.</p>");
             return;
         }
 
@@ -690,7 +690,7 @@ void BaseWebServerApplication::createOperationSelectorGB(){
                 if( false
                     ||  ( n == "AutoCropImages" )
                     ||  ( n == "Average" )
-                    ||  ( n == "BoostSerializeDrover" ) 
+                    ||  ( n == "SerializeDrover" ) 
                     ||  ( n == "ContourBooleanOperations" )
                     ||  ( n == "ContouringAides" ) 
                     ||  ( n == "ContourSimilarity" )
@@ -1343,4 +1343,3 @@ std::unique_ptr<Wt::WApplication> createApplication(const Wt::WEnvironment &env)
 int main(int argc, char **argv){
     return Wt::WRun(argc, argv, &createApplication);
 }
-

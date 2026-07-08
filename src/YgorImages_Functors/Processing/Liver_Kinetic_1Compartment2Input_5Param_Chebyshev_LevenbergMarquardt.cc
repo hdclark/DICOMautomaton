@@ -32,7 +32,7 @@
 #include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
-#include "../../Common_Boost_Serialization.h"
+#include "../../Common_Serialization.h"
 #include "../../Common_Plotting.h"
 #include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "../../KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
@@ -510,4 +510,3 @@ KineticModel_Liver_1C2I_5Param_Chebyshev_LevenbergMarquardt(planar_image_collect
 }
 
 #endif // DCMA_USE_GNU_GSL
-

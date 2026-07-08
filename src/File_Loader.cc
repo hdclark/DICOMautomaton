@@ -23,7 +23,7 @@
 
 #include "Structs.h"
 
-#include "Boost_Serialization_File_Loader.h"
+#include "Serialization_File_Loader.h"
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
 #include "XYZ_File_Loader.h"
@@ -160,11 +160,11 @@ Load_Files( Drover &DICOM_data,
             return true;
         }});
 
-        //Standalone file loading: Boost.Serialization archives.
-        loaders.emplace_back(file_loader_t{{".gz", ".tar", ".tar.gz", ".tgz", ".xml", ".xml.gz", ".txt", ".txt.gz"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
+        //Standalone file loading: Ygor serialization archives.
+        loaders.emplace_back(file_loader_t{{".gz", ".xml", ".xml.gz"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
-            && !Load_From_Boost_Serialization_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                YLOGWARN("Failed to load Boost.Serialization archive");
+            && !Load_From_Serialization_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+                YLOGWARN("Failed to load Ygor serialization archive");
                 return false;
             }
             return true;
@@ -574,4 +574,3 @@ Load_Files( Drover &DICOM_data,
 
     return (Paths.empty() && !contained_unresolvable);
 }
-

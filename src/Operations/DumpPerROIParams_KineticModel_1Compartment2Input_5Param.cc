@@ -18,7 +18,7 @@
 #include <vector>
 #include <filesystem>
 
-#include "../Common_Boost_Serialization.h"
+#include "../../Common_Serialization.h"
 #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "../KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.h"

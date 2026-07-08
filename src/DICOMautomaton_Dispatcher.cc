@@ -102,7 +102,7 @@ try{
 
     //----------------------------------------------- Data: File Loading ---------------------------------------------
     // The following objects are only relevant for the various file loaders. They will be passed through the loaders
-    // (e.g., DICOM file, Boost.Serialization archive, Protobuf file, etc.) until successfully loaded.
+    // (e.g., DICOM file, Ygor XML archive, Protobuf file, etc.) until successfully loaded.
 
     //List of filenames or directories to parse and load.
     std::list<std::string> StandaloneFilesDirs;  // Used to defer filesystem checking.

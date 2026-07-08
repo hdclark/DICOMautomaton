@@ -32,7 +32,7 @@
 #include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
-#include "../../Common_Boost_Serialization.h"
+#include "../../Common_Serialization.h"
 #include "../../Common_Plotting.h"
 #include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_Common.h"
 #include "../../KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
@@ -504,4 +504,3 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
 }
 
 #endif // DCMA_USE_GNU_GSL
-
