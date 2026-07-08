@@ -2,11 +2,10 @@
 
 #pragma once
 
-#include <boost/serialization/nvp.hpp>
 #include <limits>
 #include <memory>
 
-#include "YgorMathIOBoostSerialization.h"
+#include "YgorMathIOSerialization.h"
 
 template <class T> class samples_1D;
 
@@ -39,29 +38,54 @@ struct KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters {
 };
 
 
-namespace boost {
+namespace ygor {
 namespace serialization {
+
+#ifndef DCMA_YGOR_SHARED_PTR_SERIALIZATION
+#define DCMA_YGOR_SHARED_PTR_SERIALIZATION
+template<typename T>
+void serialize(xml_oarchive &a, std::shared_ptr<T> &p){
+    auto has_value = static_cast<bool>(p);
+    a & make_nvp("has_value", has_value);
+    if(has_value){
+        a & make_nvp("value", *p);
+    }
+    return;
+}
+
+template<typename T>
+void serialize(xml_iarchive &a, std::shared_ptr<T> &p){
+    bool has_value = false;
+    a & make_nvp("has_value", has_value);
+    if(has_value){
+        p = std::make_shared<T>();
+        a & make_nvp("value", *p);
+    }else{
+        p.reset();
+    }
+    return;
+}
+#endif // DCMA_YGOR_SHARED_PTR_SERIALIZATION
 
 template<typename Archive>
 void serialize(Archive &a, 
-               KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &p, 
-               const unsigned int /*version*/ ){
-    a & boost::serialization::make_nvp("cAIF",  p.cAIF)
+               KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters &p){
+    a & make_nvp("cAIF",  p.cAIF)
 
-      & boost::serialization::make_nvp("cVIF",  p.cVIF)
+      & make_nvp("cVIF",  p.cVIF)
 
-      & boost::serialization::make_nvp("cROI",  p.cROI)
+      & make_nvp("cROI",  p.cROI)
 
-      & boost::serialization::make_nvp("FittingPerformed", p.FittingPerformed)
-      & boost::serialization::make_nvp("FittingSuccess",   p.FittingSuccess)
+      & make_nvp("FittingPerformed", p.FittingPerformed)
+      & make_nvp("FittingSuccess",   p.FittingSuccess)
 
-      & boost::serialization::make_nvp("RSS",   p.RSS)
+      & make_nvp("RSS",   p.RSS)
 
-      & boost::serialization::make_nvp("k1A",   p.k1A)
-      & boost::serialization::make_nvp("tauA",  p.tauA)
-      & boost::serialization::make_nvp("k1V",   p.k1V)
-      & boost::serialization::make_nvp("tauV",  p.tauV)
-      & boost::serialization::make_nvp("k2",    p.k2);
+      & make_nvp("k1A",   p.k1A)
+      & make_nvp("tauA",  p.tauA)
+      & make_nvp("k1V",   p.k1V)
+      & make_nvp("tauV",  p.tauV)
+      & make_nvp("k2",    p.k2);
     return;
 }
 

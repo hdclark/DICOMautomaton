@@ -33,7 +33,7 @@
 #include "Operations/AutoCropImages.h"
 #include "Operations/Average.h"
 #include "Operations/BEDConvert.h"
-#include "Operations/BoostSerializeDrover.h"
+#include "Operations/SerializeDrover.h"
 #include "Operations/BuildLexiconInteractively.h"
 #include "Operations/ClusterDBSCAN.h"
 #include "Operations/CombineImages.h"
@@ -331,7 +331,7 @@ known_ops_t Known_Operations(){
     out["AutoCropImages"] = std::make_pair(OpArgDocAutoCropImages, AutoCropImages);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
     out["BEDConvert"] = std::make_pair(OpArgDocBEDConvert, BEDConvert);
-    out["BoostSerializeDrover"] = std::make_pair(OpArgDocBoost_Serialize_Drover, Boost_Serialize_Drover);
+    out["SerializeDrover"] = std::make_pair(OpArgDocSerializeDrover, SerializeDrover);
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
     out["CellularAutomata"] = std::make_pair(OpArgDocCellularAutomata, CellularAutomata);
     out["ClusterDBSCAN"] = std::make_pair(OpArgDocClusterDBSCAN, ClusterDBSCAN);

@@ -178,9 +178,9 @@ provide these options are documented in [Operations](#operations).
   *Load standalone files and all files in specified directory. Inform the analysis 'ComputeXYZ' of the patient's ID,
   launch the analysis, and then interactively view.*
 
-- ```dicomautomaton_dispatcher CT*dcm -o ModifyingOperation -o BoostSerializeDrover```  
+- ```dicomautomaton_dispatcher CT*dcm -o ModifyingOperation -o SerializeDrover```  
   *Launch the default interactive viewer to inspect a collection of computed tomography images, perform an operation
-  that modifies them, and serialize the internal state for later using the [BoostSerializeDrover](#boostserializedrover)
+  that modifies them, and serialize the internal state for later using the [SerializeDrover](#serializedrover)
   operation.*
 
 ### dicomautomaton_webserver
@@ -201,45 +201,6 @@ required. A Docker script is bundled with DICOMautomaton sources which includes 
 - ```dicomautomaton_webserver --config /etc/DICOMautomaton/webserver.conf --http-address 0.0.0.0 --http-port 8080
   --docroot='/etc/DICOMautomaton/'```  
   *Launch the webserver on any interface and port 8080.*
-
-### dicomautomaton_bsarchive_convert
-
-#### Description
-
-A program for converting Boost.Serialization archives types which DICOMautomaton can read. These archives need to be
-created by the [BoostSerializeDrover](#boostserializedrover) operation. Some archive types are concise and not portable
-(i.e., binary archives), or verbose (and thus slow to read and write) and portable (i.e., XML, plain text). To combat
-verbosity, on-the-fly gzip compression and decompression is supported. This program can be used to convert archive
-types.
-
-#### Usage Examples
-
-- ```dicomautomaton_bsarchive_convert --help```  
-  *Print a listing of all available options.*
-
-- ```dicomautomaton_bsarchive_convert -i file.binary -o file.xml -t 'XML'```  
-  *Convert a binary archive to a portable XML archive.*
-
-- ```dicomautomaton_bsarchive_convert -i file.binary.gz -o file.xml.gz -t 'gzip-xml'```  
-  *Convert a binary archive to a gzipped portable XML archive.*
-
-- ```dicomautomaton_bsarchive_convert -i file.binary.gz -o file.xml -t 'XML'```  
-  *Convert a gzipped binary archive to a non-gzipped portable XML archive.*
-
-- ```dicomautomaton_bsarchive_convert -i file.xml.gz -o file.txt -t 'txt'```  
-  *Convert a gzipped binary archive to a non-gzipped, portable, and inspectable text archive.*
-
-- ```dicomautomaton_bsarchive_convert -i file.txt -o file.txt.gz -t 'gzip-txt'```  
-  *Convert an uncompressed text archive to a compressed text archive. Note that this conversion is effectively the same
-  as simply ```gzip file.txt```.*
-
-- ```dicomautomaton_bsarchive_convert -i file.xml.gz -o file.bin -t 'binary'```  
-  *Convert a compressed archive to a binary file.* Note that binary archives should only expect to be readable on the
-  same hardware with the same versions and are therefore best for checkpointing calculations that can fail or may need
-  to be tweaked later.*
-
-- ```dicomautomaton_bsarchive_convert -i file.xml.gz -o file.bin.gz -t 'gzip-binary'```  
-  *Convert a compressed archive to a compressed binary file.*
 
 ### dicomautomaton_dump
 
@@ -324,7 +285,7 @@ will work.
 - Average
 - BCCAExtractRadiomicFeatures
 - BEDConvert
-- BoostSerializeDrover
+- SerializeDrover
 - Break (alias for False)
 - BuildLexiconInteractively
 - CT_Liver_Perfusion
@@ -2825,7 +2786,7 @@ matching is required. Refer to the lexicon for available labels.
 
 ----------------------------------------------------
 
-## BoostSerializeDrover
+## SerializeDrover
 
 ### Tags
 
@@ -2833,8 +2794,10 @@ matching is required. Refer to the lexicon for available labels.
 
 ### Description
 
-This operation exports all loaded state to a serialized format that can be loaded again later. Is is especially useful
-for suspending long-running operations with intermittant interactive sub-operations.
+This operation exports selected loaded state to a Ygor XML serialized format that can be loaded again later. It is
+especially useful for suspending long-running operations with intermittent interactive sub-operations. New archives are
+gzipped XML by default. Legacy Boost archives and binary/text Boost archive variants are not supported by the active
+loader.
 
 ### Parameters
 
@@ -2850,7 +2813,7 @@ should be portable across most CPUs.
 
 ##### Default
 
-- ```"/tmp/boost_serialized_drover.xml.gz"```
+- ```"/tmp/serialized_drover.xml.gz"```
 
 ##### Examples
 
@@ -37418,4 +37381,3 @@ Ygor.
 
 DICOMautomaton depends on several heavily templated libraries and external projects. It requires a considerable amount
 of memory to build.
-

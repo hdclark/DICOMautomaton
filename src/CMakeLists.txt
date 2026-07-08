@@ -136,8 +136,11 @@ set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 add_library(            CSG_SDF_obj OBJECT CSG_SDF.cc )
 set_target_properties(  CSG_SDF_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            Common_Boost_Serialization_obj OBJECT Common_Boost_Serialization.cc )
-set_target_properties(  Common_Boost_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+add_library(            Common_Serialization_obj OBJECT Common_Serialization.cc )
+set_target_properties(  Common_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Serialization_Tests_obj OBJECT Serialization_Tests.cc )
+set_target_properties(  Serialization_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 if(WITH_CGAL)
     add_library(            Contour_Boolean_Operations_obj OBJECT Contour_Boolean_Operations.cc )
@@ -215,9 +218,8 @@ set_target_properties(  Line_Sample_File_Loader_obj PROPERTIES POSITION_INDEPEND
 add_library(            Transformation_File_Loader_obj OBJECT Transformation_File_Loader.cc )
 set_target_properties(  Transformation_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library(            Boost_Serialization_File_Loader_obj OBJECT Boost_Serialization_File_Loader.cc 
-                                                                   StructsIOBoostSerialization.h )
-set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+add_library(            Serialization_File_Loader_obj OBJECT Serialization_File_Loader.cc )
+set_target_properties(  Serialization_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Script_Loader_obj OBJECT Script_Loader.cc )
 set_target_properties(  Script_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -382,7 +384,6 @@ target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 target_link_libraries(imebrashim
     Explicator::explicator
     Ygor::ygor
-    Boost::serialization
     Boost::iostreams
     Boost::thread
     "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
@@ -504,7 +505,8 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
     $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
-    $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
+    $<TARGET_OBJECTS:Common_Serialization_obj>
+    $<TARGET_OBJECTS:Serialization_Tests_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
     $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
@@ -529,7 +531,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
-    $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
+    $<TARGET_OBJECTS:Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:Lexicon_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
@@ -591,7 +593,6 @@ target_link_libraries (dicomautomaton_dispatcher PUBLIC
     "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
     "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
-    Boost::serialization
     Boost::iostreams
     Boost::thread
     "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
@@ -632,7 +633,8 @@ if(WITH_WT)
         $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
         $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
-        $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
+        $<TARGET_OBJECTS:Common_Serialization_obj>
+        $<TARGET_OBJECTS:Serialization_Tests_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
         $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
         $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
@@ -657,7 +659,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
-        $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
+        $<TARGET_OBJECTS:Serialization_File_Loader_obj>
         $<TARGET_OBJECTS:DICOM_File_Loader_obj>
         $<TARGET_OBJECTS:Lexicon_Loader_obj>
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
@@ -720,7 +722,6 @@ if(WITH_WT)
         "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
         wt
         wthttp
-        Boost::serialization
         Boost::iostreams
         Boost::thread
         "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
@@ -737,36 +738,6 @@ if(WITH_WT)
         add_sycl_to_target( TARGET dicomautomaton_webserver )
     endif()
 endif()
-
-# Executable.
-add_executable(dicomautomaton_bsarchive_convert
-    Boost_Serialization_Archive_Converter.cc
-    $<TARGET_OBJECTS:Structs_obj>
-    $<TARGET_OBJECTS:Tables_obj>
-    $<TARGET_OBJECTS:Alignment_Rigid_obj>
-    $<TARGET_OBJECTS:Alignment_Field_obj>
-    $<TARGET_OBJECTS:Dose_Meld_obj>
-    $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
-    $<TARGET_OBJECTS:Regex_Selectors_obj>
-    $<TARGET_OBJECTS:String_Parsing_obj>
-    $<TARGET_OBJECTS:Metadata_obj>
-    $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
-)
-target_link_libraries(dicomautomaton_bsarchive_convert
-    Explicator::explicator
-    Ygor::ygor
-    "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
-    "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
-    Boost::serialization
-    Boost::iostreams
-    Boost::thread
-    "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
-    "$<$<BOOL:${MINGW}>:ws2_32>"
-    "$<$<BOOL:${MINGW}>:wsock32>"
-    z
-    m
-    Threads::Threads
-)
 
 if(WITH_POSTGRES)
     # Executable.
@@ -877,7 +848,6 @@ target_link_libraries(dicomautomaton_deidentify
 # CMakeLists.txt. This enables 'find_package(DICOMautomaton)' for downstream
 # consumers.
 install(TARGETS dicomautomaton_dispatcher
-                dicomautomaton_bsarchive_convert
                 dicomautomaton_dump
                 dicomautomaton_deidentify
                 imebrashim

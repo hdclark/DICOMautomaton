@@ -70,7 +70,7 @@ endmacro()
 
 _dcma_find_or_fetch(Ygor
     "https://github.com/hdclark/Ygor.git"
-    master)
+    4d7001babcd5a0084ae463147549c4fe0304c5c2)
 
 _dcma_find_or_fetch(YgorClustering
     "https://github.com/hdclark/YgorClustering.git"
@@ -79,4 +79,3 @@ _dcma_find_or_fetch(YgorClustering
 _dcma_find_or_fetch(Explicator
     "https://github.com/hdclark/Explicator.git"
     master)
-

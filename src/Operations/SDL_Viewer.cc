@@ -69,7 +69,7 @@
 #include "../Operation_Dispatcher.h"
 
 #include "../Colour_Maps.h"
-#include "../Common_Boost_Serialization.h"
+#include "../Common_Serialization.h"
 #include "../Common_Plotting.h"
 
 #include "../Structs.h"

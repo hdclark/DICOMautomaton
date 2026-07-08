@@ -1,4 +1,4 @@
-//BoostSerializeDrover.cc - A part of DICOMautomaton 2016. Written by hal clark.
+//SerializeDrover.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
 #include <filesystem>
 #include <optional>
@@ -9,29 +9,31 @@
 #include <stdexcept>
 #include <string>    
 
-#include "../Common_Boost_Serialization.h"
+#include "../Common_Serialization.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
 
 
-OperationDoc OpArgDocBoost_Serialize_Drover(){
+OperationDoc OpArgDocSerializeDrover(){
     OperationDoc out;
-    out.name = "Boost_Serialize_Drover";
+    out.name = "SerializeDrover";
 
     out.tags.emplace_back("category: meta");
 
     out.desc = 
-        "This operation exports all loaded state to a serialized format that can be loaded again later."
-        " Is is especially useful for suspending long-running operations with intermittant interactive sub-operations.";
+        "This operation exports selected loaded state to a Ygor XML serialized format that can be loaded again later."
+        " It is especially useful for suspending long-running operations with intermittent interactive sub-operations."
+        " New archives are gzipped XML by default. Legacy Boost archives and binary/text Boost archive variants are not"
+        " supported by the active loader.";
 
 
     out.args.emplace_back();
     out.args.back().name = "Filename";
     out.args.back().desc = "The filename (or full path name) to which the serialized data should be written."
                            " The file format is gzipped XML, which should be portable across most CPUs.";
-    out.args.back().default_val = "/tmp/boost_serialized_drover.xml.gz";
+    out.args.back().default_val = "/tmp/serialized_drover.xml.gz";
     out.args.back().expected = true;
     out.args.back().examples = { "/tmp/out.xml.gz", 
                             "./out.xml.gz",
@@ -57,10 +59,10 @@ OperationDoc OpArgDocBoost_Serialize_Drover(){
     return out;
 }
 
-bool Boost_Serialize_Drover(Drover &DICOM_data,
-                              const OperationArgPkg& OptArgs,
-                              std::map<std::string, std::string>& /*InvocationMetadata*/,
-                              const std::string& /*FilenameLex*/){
+bool SerializeDrover(Drover &DICOM_data,
+                     const OperationArgPkg& OptArgs,
+                     std::map<std::string, std::string>& /*InvocationMetadata*/,
+                     const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     auto FilenameStr = OptArgs.getValueStr("Filename").value();
@@ -103,7 +105,7 @@ bool Boost_Serialize_Drover(Drover &DICOM_data,
         d.rtplan_data = DICOM_data.rtplan_data;
     }
 
-    const auto res = Common_Boost_Serialize_Drover(d, apath);
+    const auto res = Common_Serialize_Drover(d, apath);
     if(res){
         YLOGINFO("Dumped serialization to file " << apath);
     }else{

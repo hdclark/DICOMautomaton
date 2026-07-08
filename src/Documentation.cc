@@ -533,11 +533,11 @@ void Emit_Documentation(std::ostream &os,
         " and then interactively view.*"
     );
     reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_dispatcher CT*dcm -o ModifyingOperation -o BoostSerializeDrover```"
+        "```dicomautomaton_dispatcher CT*dcm -o ModifyingOperation -o SerializeDrover```"
         ,
         "*Launch the default interactive viewer to inspect a collection of computed tomography images,"
         " perform an operation that modifies them, and serialize the internal state for later"
-        " using the [BoostSerializeDrover](#boostserializedrover) operation.*"
+        " using the [SerializeDrover](#serializedrover) operation.*"
     );
 
     //----------------
@@ -568,69 +568,6 @@ void Emit_Documentation(std::ostream &os,
         " --http-address 0.0.0.0 --http-port 8080 --docroot='/etc/DICOMautomaton/'```"
         ,
         "*Launch the webserver on any interface and port 8080.*"
-    );
-
-    //----------------
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "### dicomautomaton_bsarchive_convert"
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "#### Description"
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "A program for converting Boost.Serialization archives types which DICOMautomaton can read."
-        " These archives need to be created by the [BoostSerializeDrover](#boostserializedrover) operation."
-        " Some archive types are concise and not portable (i.e., binary archives), or verbose"
-        " (and thus slow to read and write) and portable (i.e., XML, plain text)."
-        " To combat verbosity, on-the-fly gzip compression and decompression is supported."
-        " This program can be used to convert archive types."
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "#### Usage Examples"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_bsarchive_convert --help```"
-        ,
-        "*Print a listing of all available options.*"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_bsarchive_convert -i file.binary -o file.xml -t 'XML'```"
-        ,
-        "*Convert a binary archive to a portable XML archive.*"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_bsarchive_convert -i file.binary.gz -o file.xml.gz -t 'gzip-xml'```"
-        ,
-        "*Convert a binary archive to a gzipped portable XML archive.*"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_bsarchive_convert -i file.binary.gz -o file.xml -t 'XML'```"
-        ,
-        "*Convert a gzipped binary archive to a non-gzipped portable XML archive.*"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_bsarchive_convert -i file.xml.gz -o file.txt -t 'txt'```"
-        ,
-        "*Convert a gzipped binary archive to a non-gzipped, portable, and inspectable text archive.*"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_bsarchive_convert -i file.txt -o file.txt.gz -t 'gzip-txt'```"
-        ,
-        "*Convert an uncompressed text archive to a compressed text archive."
-        " Note that this conversion is effectively the same as simply ```gzip file.txt```.*"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_bsarchive_convert -i file.xml.gz -o file.bin -t 'binary'```"
-        ,
-        "*Convert a compressed archive to a binary file.*"
-        " Note that binary archives should only expect to be readable on the same hardware"
-        " with the same versions and are therefore best for checkpointing calculations that"
-        " can fail or may need to be tweaked later.*"
-    );
-    reflow_and_emit_paragraph(os, max_width, bulleta, bulletb,
-        "```dicomautomaton_bsarchive_convert -i file.xml.gz -o file.bin.gz -t 'gzip-binary'```"
-        ,
-        "*Convert a compressed archive to a compressed binary file.*"
     );
 
     //----------------
@@ -810,4 +747,3 @@ void Emit_Documentation(std::ostream &os,
 
     return;
 }
-

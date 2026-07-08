@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include <boost/serialization/nvp.hpp>
-#include <boost/serialization/version.hpp>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <memory>
 
-#include "YgorMathChebyshevIOBoostSerialization.h"
-#include "YgorMathIOBoostSerialization.h"
+#include "YgorMathChebyshevIOSerialization.h"
+#include "YgorMathIOSerialization.h"
 
 template <class T> class cheby_approx;
 template <class T> class samples_1D;
@@ -106,63 +105,89 @@ struct KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters {
 
 };
 
-BOOST_CLASS_VERSION(KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters, 1)
-
-namespace boost {
+namespace ygor {
 namespace serialization {
+
+#ifndef DCMA_YGOR_SHARED_PTR_SERIALIZATION
+#define DCMA_YGOR_SHARED_PTR_SERIALIZATION
+template<typename T>
+void serialize(xml_oarchive &a, std::shared_ptr<T> &p){
+    auto has_value = static_cast<bool>(p);
+    a & make_nvp("has_value", has_value);
+    if(has_value){
+        a & make_nvp("value", *p);
+    }
+    return;
+}
+
+template<typename T>
+void serialize(xml_iarchive &a, std::shared_ptr<T> &p){
+    bool has_value = false;
+    a & make_nvp("has_value", has_value);
+    if(has_value){
+        p = std::make_shared<T>();
+        a & make_nvp("value", *p);
+    }else{
+        p.reset();
+    }
+    return;
+}
+#endif // DCMA_YGOR_SHARED_PTR_SERIALIZATION
 
 template<typename Archive>
 void serialize(Archive &a, 
-               KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters &p, 
-               const unsigned int version ){
-    a & boost::serialization::make_nvp("cAIF",  p.cAIF)
-      & boost::serialization::make_nvp("dcAIF", p.dcAIF)
+               KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Parameters &p){
+    int64_t schema_version = 1;
+    a & make_nvp("schema_version", schema_version)
 
-      & boost::serialization::make_nvp("cVIF",  p.cVIF)
-      & boost::serialization::make_nvp("dcVIF", p.dcVIF)
+      & make_nvp("cAIF",  p.cAIF)
+      & make_nvp("dcAIF", p.dcAIF)
 
-      & boost::serialization::make_nvp("cROI",  p.cROI)
+      & make_nvp("cVIF",  p.cVIF)
+      & make_nvp("dcVIF", p.dcVIF)
 
-      & boost::serialization::make_nvp("FittingPerformed", p.FittingPerformed)
-      & boost::serialization::make_nvp("FittingSuccess",   p.FittingSuccess)
+      & make_nvp("cROI",  p.cROI)
 
-      & boost::serialization::make_nvp("RSS",   p.RSS)
+      & make_nvp("FittingPerformed", p.FittingPerformed)
+      & make_nvp("FittingSuccess",   p.FittingSuccess)
 
-      & boost::serialization::make_nvp("k1A",   p.k1A)
-      & boost::serialization::make_nvp("tauA",  p.tauA)
-      & boost::serialization::make_nvp("k1V",   p.k1V)
-      & boost::serialization::make_nvp("tauV",  p.tauV)
-      & boost::serialization::make_nvp("k2",    p.k2)
+      & make_nvp("RSS",   p.RSS)
 
-      & boost::serialization::make_nvp("dF_dtauA", p.dF_dtauA)
-      & boost::serialization::make_nvp("dF_dtauV", p.dF_dtauV)
-      & boost::serialization::make_nvp("dF_dk2",   p.dF_dk2)
+      & make_nvp("k1A",   p.k1A)
+      & make_nvp("tauA",  p.tauA)
+      & make_nvp("k1V",   p.k1V)
+      & make_nvp("tauV",  p.tauV)
+      & make_nvp("k2",    p.k2)
 
-      & boost::serialization::make_nvp("S_IA_IV", p.S_IA_IV)
-      & boost::serialization::make_nvp("S_IA_R",  p.S_IA_R)
-      & boost::serialization::make_nvp("S_IV_R",  p.S_IV_R)
-      & boost::serialization::make_nvp("S_IA_IA", p.S_IA_IA)
-      & boost::serialization::make_nvp("S_IV_IV", p.S_IV_IV)
-      & boost::serialization::make_nvp("S_R_R",   p.S_R_R)
+      & make_nvp("dF_dtauA", p.dF_dtauA)
+      & make_nvp("dF_dtauV", p.dF_dtauV)
+      & make_nvp("dF_dk2",   p.dF_dk2)
 
-      & boost::serialization::make_nvp("S_R_dtauA_IA",   p.S_R_dtauA_IA)
-      & boost::serialization::make_nvp("S_IA_dtauA_IA",  p.S_IA_dtauA_IA)
-      & boost::serialization::make_nvp("S_IV_dtauA_IA",  p.S_IV_dtauA_IA)
+      & make_nvp("S_IA_IV", p.S_IA_IV)
+      & make_nvp("S_IA_R",  p.S_IA_R)
+      & make_nvp("S_IV_R",  p.S_IV_R)
+      & make_nvp("S_IA_IA", p.S_IA_IA)
+      & make_nvp("S_IV_IV", p.S_IV_IV)
+      & make_nvp("S_R_R",   p.S_R_R)
 
-      & boost::serialization::make_nvp("S_R_dtauV_IV",   p.S_R_dtauV_IV)
-      & boost::serialization::make_nvp("S_IV_dtauV_IV",  p.S_IV_dtauV_IV)
-      & boost::serialization::make_nvp("S_IA_dtauV_IV",  p.S_IA_dtauV_IV)
+      & make_nvp("S_R_dtauA_IA",   p.S_R_dtauA_IA)
+      & make_nvp("S_IA_dtauA_IA",  p.S_IA_dtauA_IA)
+      & make_nvp("S_IV_dtauA_IA",  p.S_IV_dtauA_IA)
 
-      & boost::serialization::make_nvp("S_R_dk2_IA",  p.S_R_dk2_IA)
-      & boost::serialization::make_nvp("S_R_dk2_IV",  p.S_R_dk2_IV)
-      & boost::serialization::make_nvp("S_IA_dk2_IA", p.S_IA_dk2_IA)
-      & boost::serialization::make_nvp("S_IV_dk2_IV", p.S_IV_dk2_IV)
-      & boost::serialization::make_nvp("S_IA_dk2_IV", p.S_IA_dk2_IV)
-      & boost::serialization::make_nvp("S_IV_dk2_IA", p.S_IV_dk2_IA);
+      & make_nvp("S_R_dtauV_IV",   p.S_R_dtauV_IV)
+      & make_nvp("S_IV_dtauV_IV",  p.S_IV_dtauV_IV)
+      & make_nvp("S_IA_dtauV_IV",  p.S_IA_dtauV_IV)
 
-    if(version >= 1){
-        a & boost::serialization::make_nvp("ExpApproxTrunc", p.ExpApproxTrunc)
-          & boost::serialization::make_nvp("MultiplicationCoeffTrunc", p.MultiplicationCoeffTrunc);
+      & make_nvp("S_R_dk2_IA",  p.S_R_dk2_IA)
+      & make_nvp("S_R_dk2_IV",  p.S_R_dk2_IV)
+      & make_nvp("S_IA_dk2_IA", p.S_IA_dk2_IA)
+      & make_nvp("S_IV_dk2_IV", p.S_IV_dk2_IV)
+      & make_nvp("S_IA_dk2_IV", p.S_IA_dk2_IV)
+      & make_nvp("S_IV_dk2_IA", p.S_IV_dk2_IA);
+
+    if(schema_version >= 1){
+        a & make_nvp("ExpApproxTrunc", p.ExpApproxTrunc)
+          & make_nvp("MultiplicationCoeffTrunc", p.MultiplicationCoeffTrunc);
     }
 
     return;

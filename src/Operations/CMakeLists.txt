@@ -12,7 +12,7 @@ add_library(Operations_objs OBJECT
     AutoCropImages.cc
     Average.cc
     BEDConvert.cc
-    BoostSerializeDrover.cc
+    SerializeDrover.cc
     BuildLexiconInteractively.cc
     ClusterDBSCAN.cc
     CombineImages.cc
