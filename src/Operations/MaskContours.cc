@@ -87,8 +87,8 @@ bool segments_intersect_xy(const vec3<double> &a,
                                       std::abs(c.x), std::abs(c.y), std::abs(d.x), std::abs(d.y)});
     const auto eps = 1.0E-10 * scale;
 
-    if( ((o1 > eps) && (o2 < -eps) || (o1 < -eps) && (o2 > eps))
-    &&  ((o3 > eps) && (o4 < -eps) || (o3 < -eps) && (o4 > eps)) ) return true;
+    if( (((o1 > eps) && (o2 < -eps)) || ((o1 < -eps) && (o2 > eps)))
+    &&  (((o3 > eps) && (o4 < -eps)) || ((o3 < -eps) && (o4 > eps))) ) return true;
 
     if((std::abs(o1) <= eps) && point_on_segment_xy(c,a,b)) return true;
     if((std::abs(o2) <= eps) && point_on_segment_xy(d,a,b)) return true;
@@ -419,6 +419,10 @@ OperationDoc OpArgDocMaskContours(){
         "leave-and-return excursions without erasing short runs at the beginning or end of a trace."
     );
     out.notes.emplace_back(
+        "Derived contour collections are homogeneous in MaskContoursRegion and MaskContoursState so downstream metadata "
+        "partitioning/filtering can select a named region and inside/outside state reliably."
+    );
+    out.notes.emplace_back(
         "The lower-mainland examples are intentionally coarse demonstration polygons, not authoritative park boundaries."
     );
 
@@ -485,20 +489,34 @@ bool MaskContours(Drover &DICOM_data,
     }
 
     // Build all derived data separately so appending it cannot invalidate references in the selection list.
+    // Keep each appended collection homogeneous by (region,state), which makes the added metadata useful to
+    // collection-level selectors and partitioning operations.
     auto contour_storage = std::make_shared<Contour_Data>();
     for(const auto &cc_refw : cc_selected){
         const auto &src_cc = cc_refw.get();
-        contour_collection<double> derived_cc;
-        for(const auto &source : src_cc.contours){
-            for(const auto &region : regions){
+        for(const auto &region : regions){
+            contour_collection<double> inside_cc;
+            contour_collection<double> outside_cc;
+
+            for(const auto &source : src_cc.contours){
                 auto pieces = slice_contour(source, region, DebounceDistance);
                 for(auto &piece : pieces){
-                    derived_cc.contours.emplace_back(std::move(piece));
+                    const auto state_it = piece.metadata.find("MaskContoursState");
+                    if(state_it == piece.metadata.end()){
+                        throw std::logic_error("MaskContours: derived contour is missing MaskContoursState metadata");
+                    }
+                    if(state_it->second == "inside"){
+                        inside_cc.contours.emplace_back(std::move(piece));
+                    }else if(state_it->second == "outside"){
+                        outside_cc.contours.emplace_back(std::move(piece));
+                    }else{
+                        throw std::logic_error("MaskContours: derived contour has an invalid MaskContoursState value");
+                    }
                 }
             }
-        }
-        if(!derived_cc.contours.empty()){
-            contour_storage->ccs.emplace_back(std::move(derived_cc));
+
+            if(!inside_cc.contours.empty()) contour_storage->ccs.emplace_back(std::move(inside_cc));
+            if(!outside_cc.contours.empty()) contour_storage->ccs.emplace_back(std::move(outside_cc));
         }
     }
 
@@ -531,6 +549,23 @@ TEST_CASE("MaskContours splits a path into exact inside and outside portions"){
     CHECK(atoms.at(0).length() == doctest::Approx(1.0));
     CHECK(atoms.at(1).length() == doctest::Approx(2.0));
     CHECK(atoms.at(2).length() == doctest::Approx(1.0));
+}
+
+TEST_CASE("MaskContours tags every derived piece for downstream filtering"){
+    const auto r = parse_regions("Region(square){Polygon(-1,-1, 1,-1, 1,1, -1,1)}").front();
+    contour_of_points<double> source;
+    source.closed = false;
+    source.metadata["SourceTag"] = "preserved";
+    source.points.emplace_back(vec3<double>(-2.0,0.0,0.0));
+    source.points.emplace_back(vec3<double>(2.0,0.0,0.0));
+
+    const auto pieces = slice_contour(source, r, 0.0);
+    REQUIRE(pieces.size() == 3);
+    for(const auto &piece : pieces){
+        CHECK(piece.metadata.at("MaskContoursRegion") == "square");
+        CHECK((piece.metadata.at("MaskContoursState") == "inside" || piece.metadata.at("MaskContoursState") == "outside"));
+        CHECK(piece.metadata.at("SourceTag") == "preserved");
+    }
 }
 
 TEST_CASE("MaskContours debounce absorbs a short leave-and-return excursion"){
