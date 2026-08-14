@@ -11,7 +11,14 @@ std::vector<glsl_shader_preset> get_glsl_shader_presets(){
 
     static const std::string invalid_hover_index =
         std::to_string(std::numeric_limits<uint32_t>::max()) + "u";
+
+    // gl_PrimitiveID is not a fragment-shader built-in in GLSL 1.40. It became
+    // available to fragment shaders with GLSL 1.50 / OpenGL 3.2. Keep the
+    // primitive-index hover path on capable implementations, and compile a
+    // no-op hover path on older GLSL implementations so the core viewer still
+    // has baseline mesh rendering.
     const std::string hover_fragment_helpers =
+        "#if __VERSION__ >= 150\n"
         "uniform uint hovered_face_index;\n"
         "uniform uint hovered_edge_index;\n"
         "uniform usamplerBuffer primitive_face_indices;\n"
@@ -51,6 +58,15 @@ vec4 apply_hover_highlight(vec4 base_colour,
     vec3 shaded = mix(base_colour.rgb * 0.65, vec3(1.0, 0.95, 0.35), 0.45 + 0.55 * diff);
     return vec4(shaded, max(base_colour.a, 0.75));
 }
+#else
+vec4 apply_hover_highlight(vec4 base_colour,
+                           vec3 frag_pos_value,
+                           vec3 frag_norm_value,
+                           vec3 flat_norm_value,
+                           bool use_smoothing_value){
+    return base_colour;
+}
+#endif
 )";
     const auto with_hover_support = [&hover_fragment_helpers](const char *fragment_shader) -> std::string {
         return hover_fragment_helpers + fragment_shader;
@@ -396,6 +412,95 @@ void main(){
     frag_colour = apply_hover_highlight(base_colour, frag_pos, frag_norm, flat_norm, use_smoothing);
 }
 )")
+    });
+
+    // ------------------------------- 9. Baseline Diffuse (fallback) ---------------------------------------
+    // Deliberately avoids primitive IDs, buffer samplers, flat interpolation, derivatives, and other
+    // optional/high-version features. The preprocessor branches also make this source usable from
+    // GLSL 1.20 compatibility contexts through current desktop GLSL implementations.
+    presets.push_back({
+        "Baseline Diffuse",
+        "Portable fallback with simple diffuse lighting and no primitive-hover support.",
+
+        R"(
+#if __VERSION__ >= 130
+in vec3 v_pos;
+in vec3 v_norm;
+out vec3 fallback_norm;
+#else
+attribute vec3 v_pos;
+attribute vec3 v_norm;
+varying vec3 fallback_norm;
+#endif
+
+uniform mat4 mvp_matrix;
+uniform mat3 norm_matrix;
+
+void main(){
+    gl_Position = mvp_matrix * vec4(v_pos, 1.0);
+    fallback_norm = normalize(norm_matrix * v_norm);
+}
+)",
+
+        R"(
+#if __VERSION__ >= 130
+in vec3 fallback_norm;
+out vec4 frag_colour;
+#define DCMA_FRAGMENT_COLOUR frag_colour
+#else
+varying vec3 fallback_norm;
+#define DCMA_FRAGMENT_COLOUR gl_FragColor
+#endif
+
+uniform vec4 user_colour;
+uniform bool use_lighting;
+
+void main(){
+    vec4 base_colour = user_colour;
+    if(use_lighting){
+        vec3 N = normalize(fallback_norm);
+        vec3 L = normalize(vec3(0.4, 0.7, 1.0));
+        float diffuse = max(dot(N, L), 0.0);
+        base_colour = vec4(user_colour.rgb * (0.25 + 0.75 * diffuse), user_colour.a);
+    }
+    DCMA_FRAGMENT_COLOUR = base_colour;
+}
+)"
+    });
+
+    // -------------------------------- 10. Baseline Unlit (fallback) ---------------------------------------
+    presets.push_back({
+        "Baseline Unlit",
+        "Minimal portable fallback that applies the model-view-projection transform and a uniform colour only.",
+
+        R"(
+#if __VERSION__ >= 130
+in vec3 v_pos;
+#else
+attribute vec3 v_pos;
+#endif
+
+uniform mat4 mvp_matrix;
+
+void main(){
+    gl_Position = mvp_matrix * vec4(v_pos, 1.0);
+}
+)",
+
+        R"(
+#if __VERSION__ >= 130
+out vec4 frag_colour;
+#define DCMA_FRAGMENT_COLOUR frag_colour
+#else
+#define DCMA_FRAGMENT_COLOUR gl_FragColor
+#endif
+
+uniform vec4 user_colour;
+
+void main(){
+    DCMA_FRAGMENT_COLOUR = user_colour;
+}
+)"
     });
 
     return presets;
