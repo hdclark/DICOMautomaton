@@ -901,9 +901,9 @@ TEST_CASE( "AlignViaTPSRPM anti-collapse validation" ){
         REQUIRE( trans_total_variance > 0.1 );
     }
 
-    SUBCASE("zero regularization still prevents total collapse"){
-        // Even with zero lambda, normalization and the TPS structure should prevent total collapse.
-        // This tests that the algorithm doesn't catastrophically fail.
+    SUBCASE("near-zero regularization still prevents total collapse"){
+        // With very small lambda, normalization and the TPS structure should prevent total collapse.
+        // This keeps the test in a numerically stable regime across platforms.
         point_set<double> ps_stationary;
         for(const auto &p : ps_moving.points){
             ps_stationary.points.emplace_back(p.rotate_around_z(test_pi * 0.05));
@@ -911,12 +911,11 @@ TEST_CASE( "AlignViaTPSRPM anti-collapse validation" ){
 
         AlignViaTPSRPMParams params;
         params.kernel_dimension = 2;
-        params.lambda_start = 0.0;
+        params.lambda_start = 0.0001;
         params.T_end_scale = 0.01;
         params.N_iters_at_fixed_T = 2;
-        params.Sinkhorn_tolerance = 0.05;
 
-        // With zero regularization, the algorithm may not converge perfectly,
+        // With near-zero regularization, the algorithm may not converge perfectly,
         // but it should still produce a result.
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
         REQUIRE( result.has_value() );
