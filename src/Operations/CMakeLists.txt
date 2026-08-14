@@ -155,6 +155,7 @@ add_library(Operations_objs OBJECT
     LoadFilesInteractively.cc
     LogScale.cc
     MapTableToParameters.cc
+    MaskContours.cc
     MaskParameters.cc
     MaskVerbosity.cc
     MaxMinPixels.cc
