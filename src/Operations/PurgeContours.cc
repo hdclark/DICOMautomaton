@@ -235,11 +235,11 @@ bool PurgeContours(Drover &DICOM_data,
         const auto matches_selection = matches_either_name(cop);
         if(!matches_selection) return false; // If contour does not match selection criteria, ignore it.
 
-        const auto purge_via_area = area_criteria(cop);
-        const auto purge_via_perimeter = perimeter_criteria(cop);
-        const auto purge_via_vert_count = vert_count_criteria(cop);
-        const auto should_purge = purge_via_area || purge_via_perimeter || purge_via_vert_count;
-        return should_purge;
+        // Evaluate with short-circuiting to avoid unnecessary geometry calculations.
+        if(area_criteria(cop)) return true;
+        if(perimeter_criteria(cop)) return true;
+        if(vert_count_criteria(cop)) return true;
+        return false;
     };
     DICOM_data.Ensure_Contour_Data_Allocated();
     for(auto & cc : DICOM_data.contour_data->ccs){
@@ -251,4 +251,3 @@ bool PurgeContours(Drover &DICOM_data,
 
     return true;
 }
-
