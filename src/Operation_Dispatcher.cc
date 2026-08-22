@@ -223,6 +223,7 @@
 #include "Operations/RigidWarpImages.h"
 #include "Operations/SamplePoints.h"
 #include "Operations/ScalePixels.h"
+#include "Operations/ScheduleCoverage.h"
 #include "Operations/SelectDirectory.h"
 #include "Operations/SelectFilename.h"
 #include "Operations/SelectionIsPresent.h"
@@ -525,6 +526,7 @@ known_ops_t Known_Operations(){
     out["RigidWarpImages"] = std::make_pair(OpArgDocRigidWarpImages, RigidWarpImages);
     out["SamplePoints"] = std::make_pair(OpArgDocSamplePoints, SamplePoints);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
+    out["ScheduleCoverage"] = std::make_pair(OpArgDocScheduleCoverage, ScheduleCoverage);
     out["SelectDirectory"] = std::make_pair(OpArgDocSelectDirectory, SelectDirectory);
     out["SelectFilename"] = std::make_pair(OpArgDocSelectFilename, SelectFilename);
     out["SelectionIsPresent"] = std::make_pair(OpArgDocSelectionIsPresent, SelectionIsPresent);
