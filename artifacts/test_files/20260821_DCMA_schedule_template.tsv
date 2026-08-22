@@ -2,6 +2,7 @@
 "Requirement 1","onsite","any 2",,,,,,,,,,,,
 "Requirement 2","srs","XC OR XD OR XE OR XF OR XG",,,,,,,,,,,,
 "Requirement 3","livsabr","XC OR XD OR XE OR XF OR XH",,,,,,,,,,,,
+"Requirement 4","max_consecutive_remote","2",,,,,,,,,,,,
 ,,,,,,,,,,,,,,
 "Date","XA","XB","XC","XD","XE","XF","XG","XH","XI","XJ","XK",,,
 "Mon, Aug 31, 2026","Remote","x","Prim","x","Sec","Remote","Vac","x","Remote","x","Remote",,,

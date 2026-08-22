@@ -60,6 +60,16 @@ std::string to_upper(const std::string &s){
     return out;
 }
 
+std::string normalize_identifier(const std::string &s){
+    std::string out;
+    for(const char c : s){
+        if(std::isalnum(static_cast<unsigned char>(c))){
+            out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+        }
+    }
+    return out;
+}
+
 std::vector<std::string> split_ws(const std::string &s){
     std::vector<std::string> out;
     std::istringstream iss(s);
@@ -69,6 +79,15 @@ std::vector<std::string> split_ws(const std::string &s){
 }
 
 std::string join(const std::vector<int64_t> &v, const std::string &sep){
+    std::stringstream ss;
+    for(size_t i = 0; i < v.size(); ++i){
+        if(i != 0) ss << sep;
+        ss << v[i];
+    }
+    return ss.str();
+}
+
+std::string join_strings(const std::vector<std::string> &v, const std::string &sep){
     std::stringstream ss;
     for(size_t i = 0; i < v.size(); ++i){
         if(i != 0) ss << sep;
@@ -119,12 +138,8 @@ bool term_list_matches(const std::string &cell,
     return false;
 }
 
-bool is_vacation_cell(const std::string &raw){
-    return (to_lower(trim(raw)) == "vac");
-}
-
 // --------------------------------------------------------------------------------------------------------------------------
-// Quota parsing.
+// Requirement / quota parsing helpers.
 // --------------------------------------------------------------------------------------------------------------------------
 
 bool is_all_digits(const std::string &s){
@@ -133,6 +148,56 @@ bool is_all_digits(const std::string &s){
         if(!std::isdigit(static_cast<unsigned char>(c))) return false;
     }
     return true;
+}
+
+bool is_max_consecutive_remote_requirement(const std::string &type){
+    const auto normalized = normalize_identifier(type);
+    return (normalized == "maxconsecutiveremote")
+        || (normalized == "maxconsecutiveremotedays")
+        || (normalized == "consecutiveremote");
+}
+
+std::string requirement_display_name(const Requirement &req){
+    const auto type = trim(req.type);
+    if(type.empty()) return req.label;
+    return "requirement '" + type + "' (" + req.label + ")";
+}
+
+std::string override_reason(const ParsedSchedule &schedule,
+                            const RequirementModel &model,
+                            const Solution &solution,
+                            const size_t day_index,
+                            const int64_t staff_index){
+    if(day_index >= solution.day_onsite.size()){
+        return "reason=coverage explanation unavailable";
+    }
+
+    auto without_staff = solution.day_onsite[day_index];
+    without_staff.erase(std::remove(without_staff.begin(), without_staff.end(), staff_index), without_staff.end());
+    const auto counterfactual = evaluate_violation(without_staff, model);
+
+    const std::vector<int64_t> *current_ptr = nullptr;
+    if(day_index < solution.day_violation.size()) current_ptr = &solution.day_violation[day_index];
+
+    std::vector<std::string> satisfies;
+    std::vector<std::string> reduces;
+    for(size_t r = 0; r < counterfactual.size() && r < schedule.requirements.size(); ++r){
+        const int64_t current = (current_ptr && r < current_ptr->size()) ? (*current_ptr)[r] : 0;
+        if(counterfactual[r] <= current) continue;
+        if(current == 0){
+            satisfies.push_back(requirement_display_name(schedule.requirements[r]));
+        }else{
+            reduces.push_back(requirement_display_name(schedule.requirements[r]));
+        }
+    }
+
+    std::vector<std::string> clauses;
+    if(!satisfies.empty()) clauses.push_back("required to satisfy " + join_strings(satisfies, ", "));
+    if(!reduces.empty()) clauses.push_back("required to reduce deficit for " + join_strings(reduces, ", "));
+    if(clauses.empty()){
+        return "reason=secondary-objective trade-off; not individually required for coverage";
+    }
+    return "reason=" + join_strings(clauses, "; ");
 }
 
 } // anonymous namespace
@@ -157,9 +222,10 @@ CellClass classify_cell(const std::string &raw,
         return b;
     };
 
-    // Priority order. The default term lists are disjoint, but the explicit order makes behavior deterministic when a
-    // user configures overlapping terms.
+    // Priority order. Explicit vacation classification is kept separate from generic immutable cells so the
+    // consecutive-remote objective can ignore user-configured vacation terms without hard-coding spellings.
     if(mark(term_list_matches(cell, terms.holiday, terms.regex_mode)))    return CellClass::Holiday;
+    if(mark(term_list_matches(cell, terms.vacation, terms.regex_mode)))   return CellClass::Vacation;
     if(mark(term_list_matches(cell, terms.onsite, terms.regex_mode)))     return CellClass::Onsite;
     if(mark(term_list_matches(cell, terms.remote_pref, terms.regex_mode)))return CellClass::RemotePreference;
     if(mark(term_list_matches(cell, terms.undecided, terms.regex_mode)))  return CellClass::Undecided;
@@ -271,6 +337,21 @@ ParsedSchedule parse_schedule(const tables::table2 &table,
                 req.label = first_cell_opt.value();
                 req.type = table.value(r, min_col + 1).value_or("");
                 req.quota_raw = table.value(r, min_col + 2).value_or("");
+
+                if(is_max_consecutive_remote_requirement(req.type)){
+                    const std::string raw_limit = trim(req.quota_raw);
+                    if(!is_all_digits(raw_limit)){
+                        throw std::runtime_error("Requirement '" + req.label + "' of type '" + req.type
+                                                 + "' requires a non-negative integer maximum, but found '"
+                                                 + req.quota_raw + "'");
+                    }
+                    if(out.max_consecutive_remote_days){
+                        throw std::runtime_error("Multiple max_consecutive_remote requirements were found; only one is allowed");
+                    }
+                    out.max_consecutive_remote_days = std::stoll(raw_limit);
+                    continue;
+                }
+
                 if(!parse_quota(req.quota_raw, req.min_onsite, req.subset)){
                     throw std::runtime_error("Unable to parse quota expression '" + req.quota_raw
                                              + "' for requirement '" + req.label + "'");
@@ -496,8 +577,8 @@ std::vector<DayCandidate> generate_day_candidates(const Day &day,
     }
 
     // Prune candidates whose violation vector is strictly dominated by another candidate's. Candidates sharing a
-    // violation vector are all retained because they may differ in their on-site set (relevant for fairness) or their
-    // override count.
+    // violation vector are all retained because they may differ in their on-site set (relevant for fairness/run
+    // length) or their override count.
     {
         std::vector<size_t> survivors;
         survivors.reserve(out.size());
@@ -505,8 +586,8 @@ std::vector<DayCandidate> generate_day_candidates(const Day &day,
             bool dominated = false;
             for(size_t j = 0; j < out.size() && !dominated; ++j){
                 if(i == j) continue;
-                const auto &a = out[j].violation; // candidate that might dominate
-                const auto &b = out[i].violation; // candidate being tested
+                const auto &a = out[j].violation;
+                const auto &b = out[i].violation;
                 bool leq = true;
                 bool lt = false;
                 for(size_t k = 0; k < b.size(); ++k){
@@ -622,9 +703,9 @@ int64_t consecutive_remote_penalty(const ParsedSchedule &schedule,
             const auto &day = schedule.days[d];
             const auto cls = day.classes[s];
 
-            // Vacation and holidays are non-working days for this objective. Skip them without incrementing or
-            // terminating the run, so a run is measured in consecutive remote workdays.
-            if(day.holiday || cls == CellClass::Holiday || is_vacation_cell(day.cells[s])) continue;
+            // Vacation and holiday cells are non-working days for this objective. Skip them without incrementing or
+            // terminating the run, so the run is measured in consecutive remote workdays.
+            if(day.holiday || cls == CellClass::Holiday || cls == CellClass::Vacation) continue;
 
             const bool is_on = std::find(day_onsite[d].begin(), day_onsite[d].end(), static_cast<int64_t>(s))
                                != day_onsite[d].end();
@@ -669,7 +750,7 @@ int64_t staff_consecutive_remote_penalty(const ParsedSchedule &schedule,
     for(size_t d = 0; d < schedule.days.size(); ++d){
         const auto &day = schedule.days[d];
         const auto cls = day.classes[staff_index];
-        if(day.holiday || cls == CellClass::Holiday || is_vacation_cell(day.cells[staff_index])) continue;
+        if(day.holiday || cls == CellClass::Holiday || cls == CellClass::Vacation) continue;
 
         bool is_on = false;
         if(!pools[d].empty()){
@@ -892,9 +973,12 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
                                              config.fairness_metric, config.max_consecutive_remote_days);
 
     YLOGINFO("ScheduleCoverage: parsed " << schedule.days.size() << " days, " << schedule.staff.size()
-             << " staff, " << schedule.requirements.size() << " requirements");
+             << " staff, " << schedule.requirements.size() << " coverage requirements"
+             << "; max consecutive remote days = " << config.max_consecutive_remote_days);
 
-    // Build the per-day refinement pools: candidates that share the baseline's violation vector.
+    // Build the per-day refinement pools: candidates that share the baseline's violation vector. This is why secondary
+    // objective weights (including PreferenceWeight) are never needed to make the coverage problem feasible: annealing
+    // cannot leave the lexicographically-optimal coverage surface in the first place.
     std::vector<std::vector<DayCandidate>> pools(n_days);
     for(size_t d = 0; d < n_days; ++d){
         const auto &cs = day_candidates[d];
@@ -1021,7 +1105,7 @@ tables::table2 render_variation(const tables::table2 &original,
                                 const Solution &solution){
     tables::table2 out = original;
 
-    // Overwrite the mutable cells per the solution. Immutable and holiday cells are preserved verbatim.
+    // Overwrite the mutable cells per the solution. Immutable, vacation, and holiday cells are preserved verbatim.
     for(size_t d = 0; d < schedule.days.size(); ++d){
         const auto &day = schedule.days[d];
         if(day.holiday) continue;
@@ -1038,9 +1122,8 @@ tables::table2 render_variation(const tables::table2 &original,
                 if(ov.count(static_cast<int64_t>(s)) != 0){
                     out.inject(day.row, schedule.staff_columns[s], "onsite");
                 }
-                // Otherwise leave the original "Remote" cell untouched.
+                // Otherwise leave the original preference cell untouched.
             }
-            // Fixed on-site, fixed remote, and immutable cells are already correct.
         }
     }
 
@@ -1051,10 +1134,11 @@ tables::table2 render_variation(const tables::table2 &original,
     out.inject(r, 0, "== Schedule Report ==");
     ++r;
 
-    // FLAG rows: one per day+requirement whose quota cannot be met.
+    // FLAG rows: one per day+coverage requirement whose quota cannot be met.
     for(size_t d = 0; d < schedule.days.size(); ++d){
         const auto &day = schedule.days[d];
         if(day.holiday) continue;
+        if(d >= solution.day_violation.size()) continue;
         const auto &dv = solution.day_violation[d];
         for(size_t req = 0; req < dv.size(); ++req){
             if(dv[req] > 0){
@@ -1069,14 +1153,18 @@ tables::table2 render_variation(const tables::table2 &original,
         }
     }
 
-    // OVERRIDE rows: one per Remote -> on-site change.
+    // OVERRIDE rows: one per Remote -> on-site change, with a counterfactual explanation of why the staff member's
+    // presence matters to coverage. If their individual presence is not required for coverage, say so explicitly.
+    const auto model = build_requirement_model(schedule);
     for(size_t d = 0; d < schedule.days.size(); ++d){
         const auto &day = schedule.days[d];
+        if(d >= solution.day_overridden.size()) continue;
         for(const int64_t idx : solution.day_overridden[d]){
             out.inject(r, 0, "OVERRIDE");
             out.inject(r, 1, day.date);
             out.inject(r, 2, schedule.staff[static_cast<size_t>(idx)]);
             out.inject(r, 3, "Remote -> onsite");
+            out.inject(r, 4, override_reason(schedule, model, solution, d, idx));
             ++r;
         }
     }
@@ -1091,13 +1179,17 @@ tables::table2 render_variation(const tables::table2 &original,
         for(size_t d = 0; d < schedule.days.size(); ++d){
             const auto &day = schedule.days[d];
             const auto cls = day.classes[s];
-            const bool is_on = std::find(solution.day_onsite[d].begin(), solution.day_onsite[d].end(),
-                                         static_cast<int64_t>(s)) != solution.day_onsite[d].end();
-            const bool is_ov = std::find(solution.day_overridden[d].begin(), solution.day_overridden[d].end(),
-                                         static_cast<int64_t>(s)) != solution.day_overridden[d].end();
+            const bool is_on = (d < solution.day_onsite.size())
+                            && (std::find(solution.day_onsite[d].begin(), solution.day_onsite[d].end(),
+                                         static_cast<int64_t>(s)) != solution.day_onsite[d].end());
+            const bool is_ov = (d < solution.day_overridden.size())
+                            && (std::find(solution.day_overridden[d].begin(), solution.day_overridden[d].end(),
+                                         static_cast<int64_t>(s)) != solution.day_overridden[d].end());
 
             if(day.holiday){
                 ++other;
+            }else if(cls == CellClass::Vacation){
+                ++vacation;
             }else if(cls == CellClass::Onsite){
                 ++onsite;
             }else if(cls == CellClass::Remote){
@@ -1106,9 +1198,8 @@ tables::table2 render_variation(const tables::table2 &original,
                 if(is_on) ++onsite; else ++remote;
             }else if(cls == CellClass::RemotePreference){
                 if(is_ov) ++onsite; else ++remote;
-            }else{ // Immutable or Holiday marker on a mixed day.
-                if(is_vacation_cell(day.cells[s])) ++vacation;
-                else ++other;
+            }else{
+                ++other;
             }
         }
 
@@ -1155,20 +1246,26 @@ OperationDoc OpArgDocScheduleCoverage(){
         "The input table is expected to have two interleaved regions: (1) requirement rows near the top whose first"
         " column matches 'RequirementRegex' and whose second and third columns hold a requirement type and a quota"
         " expression, and (2) one or more schedule blocks, each beginning with a header row matching 'HeaderRegex'"
-        " (whose columns name the staff) followed by date rows whose cells hold per-staff statuses."
+        " (whose columns name the staff) followed by date rows whose cells hold per-staff statuses. A requirement whose"
+        " type is 'max_consecutive_remote' uses a non-negative integer in column 2 to set the default maximum length of"
+        " a remote-workday run; it is a secondary scheduling objective rather than an on-site coverage quota."
         "\n\n"
         "Cell terms are classified into the categories below using user-overridable, comma-separated term lists"
-        " (case-insensitive, exact by default; opt into regex matching via 'TermMatchMode'). A term matching no known"
-        " category is treated as immutable/non-counting and a warning is logged."
+        " (case-insensitive, exact by default; opt into regex matching via 'TermMatchMode'). Vacation and holiday"
+        " classifications are used by the consecutive-remote objective; those cells neither count toward nor terminate"
+        " a remote-workday run. A term matching no known category is treated as immutable/non-counting and a warning is"
+        " logged."
         "\n\n"
-        "Quota expressions are either 'any <N>', '<N>', 'any', or a staff OR-list like 'A OR B OR C' (which means at"
-        " least one of the listed staff). Each requirement evaluates to: on a given day, the number of on-site staff"
-        " within the requirement's subset must meet or exceed its minimum."
+        "Coverage quota expressions are either 'any <N>', '<N>', 'any', or a staff OR-list like 'A OR B OR C' (which"
+        " means at least one of the listed staff). Each coverage requirement evaluates to: on a given day, the number"
+        " of on-site staff within the requirement's subset must meet or exceed its minimum."
         "\n\n"
-        "The solver first minimizes requirement deficits in lexicographic priority order, then balances fairness,"
-        " honors remote preferences, and optionally penalizes long runs of remote workdays without worsening coverage."
-        " Output tables carry a 'ScheduleVariation' metadata key plus objective values, and each has an appended report"
-        " block with 'FLAG', 'OVERRIDE', 'TALLY', and 'OBJECTIVES' rows (see the operation notes for the report format).";
+        "The solver first minimizes coverage deficits in lexicographic priority order, then balances fairness, honors"
+        " remote preferences, and optionally penalizes long runs of remote workdays without worsening coverage. A"
+        " non-zero PreferenceWeight remains active in every annealing run. Output tables carry a 'ScheduleVariation'"
+        " metadata key plus objective values, and each has an appended report block with 'FLAG', 'OVERRIDE', 'TALLY',"
+        " and 'OBJECTIVES' rows. OVERRIDE rows include a reason showing which coverage requirement needs that staff"
+        " member, or explicitly state when the override is only a secondary-objective trade-off.";
 
     out.args.emplace_back();
     out.args.back() = STWhitelistOpArgDoc();
@@ -1191,18 +1288,28 @@ OperationDoc OpArgDocScheduleCoverage(){
 
     out.args.emplace_back();
     out.args.back().name = "HolidayTerms";
-    out.args.back().desc = "Comma-separated terms that mark a whole day as a holiday (skipped by the optimizer).";
+    out.args.back().desc = "Comma-separated holiday terms. A day where every staff cell matches is skipped by the"
+                           " optimizer; holiday cells are also skipped by consecutive-remote counting.";
     out.args.back().default_val = "Holiday";
     out.args.back().expected = true;
     out.args.back().examples = { "Holiday", "Holiday,Stat" };
 
     out.args.emplace_back();
-    out.args.back().name = "ImmutableTerms";
-    out.args.back().desc = "Comma-separated terms that are fixed and do not count toward on-site quotas (e.g.,"
-                           " vacation, clinic time, primary/secondary roles).";
-    out.args.back().default_val = "Vac,CTO,Prim,Sec";
+    out.args.back().name = "VacationTerms";
+    out.args.back().desc = "Comma-separated vacation/non-working terms. These cells are fixed, do not count toward"
+                           " on-site quotas, and are skipped by consecutive-remote counting.";
+    out.args.back().default_val = "Vac";
     out.args.back().expected = true;
-    out.args.back().examples = { "Vac,CTO,Prim,Sec", "Vac,Leave,Prim,Sec" };
+    out.args.back().examples = { "Vac", "Vac,Leave", "Vacation,PTO" };
+
+    out.args.emplace_back();
+    out.args.back().name = "ImmutableTerms";
+    out.args.back().desc = "Comma-separated terms that are fixed and do not count toward on-site quotas (e.g., clinic"
+                           " time or primary/secondary roles). These terms terminate a remote run unless they are also"
+                           " classified through VacationTerms or HolidayTerms.";
+    out.args.back().default_val = "CTO,Prim,Sec";
+    out.args.back().expected = true;
+    out.args.back().examples = { "CTO,Prim,Sec", "Clinic,Prim,Sec" };
 
     out.args.emplace_back();
     out.args.back().name = "OnsiteTerms";
@@ -1214,7 +1321,7 @@ OperationDoc OpArgDocScheduleCoverage(){
     out.args.emplace_back();
     out.args.back().name = "RemotePreferenceTerms";
     out.args.back().desc = "Comma-separated terms that prefer remote work but may be overridden to on-site when"
-                           " needed to satisfy coverage.";
+                           " needed to satisfy coverage or improve another weighted secondary objective.";
     out.args.back().default_val = "Remote";
     out.args.back().expected = true;
     out.args.back().examples = { "Remote", "Remote,Wfh" };
@@ -1277,11 +1384,12 @@ OperationDoc OpArgDocScheduleCoverage(){
     out.args.emplace_back();
     out.args.back().name = "MaxConsecutiveRemoteDays";
     out.args.back().desc = "Maximum consecutive remote workdays before each additional remote workday incurs one"
-                           " penalty unit. Vacation ('Vac') and holiday cells are skipped and neither count toward nor"
-                           " terminate the run. Set to 0 to disable this objective.";
-    out.args.back().default_val = "0";
+                           " penalty unit. Use 'table' to read the max_consecutive_remote requirement from the input"
+                           " table; a non-negative integer overrides the table (0 disables this objective). Vacation"
+                           " and holiday cells are skipped according to VacationTerms and HolidayTerms.";
+    out.args.back().default_val = "table";
     out.args.back().expected = true;
-    out.args.back().examples = { "0", "2", "3", "5" };
+    out.args.back().examples = { "table", "0", "2", "3", "5" };
 
     out.args.emplace_back();
     out.args.back().name = "ConsecutiveRemoteWeight";
@@ -1299,15 +1407,20 @@ OperationDoc OpArgDocScheduleCoverage(){
     out.args.back().examples = { "0", "12345" };
 
     out.notes.emplace_back(
-        "Report format (appended below the last schedule row, using reserved leading tokens in column 0):"
-        " a 'FLAG' row is emitted for every day+requirement whose quota cannot be met; an 'OVERRIDE' row is emitted"
-        " for every Remote -> on-site change; a 'TALLY' row reports each staff member's on-site, remote, vacation,"
-        " and other day tallies; and an 'OBJECTIVES' row records the total requirement violations, the fairness"
-        " metric value, override count, and consecutive-remote penalty.");
+        "A table requirement row such as 'Requirement 4, max_consecutive_remote, 2' penalizes each remote workday"
+        " beyond two consecutive remote workdays. Vacation and holiday cells are omitted from the run count and do not"
+        " terminate the run. MaxConsecutiveRemoteDays can override or disable the table value at runtime.");
     out.notes.emplace_back(
-        "The requirement objective of every emitted variation is guaranteed to equal the lexicographic optimum of the"
-        " per-day requirement deficits; variations differ only in fairness, preference-override, and optional"
-        " consecutive-remote secondary objectives.");
+        "Report format (appended below the last schedule row, using reserved leading tokens in column 0): a 'FLAG' row"
+        " is emitted for every day+coverage requirement whose quota cannot be met; an 'OVERRIDE' row is emitted for"
+        " every Remote -> on-site change and includes its reason; a 'TALLY' row reports each staff member's on-site,"
+        " remote, vacation, and other day tallies; and an 'OBJECTIVES' row records total coverage violations, fairness,"
+        " override count, and consecutive-remote penalty.");
+    out.notes.emplace_back(
+        "The coverage requirement objective of every emitted variation is guaranteed to equal the lexicographic optimum"
+        " of the per-day requirement deficits; variations differ only in fairness, preference-override, and optional"
+        " consecutive-remote secondary objectives. Zeroing PreferenceWeight is not required for feasibility because"
+        " annealing is restricted to candidates with the already-optimal coverage vector.");
 
     return out;
 }
@@ -1335,6 +1448,7 @@ bool ScheduleCoverage(Drover &DICOM_data,
 
     TermLists terms;
     terms.holiday     = SplitStringToVector(OptArgs.getValueStr("HolidayTerms").value(), ',', 'd');
+    terms.vacation    = SplitStringToVector(OptArgs.getValueStr("VacationTerms").value(), ',', 'd');
     terms.immutable   = SplitStringToVector(OptArgs.getValueStr("ImmutableTerms").value(), ',', 'd');
     terms.onsite      = SplitStringToVector(OptArgs.getValueStr("OnsiteTerms").value(), ',', 'd');
     terms.remote_pref = SplitStringToVector(OptArgs.getValueStr("RemotePreferenceTerms").value(), ',', 'd');
@@ -1351,25 +1465,33 @@ bool ScheduleCoverage(Drover &DICOM_data,
         throw std::runtime_error("TermMatchMode argument not understood");
     }
 
-    SolverConfig config;
-    config.fairness_metric = FairnessMetricStr;
-    config.n_variations = std::stoll(NVariationsStr);
-    config.preference_weight = std::stod(PreferenceWeightStr);
-    config.fairness_weight = std::stod(FairnessWeightStr);
-    config.max_consecutive_remote_days = std::stoll(MaxConsecutiveRemoteDaysStr);
-    config.consecutive_remote_weight = std::stod(ConsecutiveRemoteWeightStr);
-    config.seed = std::stoll(SeedStr);
+    SolverConfig base_config;
+    base_config.fairness_metric = FairnessMetricStr;
+    base_config.n_variations = std::stoll(NVariationsStr);
+    base_config.preference_weight = std::stod(PreferenceWeightStr);
+    base_config.fairness_weight = std::stod(FairnessWeightStr);
+    base_config.consecutive_remote_weight = std::stod(ConsecutiveRemoteWeightStr);
+    base_config.seed = std::stoll(SeedStr);
 
-    if(config.n_variations < 1){
+    const bool use_table_remote_limit = (normalize_identifier(MaxConsecutiveRemoteDaysStr) == "table");
+    std::optional<int64_t> remote_limit_override;
+    if(!use_table_remote_limit){
+        const std::string raw = trim(MaxConsecutiveRemoteDaysStr);
+        if(!is_all_digits(raw)){
+            throw std::runtime_error("MaxConsecutiveRemoteDays must be 'table' or a non-negative integer");
+        }
+        remote_limit_override = std::stoll(raw);
+    }
+
+    if(base_config.n_variations < 1){
         throw std::runtime_error("NVariations must be at least 1");
     }
-    if(config.max_consecutive_remote_days < 0){
-        throw std::runtime_error("MaxConsecutiveRemoteDays must be non-negative");
-    }
-    if(config.preference_weight < 0.0 || config.fairness_weight < 0.0 || config.consecutive_remote_weight < 0.0){
+    if(base_config.preference_weight < 0.0 || base_config.fairness_weight < 0.0
+       || base_config.consecutive_remote_weight < 0.0){
         throw std::runtime_error("PreferenceWeight, FairnessWeight, and ConsecutiveRemoteWeight must be non-negative");
     }
-    if(!(config.fairness_metric == "range" || config.fairness_metric == "variance" || config.fairness_metric == "gini")){
+    if(!(base_config.fairness_metric == "range" || base_config.fairness_metric == "variance"
+         || base_config.fairness_metric == "gini")){
         throw std::runtime_error("FairnessMetric argument not understood");
     }
 
@@ -1389,6 +1511,14 @@ bool ScheduleCoverage(Drover &DICOM_data,
 
         const auto schedule = ScheduleCoverageCore::parse_schedule(t, RequirementRegexStr, HeaderRegexStr, terms);
         const auto model = ScheduleCoverageCore::build_requirement_model(schedule);
+
+        SolverConfig config = base_config;
+        if(remote_limit_override){
+            config.max_consecutive_remote_days = *remote_limit_override;
+        }else{
+            config.max_consecutive_remote_days = schedule.max_consecutive_remote_days.value_or(0);
+        }
+
         const auto solutions = ScheduleCoverageCore::produce_variations(schedule, model, config);
 
         const std::string base_label = (t.metadata.count("TableLabel") != 0) ? t.metadata["TableLabel"] : "unspecified";
@@ -1406,6 +1536,8 @@ bool ScheduleCoverage(Drover &DICOM_data,
             out.metadata["ScheduleVariation"] = std::to_string(i + 1);
             out.metadata["ScheduleCoverageFairness"] = format_double(solutions[i].fairness);
             out.metadata["ScheduleCoverageOverrides"] = std::to_string(solutions[i].overrides);
+            out.metadata["ScheduleCoverageMaxConsecutiveRemoteDays"] =
+                std::to_string(config.max_consecutive_remote_days);
             out.metadata["ScheduleCoverageConsecutiveRemotePenalty"] =
                 std::to_string(solutions[i].consecutive_remote_penalty);
             out.metadata["ScheduleCoverageViolations"] = join(solutions[i].violation_sum, ",");

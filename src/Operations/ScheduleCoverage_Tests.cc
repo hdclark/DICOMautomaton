@@ -30,7 +30,8 @@ tables::table2 make_table(const std::vector<std::vector<std::string>> &rows){
 TermLists default_terms(){
     TermLists terms;
     terms.holiday = { "Holiday" };
-    terms.immutable = { "Vac", "CTO", "Prim", "Sec" };
+    terms.vacation = { "Vac" };
+    terms.immutable = { "CTO", "Prim", "Sec" };
     terms.onsite = { "onsite" };
     terms.remote_pref = { "Remote" };
     terms.undecided = { "x" };
@@ -74,8 +75,8 @@ std::string signature(const std::vector<Solution> &sols){
 TEST_CASE("ScheduleCoverage: cell classification covers all categories and is case-insensitive"){
     const auto terms = default_terms();
 
-    CHECK(classify_cell("Vac", terms) == CellClass::Immutable);
-    CHECK(classify_cell("vac", terms) == CellClass::Immutable);
+    CHECK(classify_cell("Vac", terms) == CellClass::Vacation);
+    CHECK(classify_cell("vac", terms) == CellClass::Vacation);
     CHECK(classify_cell("CTO", terms) == CellClass::Immutable);
     CHECK(classify_cell("Prim", terms) == CellClass::Immutable);
     CHECK(classify_cell("Sec", terms) == CellClass::Immutable);
@@ -90,7 +91,7 @@ TEST_CASE("ScheduleCoverage: cell classification covers all categories and is ca
     bool known = true;
     CHECK(classify_cell("UnrecognizedTerm", terms, &known) == CellClass::Immutable);
     CHECK(known == false);
-    CHECK(classify_cell("Vac", terms, &known) == CellClass::Immutable);
+    CHECK(classify_cell("Vac", terms, &known) == CellClass::Vacation);
     CHECK(known == true);
     CHECK(classify_cell("", terms, &known) == CellClass::Immutable);
     CHECK(known == false);
@@ -104,6 +105,15 @@ TEST_CASE("ScheduleCoverage: cell classification supports regex term mode"){
     CHECK(classify_cell("x", terms) == CellClass::Undecided);
     CHECK(classify_cell("?", terms) == CellClass::Undecided);
     CHECK(classify_cell("y", terms) == CellClass::Immutable);
+}
+
+TEST_CASE("ScheduleCoverage: vacation terms are user configurable"){
+    TermLists terms = default_terms();
+    terms.vacation = { "Leave", "PTO" };
+
+    CHECK(classify_cell("Leave", terms) == CellClass::Vacation);
+    CHECK(classify_cell("pto", terms) == CellClass::Vacation);
+    CHECK(classify_cell("Vac", terms) == CellClass::Immutable); // No longer special after removing it from VacationTerms.
 }
 
 TEST_CASE("ScheduleCoverage: fixed-remote terms are recognized when non-overlapping"){
@@ -151,10 +161,11 @@ TEST_CASE("ScheduleCoverage: quota parsing"){
     CHECK(!parse_quota("any xyz", min, subset));
 }
 
-TEST_CASE("ScheduleCoverage: schedule parsing detects requirements, headers, staff, and days"){
+TEST_CASE("ScheduleCoverage: schedule parsing detects coverage and consecutive-remote requirements"){
     const auto t = make_table({
         { "Requirement 1", "onsite", "any 2" },
         { "Requirement 2", "srs", "XC OR XD" },
+        { "Requirement 3", "max_consecutive_remote", "2" },
         {},
         { "Date", "XA", "XB" },
         { "Mon, Aug 31, 2026", "x", "Remote" },
@@ -163,12 +174,15 @@ TEST_CASE("ScheduleCoverage: schedule parsing detects requirements, headers, sta
 
     const auto schedule = parse_schedule(t, "^Requirement", "^Date$", default_terms());
 
+    // The run-length requirement is table-level configuration, not a coverage requirement.
     REQUIRE(schedule.requirements.size() == 2);
     CHECK(schedule.requirements[0].label == "Requirement 1");
     CHECK(schedule.requirements[0].type == "onsite");
     CHECK(schedule.requirements[0].min_onsite == 2);
     CHECK(schedule.requirements[1].label == "Requirement 2");
     CHECK(schedule.requirements[1].subset == std::vector<std::string>({"XC", "XD"}));
+    REQUIRE(schedule.max_consecutive_remote_days.has_value());
+    CHECK(*schedule.max_consecutive_remote_days == 2);
 
     REQUIRE(schedule.staff.size() == 2);
     CHECK(schedule.staff[0] == "XA");
@@ -179,8 +193,24 @@ TEST_CASE("ScheduleCoverage: schedule parsing detects requirements, headers, sta
     CHECK(schedule.days[0].classes[0] == CellClass::Undecided);
     CHECK(schedule.days[0].classes[1] == CellClass::RemotePreference);
     CHECK(schedule.days[0].holiday == false);
-
     CHECK(schedule.days[1].holiday == true);
+}
+
+TEST_CASE("ScheduleCoverage: malformed or duplicate consecutive-remote requirements throw"){
+    const auto malformed = make_table({
+        { "Requirement 1", "max_consecutive_remote", "two" },
+        { "Date", "XA" },
+        { "Mon", "x" },
+    });
+    CHECK_THROWS_AS(parse_schedule(malformed, "^Requirement", "^Date$", default_terms()), std::runtime_error);
+
+    const auto duplicate = make_table({
+        { "Requirement 1", "max_consecutive_remote", "2" },
+        { "Requirement 2", "max consecutive remote days", "3" },
+        { "Date", "XA" },
+        { "Mon", "x" },
+    });
+    CHECK_THROWS_AS(parse_schedule(duplicate, "^Requirement", "^Date$", default_terms()), std::runtime_error);
 }
 
 TEST_CASE("ScheduleCoverage: repeated headers parse as a continuous day list"){
@@ -334,7 +364,6 @@ TEST_CASE("ScheduleCoverage: fairness is balanced on a two-staff two-day toy pro
         CHECK(s.violation_sum == std::vector<int64_t>({ 0 }));
     }
 
-    // The Pareto front should contain the perfectly balanced solution (fairness range == 0).
     const auto it = std::find_if(solutions.begin(), solutions.end(), [](const Solution &s){
         return s.fairness == 0.0;
     });
@@ -392,22 +421,30 @@ TEST_CASE("ScheduleCoverage: non-zero preference weight is honored throughout Pa
     }
 }
 
-TEST_CASE("ScheduleCoverage: consecutive remote penalty skips vacation and holiday days"){
+TEST_CASE("ScheduleCoverage: consecutive remote penalty skips user-configured vacation and holiday terms"){
+    TermLists terms = default_terms();
+    terms.vacation = { "Leave" };
+    terms.holiday = { "Stat" };
+
     const auto t = make_table({
         { "Date", "XA" },
         { "Mon", "x" },
-        { "Tues", "Vac" },
+        { "Tues", "Leave" },
         { "Wed", "x" },
-        { "Thurs", "Holiday" },
+        { "Thurs", "Stat" },
         { "Fri", "x" },
         { "Sat", "onsite" },
         { "Sun", "x" },
     });
 
-    const auto schedule = parse_schedule(t, "^Requirement", "^Date$", default_terms());
+    const auto schedule = parse_schedule(t, "^Requirement", "^Date$", terms);
+    REQUIRE(schedule.days.size() == 7);
+    CHECK(schedule.days[1].classes[0] == CellClass::Vacation);
+    CHECK(schedule.days[3].holiday == true);
+
     std::vector<std::vector<int64_t>> all_remote(schedule.days.size());
 
-    // Mon/Wed/Fri form a three-remote-workday run; Vac and Holiday are skipped rather than counted. Sat breaks it.
+    // Mon/Wed/Fri form a three-remote-workday run; Leave and Stat are skipped rather than counted. Sat breaks it.
     CHECK(consecutive_remote_penalty(schedule, all_remote, 2) == 1);
     CHECK(consecutive_remote_penalty(schedule, all_remote, 3) == 0);
     CHECK(consecutive_remote_penalty(schedule, all_remote, 0) == 0);
@@ -441,16 +478,21 @@ TEST_CASE("ScheduleCoverage: consecutive remote objective breaks long remote run
     }
 }
 
-TEST_CASE("ScheduleCoverage: operation docs expose consecutive remote controls"){
+TEST_CASE("ScheduleCoverage: operation docs expose table and runtime consecutive remote controls"){
     const auto doc = OpArgDocScheduleCoverage();
-    const auto has_arg = [&](const std::string &name){
-        return std::any_of(doc.args.begin(), doc.args.end(), [&](const auto &arg){ return arg.name == name; });
+    const auto find_arg = [&](const std::string &name) -> const OperationArgDoc* {
+        const auto it = std::find_if(doc.args.begin(), doc.args.end(), [&](const auto &arg){ return arg.name == name; });
+        return (it == doc.args.end()) ? nullptr : &(*it);
     };
-    CHECK(has_arg("MaxConsecutiveRemoteDays"));
-    CHECK(has_arg("ConsecutiveRemoteWeight"));
+
+    REQUIRE(find_arg("VacationTerms") != nullptr);
+    REQUIRE(find_arg("HolidayTerms") != nullptr);
+    REQUIRE(find_arg("MaxConsecutiveRemoteDays") != nullptr);
+    CHECK(find_arg("MaxConsecutiveRemoteDays")->default_val == "table");
+    CHECK(find_arg("ConsecutiveRemoteWeight") != nullptr);
 }
 
-TEST_CASE("ScheduleCoverage: rendering preserves immutable cells and removes undecided terms"){
+TEST_CASE("ScheduleCoverage: rendering preserves vacation cells and removes undecided terms"){
     const auto t = make_table({
         { "Requirement 1", "onsite", "any 1" },
         {},
@@ -461,9 +503,9 @@ TEST_CASE("ScheduleCoverage: rendering preserves immutable cells and removes und
     const auto schedule = parse_schedule(t, "^Requirement", "^Date$", default_terms());
 
     Solution sol;
-    sol.day_onsite = { { 0 }, {} };
-    sol.day_overridden = { {}, {} };
-    sol.day_violation = { { 0 }, {} };
+    sol.day_onsite = { { 0 } };
+    sol.day_overridden = { {} };
+    sol.day_violation = { { 0 } };
     sol.violation_sum = { 0 };
     sol.overrides = 0;
     sol.fairness = 0.0;
@@ -473,28 +515,29 @@ TEST_CASE("ScheduleCoverage: rendering preserves immutable cells and removes und
 
     const auto values = collect_values(out);
     CHECK(values.count("onsite") == 1);   // XA's 'x' was replaced by 'onsite'.
-    CHECK(values.count("Vac") == 1);      // Immutable cell preserved.
+    CHECK(values.count("Vac") == 1);      // Vacation cell preserved.
     CHECK(values.count("x") == 0);        // No undecided term remains.
     CHECK(values.count("== Schedule Report ==") == 1);
     CHECK(values.count("OBJECTIVES") == 1);
     CHECK(count_value(out, "TALLY") == 2); // One TALLY row per staff.
 }
 
-TEST_CASE("ScheduleCoverage: rendering reports flags, overrides, and tallies"){
+TEST_CASE("ScheduleCoverage: rendering explains remote preference overrides by requirement"){
     const auto t = make_table({
-        { "Requirement 1", "onsite", "any 2" },
+        { "Requirement 1", "onsite", "any 1" },
+        { "Requirement 2", "srs", "XA" },
         {},
         { "Date", "XA", "XB" },
         { "Mon", "Remote", "x" },
     });
 
-    // Hand-build a schedule and solution to exercise the FLAG/OVERRIDE/TALLY rows directly.
+    // Build the parsed schedule manually because the public quota grammar deliberately requires OR for named subsets.
     ParsedSchedule ps;
     ps.staff = { "XA", "XB" };
     ps.staff_columns = { 1, 2 };
     Day day;
     day.date = "Mon";
-    day.row = 3;
+    day.row = 4;
     day.holiday = false;
     day.cells = { "Remote", "x" };
     day.classes = { CellClass::RemotePreference, CellClass::Undecided };
@@ -502,31 +545,55 @@ TEST_CASE("ScheduleCoverage: rendering reports flags, overrides, and tallies"){
 
     Requirement r1;
     r1.label = "Requirement 1";
+    r1.type = "onsite";
     r1.min_onsite = 1;
     Requirement r2;
     r2.label = "Requirement 2";
-    r2.min_onsite = 2; // Impossible to fully meet with only 2 staff and XA overridden + XB on-site.
+    r2.type = "srs";
+    r2.subset = { "XA" };
+    r2.min_onsite = 1;
     ps.requirements = { r1, r2 };
 
     Solution sol;
     sol.day_onsite = { { 0, 1 } };
     sol.day_overridden = { { 0 } };
-    sol.day_violation = { { 0, 1 } }; // R2 deficit = 1.
-    sol.violation_sum = { 0, 1 };
+    sol.day_violation = { { 0, 0 } };
+    sol.violation_sum = { 0, 0 };
     sol.overrides = 1;
     sol.fairness = 0.0;
     sol.staff_onsite = { 1, 1 };
 
     const auto out = render_variation(t, ps, sol);
-
     const auto values = collect_values(out);
-    CHECK(values.count("FLAG") == 1);
+
     CHECK(values.count("OVERRIDE") == 1);
     CHECK(values.count("Remote -> onsite") == 1);
-    CHECK(values.count("deficit=1") == 1);
+    CHECK(values.count("reason=required to satisfy requirement 'srs' (Requirement 2)") == 1);
     CHECK(count_value(out, "TALLY") == 2);
     CHECK(values.count("OBJECTIVES") == 1);
+}
 
-    // The remote preference cell was overridden to on-site.
-    CHECK(values.count("onsite") == 1);
+TEST_CASE("ScheduleCoverage: rendering reports infeasible flags"){
+    const auto t = make_table({
+        { "Requirement 1", "onsite", "any 2" },
+        {},
+        { "Date", "XA", "XB" },
+        { "Mon", "x", "x" },
+    });
+
+    const auto schedule = parse_schedule(t, "^Requirement", "^Date$", default_terms());
+
+    Solution sol;
+    sol.day_onsite = { { 0 } };
+    sol.day_overridden = { {} };
+    sol.day_violation = { { 1 } };
+    sol.violation_sum = { 1 };
+    sol.overrides = 0;
+    sol.fairness = 1.0;
+    sol.staff_onsite = { 1, 0 };
+
+    const auto out = render_variation(t, schedule, sol);
+    const auto values = collect_values(out);
+    CHECK(values.count("FLAG") == 1);
+    CHECK(values.count("deficit=1") == 1);
 }

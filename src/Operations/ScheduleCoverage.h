@@ -26,8 +26,9 @@ namespace ScheduleCoverageCore {
 
 // Classification of an individual schedule cell.
 enum class CellClass {
-    Immutable,          // Fixed, does not count toward on-site quotas (Vac, CTO, Prim, Sec, unknown, ...).
-    Holiday,            // Day-level skip marker.
+    Immutable,          // Fixed, does not count toward on-site quotas (CTO, Prim, Sec, unknown, ...).
+    Vacation,           // Fixed vacation/non-working cell; skipped by consecutive-remote counting.
+    Holiday,            // Holiday marker; whole-holiday days are skipped by the optimizer.
     Onsite,             // Fixed on-site.
     RemotePreference,   // Mutable; prefers remote but may be overridden to on-site.
     Undecided,          // Mutable; must be assigned on-site or remote.
@@ -37,6 +38,7 @@ enum class CellClass {
 // User-overridable term lists used to classify cells.
 struct TermLists {
     std::vector<std::string> holiday;
+    std::vector<std::string> vacation;
     std::vector<std::string> immutable;
     std::vector<std::string> onsite;
     std::vector<std::string> remote_pref;
@@ -45,7 +47,7 @@ struct TermLists {
     bool regex_mode = false; // When true, terms are treated as (case-insensitive) regular expressions.
 };
 
-// A parsed coverage requirement.
+// A parsed on-site coverage requirement.
 struct Requirement {
     std::string label;
     std::string type;
@@ -65,7 +67,8 @@ struct Day {
 
 // The fully parsed schedule.
 struct ParsedSchedule {
-    std::vector<Requirement> requirements;
+    std::vector<Requirement> requirements; // Coverage requirements only, in lexicographic priority order.
+    std::optional<int64_t> max_consecutive_remote_days; // Optional table-level max_consecutive_remote requirement.
     std::vector<std::string> staff;
     std::vector<int64_t> staff_columns; // Column index of each staff name in the source table.
     std::vector<Day> days;
@@ -81,7 +84,7 @@ struct RequirementModel {
 struct DayCandidate {
     std::vector<int64_t> onsite;     // Staff indices assigned on-site (fixed + chosen mutable).
     std::vector<int64_t> overridden; // Staff indices whose RemotePreference was overridden.
-    std::vector<int64_t> violation;  // Per-requirement deficit.
+    std::vector<int64_t> violation;  // Per-coverage-requirement deficit.
 };
 
 // A complete solution (one schedule variation).
@@ -115,7 +118,9 @@ CellClass classify_cell(const std::string &raw,
                         const TermLists &terms,
                         bool *matched_known = nullptr);
 
-// Parse the given table into requirements, staff, and days.
+// Parse the given table into coverage requirements, the optional max_consecutive_remote requirement, staff, and days.
+// A requirement row whose type is "max_consecutive_remote" has a non-negative integer quota and configures the maximum
+// consecutive remote workdays; it is not included in the lexicographic on-site coverage objective.
 //
 // Note: throws std::runtime_error on malformed input.
 ParsedSchedule parse_schedule(const tables::table2 &table,
@@ -123,13 +128,14 @@ ParsedSchedule parse_schedule(const tables::table2 &table,
                               const std::string &header_regex,
                               const TermLists &terms);
 
-// Parse a quota expression into a (minimum on-site count, staff subset) pair. Returns false when the quota cannot be
-// understood. An empty subset denotes "all staff".
+// Parse a coverage quota expression into a (minimum on-site count, staff subset) pair. Returns false when the quota
+// cannot be understood. An empty subset denotes "all staff".
 bool parse_quota(const std::string &quota,
                  int64_t &min_onsite,
                  std::vector<std::string> &subset);
 
-// Resolve requirement subsets (staff names) to staff indices. Throws when a requirement references unknown staff.
+// Resolve coverage requirement subsets (staff names) to staff indices. Throws when a requirement references unknown
+// staff.
 RequirementModel build_requirement_model(const ParsedSchedule &schedule);
 
 // -------------------------------- Optimization ---------------------------------
@@ -151,9 +157,9 @@ std::vector<size_t> select_baseline(const std::vector<std::vector<DayCandidate>>
 double fairness_penalty(const std::vector<int64_t> &staff_onsite,
                         const std::string &metric);
 
-// Sum one penalty unit for each remote workday beyond max_consecutive_remote_days in a run. Vacation ("Vac") and
-// holiday cells are skipped: they neither count toward nor terminate a remote run. Other non-remote workdays terminate
-// the run. A non-positive maximum disables the penalty.
+// Sum one penalty unit for each remote workday beyond max_consecutive_remote_days in a run. Cells classified as
+// Vacation or Holiday are skipped: they neither count toward nor terminate a remote run. Other non-remote workdays
+// terminate the run. A non-positive maximum disables the penalty.
 int64_t consecutive_remote_penalty(const ParsedSchedule &schedule,
                                    const std::vector<std::vector<int64_t>> &day_onsite,
                                    int64_t max_consecutive_remote_days);
@@ -165,8 +171,9 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
 
 // -------------------------------- Rendering ---------------------------------
 
-// Render a solution as a full table copy (with all immutable/holiday cells preserved verbatim) plus an appended report
-// block.
+// Render a solution as a full table copy (with all immutable/vacation/holiday cells preserved verbatim) plus an
+// appended report block. OVERRIDE rows include a coverage-based explanation when the overridden staff member is
+// individually needed to satisfy (or reduce the deficit of) a requirement.
 tables::table2 render_variation(const tables::table2 &original,
                                 const ParsedSchedule &schedule,
                                 const Solution &solution);
