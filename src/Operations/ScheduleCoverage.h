@@ -91,6 +91,7 @@ struct Solution {
     std::vector<std::vector<int64_t>> day_violation;  // Per-day, per-requirement deficit (holiday => empty).
     std::vector<int64_t> violation_sum;               // Total per-requirement deficit.
     int64_t overrides = 0;
+    int64_t consecutive_remote_penalty = 0;           // Remote workdays beyond the configured run limit.
     double fairness = 0.0;                            // Unweighted fairness metric value.
     std::vector<int64_t> staff_onsite;                // Per-staff on-site tally.
 };
@@ -100,6 +101,8 @@ struct SolverConfig {
     std::string fairness_metric = "range"; // "range", "variance", or "gini".
     double fairness_weight = 1.0;
     double preference_weight = 1.0;
+    int64_t max_consecutive_remote_days = 0; // <= 0 disables the consecutive-remote objective.
+    double consecutive_remote_weight = 1.0;
     int64_t seed = 0;
     int64_t n_variations = 3;
 };
@@ -147,6 +150,13 @@ std::vector<size_t> select_baseline(const std::vector<std::vector<DayCandidate>>
 // Evaluate a fairness metric over a per-staff on-site tally.
 double fairness_penalty(const std::vector<int64_t> &staff_onsite,
                         const std::string &metric);
+
+// Sum one penalty unit for each remote workday beyond max_consecutive_remote_days in a run. Vacation ("Vac") and
+// holiday cells are skipped: they neither count toward nor terminate a remote run. Other non-remote workdays terminate
+// the run. A non-positive maximum disables the penalty.
+int64_t consecutive_remote_penalty(const ParsedSchedule &schedule,
+                                   const std::vector<std::vector<int64_t>> &day_onsite,
+                                   int64_t max_consecutive_remote_days);
 
 // Phases B-D: produce up to 'config.n_variations' Pareto-spread solutions.
 std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
