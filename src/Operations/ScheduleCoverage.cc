@@ -555,7 +555,7 @@ std::vector<size_t> select_baseline(const std::vector<std::vector<DayCandidate>>
 
 
 // --------------------------------------------------------------------------------------------------------------------------
-// Public: fairness.
+// Public: fairness and consecutive-remote penalties.
 // --------------------------------------------------------------------------------------------------------------------------
 
 double fairness_penalty(const std::vector<int64_t> &staff_onsite,
@@ -600,6 +600,49 @@ double fairness_penalty(const std::vector<int64_t> &staff_onsite,
     throw std::runtime_error("Fairness metric '" + metric + "' not understood");
 }
 
+int64_t consecutive_remote_penalty(const ParsedSchedule &schedule,
+                                   const std::vector<std::vector<int64_t>> &day_onsite,
+                                   const int64_t max_consecutive_remote_days){
+    if(max_consecutive_remote_days <= 0) return 0;
+    if(day_onsite.size() < schedule.days.size()){
+        throw std::runtime_error("Consecutive-remote penalty received fewer day assignments than the parsed schedule");
+    }
+
+    int64_t penalty = 0;
+    for(size_t s = 0; s < schedule.staff.size(); ++s){
+        int64_t run = 0;
+        const auto flush_run = [&](){
+            if(run > max_consecutive_remote_days){
+                penalty += run - max_consecutive_remote_days;
+            }
+            run = 0;
+        };
+
+        for(size_t d = 0; d < schedule.days.size(); ++d){
+            const auto &day = schedule.days[d];
+            const auto cls = day.classes[s];
+
+            // Vacation and holidays are non-working days for this objective. Skip them without incrementing or
+            // terminating the run, so a run is measured in consecutive remote workdays.
+            if(day.holiday || cls == CellClass::Holiday || is_vacation_cell(day.cells[s])) continue;
+
+            const bool is_on = std::find(day_onsite[d].begin(), day_onsite[d].end(), static_cast<int64_t>(s))
+                               != day_onsite[d].end();
+            const bool is_remote = (cls == CellClass::Remote)
+                                || ((cls == CellClass::RemotePreference || cls == CellClass::Undecided) && !is_on);
+
+            if(is_remote){
+                ++run;
+            }else{
+                flush_run();
+            }
+        }
+        flush_run();
+    }
+
+    return penalty;
+}
+
 
 // --------------------------------------------------------------------------------------------------------------------------
 // Solution construction and local search.
@@ -607,11 +650,50 @@ double fairness_penalty(const std::vector<int64_t> &staff_onsite,
 
 namespace {
 
+int64_t staff_consecutive_remote_penalty(const ParsedSchedule &schedule,
+                                         const std::vector<std::vector<DayCandidate>> &pools,
+                                         const std::vector<size_t> &choice,
+                                         const size_t staff_index,
+                                         const int64_t max_consecutive_remote_days){
+    if(max_consecutive_remote_days <= 0) return 0;
+
+    int64_t penalty = 0;
+    int64_t run = 0;
+    const auto flush_run = [&](){
+        if(run > max_consecutive_remote_days){
+            penalty += run - max_consecutive_remote_days;
+        }
+        run = 0;
+    };
+
+    for(size_t d = 0; d < schedule.days.size(); ++d){
+        const auto &day = schedule.days[d];
+        const auto cls = day.classes[staff_index];
+        if(day.holiday || cls == CellClass::Holiday || is_vacation_cell(day.cells[staff_index])) continue;
+
+        bool is_on = false;
+        if(!pools[d].empty()){
+            const auto &onsite = pools[d][choice[d]].onsite;
+            is_on = std::find(onsite.begin(), onsite.end(), static_cast<int64_t>(staff_index)) != onsite.end();
+        }
+        const bool is_remote = (cls == CellClass::Remote)
+                            || ((cls == CellClass::RemotePreference || cls == CellClass::Undecided) && !is_on);
+        if(is_remote){
+            ++run;
+        }else{
+            flush_run();
+        }
+    }
+    flush_run();
+    return penalty;
+}
+
 Solution build_solution(const ParsedSchedule &schedule,
                         const std::vector<std::vector<DayCandidate>> &day_candidates,
                         const std::vector<size_t> &choice,
                         const size_t n_req,
-                        const std::string &metric){
+                        const std::string &metric,
+                        const int64_t max_consecutive_remote_days){
     Solution sol;
     const size_t n_days = schedule.days.size();
     sol.day_onsite.resize(n_days);
@@ -635,6 +717,8 @@ Solution build_solution(const ParsedSchedule &schedule,
     }
 
     sol.fairness = fairness_penalty(sol.staff_onsite, metric);
+    sol.consecutive_remote_penalty = consecutive_remote_penalty(schedule, sol.day_onsite,
+                                                                 max_consecutive_remote_days);
     return sol;
 }
 
@@ -645,6 +729,8 @@ Solution local_search(const ParsedSchedule &schedule,
                       const size_t n_req,
                       const double w_fair,
                       const double w_pref,
+                      const double w_remote_run,
+                      const int64_t max_consecutive_remote_days,
                       const uint64_t seed,
                       const std::string &metric){
     const size_t n_days = schedule.days.size();
@@ -659,11 +745,22 @@ Solution local_search(const ParsedSchedule &schedule,
         overrides += static_cast<int64_t>(pools[d][0].overridden.size());
     }
 
-    const auto objective = [&](const std::vector<int64_t> &so, int64_t ov) -> double {
-        return w_fair * fairness_penalty(so, metric) + w_pref * static_cast<double>(ov);
+    int64_t remote_run_penalty = 0;
+    if(max_consecutive_remote_days > 0){
+        for(size_t s = 0; s < schedule.staff.size(); ++s){
+            remote_run_penalty += staff_consecutive_remote_penalty(schedule, pools, choice, s,
+                                                                    max_consecutive_remote_days);
+        }
+    }
+
+    const auto objective = [&](const std::vector<int64_t> &so, const int64_t ov,
+                               const int64_t remote_penalty) -> double {
+        return w_fair * fairness_penalty(so, metric)
+             + w_pref * static_cast<double>(ov)
+             + w_remote_run * static_cast<double>(remote_penalty);
     };
 
-    double cur = objective(staff_onsite, overrides);
+    double cur = objective(staff_onsite, overrides, remote_run_penalty);
     double best = cur;
     auto best_choice = choice;
 
@@ -673,7 +770,7 @@ Solution local_search(const ParsedSchedule &schedule,
         if(pools[d].size() > 1) mutable_days.push_back(d);
     }
     if(mutable_days.empty()){
-        return build_solution(schedule, pools, best_choice, n_req, metric);
+        return build_solution(schedule, pools, best_choice, n_req, metric, max_consecutive_remote_days);
     }
 
     std::mt19937_64 rng(seed);
@@ -691,19 +788,58 @@ Solution local_search(const ParsedSchedule &schedule,
         if(pool.size() <= 1) continue;
 
         std::uniform_int_distribution<size_t> cand_dist(0, pool.size() - 1);
+        const size_t old_idx = choice[d];
         size_t new_idx = cand_dist(rng);
-        if(new_idx == choice[d]){
+        if(new_idx == old_idx){
             new_idx = (new_idx + 1) % pool.size();
         }
 
-        // Apply the tentative swap.
-        const auto &old_c = pool[choice[d]];
+        const auto &old_c = pool[old_idx];
         const auto &new_c = pool[new_idx];
+
+        // Only staff whose on-site state changes on this day can change their remote-run contribution.
+        std::set<int64_t> affected_staff;
+        if(max_consecutive_remote_days > 0){
+            for(const int64_t idx : old_c.onsite){
+                if(std::find(new_c.onsite.begin(), new_c.onsite.end(), idx) == new_c.onsite.end()){
+                    affected_staff.insert(idx);
+                }
+            }
+            for(const int64_t idx : new_c.onsite){
+                if(std::find(old_c.onsite.begin(), old_c.onsite.end(), idx) == old_c.onsite.end()){
+                    affected_staff.insert(idx);
+                }
+            }
+        }
+
+        int64_t old_remote_contribution = 0;
+        if(max_consecutive_remote_days > 0){
+            for(const int64_t idx : affected_staff){
+                old_remote_contribution += staff_consecutive_remote_penalty(schedule, pools, choice,
+                                                                            static_cast<size_t>(idx),
+                                                                            max_consecutive_remote_days);
+            }
+        }
+
+        // Apply the tentative swap.
         for(const int64_t idx : old_c.onsite) staff_onsite[static_cast<size_t>(idx)] -= 1;
         for(const int64_t idx : new_c.onsite) staff_onsite[static_cast<size_t>(idx)] += 1;
         overrides += static_cast<int64_t>(new_c.overridden.size()) - static_cast<int64_t>(old_c.overridden.size());
+        choice[d] = new_idx;
 
-        const double cand = objective(staff_onsite, overrides);
+        int64_t remote_delta = 0;
+        if(max_consecutive_remote_days > 0){
+            int64_t new_remote_contribution = 0;
+            for(const int64_t idx : affected_staff){
+                new_remote_contribution += staff_consecutive_remote_penalty(schedule, pools, choice,
+                                                                            static_cast<size_t>(idx),
+                                                                            max_consecutive_remote_days);
+            }
+            remote_delta = new_remote_contribution - old_remote_contribution;
+            remote_run_penalty += remote_delta;
+        }
+
+        const double cand = objective(staff_onsite, overrides, remote_run_penalty);
 
         bool accept = (cand <= cur);
         if(!accept && T > 0.0){
@@ -714,12 +850,13 @@ Solution local_search(const ParsedSchedule &schedule,
 
         if(accept){
             cur = cand;
-            choice[d] = new_idx;
         }else{
             // Revert.
+            choice[d] = old_idx;
             for(const int64_t idx : new_c.onsite) staff_onsite[static_cast<size_t>(idx)] -= 1;
             for(const int64_t idx : old_c.onsite) staff_onsite[static_cast<size_t>(idx)] += 1;
             overrides -= static_cast<int64_t>(new_c.overridden.size()) - static_cast<int64_t>(old_c.overridden.size());
+            remote_run_penalty -= remote_delta;
         }
 
         if(cur < best){
@@ -728,7 +865,7 @@ Solution local_search(const ParsedSchedule &schedule,
         }
     }
 
-    return build_solution(schedule, pools, best_choice, n_req, metric);
+    return build_solution(schedule, pools, best_choice, n_req, metric, max_consecutive_remote_days);
 }
 
 } // anonymous namespace
@@ -751,7 +888,8 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
 
     // Phase B.
     const auto baseline_choice = select_baseline(day_candidates);
-    const Solution baseline = build_solution(schedule, day_candidates, baseline_choice, model.subsets.size(), config.fairness_metric);
+    const Solution baseline = build_solution(schedule, day_candidates, baseline_choice, model.subsets.size(),
+                                             config.fairness_metric, config.max_consecutive_remote_days);
 
     YLOGINFO("ScheduleCoverage: parsed " << schedule.days.size() << " days, " << schedule.staff.size()
              << " staff, " << schedule.requirements.size() << " requirements");
@@ -772,14 +910,19 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
     YLOGINFO("ScheduleCoverage: generated " << total_candidates << " per-day candidates; baseline requirement vector = ["
              << join(baseline.violation_sum, ",") << "]");
 
-    // Phase C/D: sweep a small set of (fairness, preference) weight combinations and seeds, then keep the
-    // Pareto-spread, de-duplicated results.
-    const std::vector<std::pair<double,double>> weight_combos = {
-        { config.fairness_weight, config.preference_weight },
-        { 1.0, 0.0 },
-        { 0.0, 1.0 },
-        { config.fairness_weight, 0.0 },
-        { 0.0, config.preference_weight },
+    // Phase C/D: sweep secondary-objective emphases without silently disabling any non-zero user-configured weight.
+    // In particular, a non-zero PreferenceWeight remains non-zero in every annealing run.
+    struct Weights {
+        double fairness = 0.0;
+        double preference = 0.0;
+        double remote_run = 0.0;
+    };
+    const std::vector<Weights> weight_combos = {
+        { config.fairness_weight,       config.preference_weight, config.consecutive_remote_weight },
+        { 2.0 * config.fairness_weight, config.preference_weight, config.consecutive_remote_weight },
+        { 0.5 * config.fairness_weight, config.preference_weight, config.consecutive_remote_weight },
+        { config.fairness_weight, 2.0 * config.preference_weight, config.consecutive_remote_weight },
+        { config.fairness_weight,       config.preference_weight, 2.0 * config.consecutive_remote_weight },
     };
 
     const std::vector<uint64_t> seeds = {
@@ -793,7 +936,9 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
 
     for(const auto &wc : weight_combos){
         for(const uint64_t s : seeds){
-            candidates.push_back(local_search(schedule, pools, model.subsets.size(), wc.first, wc.second, s, config.fairness_metric));
+            candidates.push_back(local_search(schedule, pools, model.subsets.size(), wc.fairness, wc.preference,
+                                              wc.remote_run, config.max_consecutive_remote_days, s,
+                                              config.fairness_metric));
         }
     }
 
@@ -817,7 +962,8 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
         }
     }
 
-    // Project onto the (fairness, overrides) Pareto front. (All solutions share the same requirement objective.)
+    // Project onto the (fairness, overrides, consecutive-remote) Pareto front. All solutions share the same
+    // lexicographically-optimal requirement objective.
     std::vector<Solution> front;
     for(size_t i = 0; i < dedup.size(); ++i){
         bool dominated = false;
@@ -825,17 +971,22 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
             if(i == j) continue;
             const auto &a = dedup[j];
             const auto &b = dedup[i];
-            const bool leq = (a.fairness <= b.fairness) && (a.overrides <= b.overrides);
-            const bool lt = (a.fairness < b.fairness) || (a.overrides < b.overrides);
+            const bool leq = (a.fairness <= b.fairness)
+                          && (a.overrides <= b.overrides)
+                          && (a.consecutive_remote_penalty <= b.consecutive_remote_penalty);
+            const bool lt = (a.fairness < b.fairness)
+                         || (a.overrides < b.overrides)
+                         || (a.consecutive_remote_penalty < b.consecutive_remote_penalty);
             if(leq && lt) dominated = true;
         }
         if(!dominated) front.push_back(std::move(dedup[i]));
     }
 
-    // Order by (fairness, overrides) for a stable, explainable output.
+    // Stable, explainable ordering.
     std::sort(front.begin(), front.end(), [](const Solution &a, const Solution &b){
         if(a.fairness != b.fairness) return a.fairness < b.fairness;
-        return a.overrides < b.overrides;
+        if(a.overrides != b.overrides) return a.overrides < b.overrides;
+        return a.consecutive_remote_penalty < b.consecutive_remote_penalty;
     });
 
     // If more solutions than requested, select a spread across the front.
@@ -844,11 +995,15 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
         std::vector<Solution> selected;
         selected.reserve(static_cast<size_t>(n_out));
         const size_t N = front.size();
-        for(int64_t k = 0; k < n_out; ++k){
-            const size_t idx = (N <= 1) ? 0
-                             : static_cast<size_t>(std::llround(static_cast<double>(k) * static_cast<double>(N - 1)
-                                                                / static_cast<double>(n_out - 1)));
-            selected.push_back(front[idx]);
+        if(n_out == 1){
+            selected.push_back(front.front());
+        }else{
+            for(int64_t k = 0; k < n_out; ++k){
+                const size_t idx = (N <= 1) ? 0
+                                 : static_cast<size_t>(std::llround(static_cast<double>(k) * static_cast<double>(N - 1)
+                                                                    / static_cast<double>(n_out - 1)));
+                selected.push_back(front[idx]);
+            }
         }
         front.swap(selected);
     }
@@ -971,6 +1126,7 @@ tables::table2 render_variation(const tables::table2 &original,
     out.inject(r, 1, "violations=" + join(solution.violation_sum, ","));
     out.inject(r, 2, "fairness=" + format_double(solution.fairness));
     out.inject(r, 3, "overrides=" + std::to_string(solution.overrides));
+    out.inject(r, 4, "consecutive_remote_penalty=" + std::to_string(solution.consecutive_remote_penalty));
     ++r;
 
     return out;
@@ -1009,10 +1165,10 @@ OperationDoc OpArgDocScheduleCoverage(){
         " least one of the listed staff). Each requirement evaluates to: on a given day, the number of on-site staff"
         " within the requirement's subset must meet or exceed its minimum."
         "\n\n"
-        "The solver first minimizes requirement deficits in lexicographic priority order, then balances fairness and"
-        " honors remote preferences without worsening coverage. Output tables carry a 'ScheduleVariation' metadata"
-        " key plus objective values, and each has an appended report block with 'FLAG', 'OVERRIDE', 'TALLY', and"
-        " 'OBJECTIVES' rows (see the operation notes for the report format).";
+        "The solver first minimizes requirement deficits in lexicographic priority order, then balances fairness,"
+        " honors remote preferences, and optionally penalizes long runs of remote workdays without worsening coverage."
+        " Output tables carry a 'ScheduleVariation' metadata key plus objective values, and each has an appended report"
+        " block with 'FLAG', 'OVERRIDE', 'TALLY', and 'OBJECTIVES' rows (see the operation notes for the report format).";
 
     out.args.emplace_back();
     out.args.back() = STWhitelistOpArgDoc();
@@ -1105,7 +1261,8 @@ OperationDoc OpArgDocScheduleCoverage(){
 
     out.args.emplace_back();
     out.args.back().name = "PreferenceWeight";
-    out.args.back().desc = "Weight on minimizing remote-preference overrides (a secondary objective).";
+    out.args.back().desc = "Weight on minimizing remote-preference overrides (a secondary objective). A non-zero value"
+                           " is honored by every annealing run in the Pareto sweep.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.0", "1.0", "2.5" };
@@ -1113,6 +1270,22 @@ OperationDoc OpArgDocScheduleCoverage(){
     out.args.emplace_back();
     out.args.back().name = "FairnessWeight";
     out.args.back().desc = "Weight on minimizing the fairness metric (a secondary objective).";
+    out.args.back().default_val = "1.0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0", "1.0", "2.5" };
+
+    out.args.emplace_back();
+    out.args.back().name = "MaxConsecutiveRemoteDays";
+    out.args.back().desc = "Maximum consecutive remote workdays before each additional remote workday incurs one"
+                           " penalty unit. Vacation ('Vac') and holiday cells are skipped and neither count toward nor"
+                           " terminate the run. Set to 0 to disable this objective.";
+    out.args.back().default_val = "0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "2", "3", "5" };
+
+    out.args.emplace_back();
+    out.args.back().name = "ConsecutiveRemoteWeight";
+    out.args.back().desc = "Weight on minimizing consecutive-remote penalty units (a secondary objective).";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.0", "1.0", "2.5" };
@@ -1130,10 +1303,11 @@ OperationDoc OpArgDocScheduleCoverage(){
         " a 'FLAG' row is emitted for every day+requirement whose quota cannot be met; an 'OVERRIDE' row is emitted"
         " for every Remote -> on-site change; a 'TALLY' row reports each staff member's on-site, remote, vacation,"
         " and other day tallies; and an 'OBJECTIVES' row records the total requirement violations, the fairness"
-        " metric value, and the override count.");
+        " metric value, override count, and consecutive-remote penalty.");
     out.notes.emplace_back(
         "The requirement objective of every emitted variation is guaranteed to equal the lexicographic optimum of the"
-        " per-day requirement deficits; variations differ only in the fairness/override secondary objectives.");
+        " per-day requirement deficits; variations differ only in fairness, preference-override, and optional"
+        " consecutive-remote secondary objectives.");
 
     return out;
 }
@@ -1155,6 +1329,8 @@ bool ScheduleCoverage(Drover &DICOM_data,
     const auto NVariationsStr = OptArgs.getValueStr("NVariations").value();
     const auto PreferenceWeightStr = OptArgs.getValueStr("PreferenceWeight").value();
     const auto FairnessWeightStr = OptArgs.getValueStr("FairnessWeight").value();
+    const auto MaxConsecutiveRemoteDaysStr = OptArgs.getValueStr("MaxConsecutiveRemoteDays").value();
+    const auto ConsecutiveRemoteWeightStr = OptArgs.getValueStr("ConsecutiveRemoteWeight").value();
     const auto SeedStr = OptArgs.getValueStr("Seed").value();
 
     TermLists terms;
@@ -1180,13 +1356,18 @@ bool ScheduleCoverage(Drover &DICOM_data,
     config.n_variations = std::stoll(NVariationsStr);
     config.preference_weight = std::stod(PreferenceWeightStr);
     config.fairness_weight = std::stod(FairnessWeightStr);
+    config.max_consecutive_remote_days = std::stoll(MaxConsecutiveRemoteDaysStr);
+    config.consecutive_remote_weight = std::stod(ConsecutiveRemoteWeightStr);
     config.seed = std::stoll(SeedStr);
 
     if(config.n_variations < 1){
         throw std::runtime_error("NVariations must be at least 1");
     }
-    if(config.preference_weight < 0.0 || config.fairness_weight < 0.0){
-        throw std::runtime_error("PreferenceWeight and FairnessWeight must be non-negative");
+    if(config.max_consecutive_remote_days < 0){
+        throw std::runtime_error("MaxConsecutiveRemoteDays must be non-negative");
+    }
+    if(config.preference_weight < 0.0 || config.fairness_weight < 0.0 || config.consecutive_remote_weight < 0.0){
+        throw std::runtime_error("PreferenceWeight, FairnessWeight, and ConsecutiveRemoteWeight must be non-negative");
     }
     if(!(config.fairness_metric == "range" || config.fairness_metric == "variance" || config.fairness_metric == "gini")){
         throw std::runtime_error("FairnessMetric argument not understood");
@@ -1225,6 +1406,8 @@ bool ScheduleCoverage(Drover &DICOM_data,
             out.metadata["ScheduleVariation"] = std::to_string(i + 1);
             out.metadata["ScheduleCoverageFairness"] = format_double(solutions[i].fairness);
             out.metadata["ScheduleCoverageOverrides"] = std::to_string(solutions[i].overrides);
+            out.metadata["ScheduleCoverageConsecutiveRemotePenalty"] =
+                std::to_string(solutions[i].consecutive_remote_penalty);
             out.metadata["ScheduleCoverageViolations"] = join(solutions[i].violation_sum, ",");
 
             auto st = std::make_shared<Sparse_Table>();
