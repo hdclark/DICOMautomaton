@@ -54,7 +54,8 @@ int64_t count_value(const tables::table2 &t, const std::string &v){
 std::string signature(const std::vector<Solution> &sols){
     std::stringstream ss;
     for(const auto &s : sols){
-        ss << s.fairness << "/" << s.overrides << "/" << s.violation_sum.size() << ":";
+        ss << s.fairness << "/" << s.overrides << "/" << s.consecutive_remote_penalty
+           << "/" << s.violation_sum.size() << ":";
         for(const int64_t v : s.staff_onsite) ss << v << ",";
         ss << ";";
         for(const auto &day : s.day_onsite){
@@ -363,6 +364,90 @@ TEST_CASE("ScheduleCoverage: deterministic with a fixed seed"){
 
     REQUIRE(a.size() == b.size());
     CHECK(signature(a) == signature(b));
+}
+
+TEST_CASE("ScheduleCoverage: non-zero preference weight is honored throughout Pareto annealing"){
+    // XB is fixed on-site on both days. Overriding XA's remote preference would improve fairness from 2 to 0, so the
+    // old fairness-only sweep (which silently set preference weight to zero) produced an override-heavy Pareto point.
+    // With fairness explicitly disabled and preference weight enabled, no annealing run may prefer such an override.
+    const auto t = make_table({
+        { "Date", "XA", "XB" },
+        { "Mon", "Remote", "onsite" },
+        { "Tues", "Remote", "onsite" },
+    });
+
+    const auto schedule = parse_schedule(t, "^Requirement", "^Date$", default_terms());
+    const auto model = build_requirement_model(schedule);
+
+    SolverConfig config;
+    config.fairness_weight = 0.0;
+    config.preference_weight = 1.0;
+    config.n_variations = 3;
+    config.seed = 7;
+
+    const auto solutions = produce_variations(schedule, model, config);
+    REQUIRE(!solutions.empty());
+    for(const auto &s : solutions){
+        CHECK(s.overrides == 0);
+    }
+}
+
+TEST_CASE("ScheduleCoverage: consecutive remote penalty skips vacation and holiday days"){
+    const auto t = make_table({
+        { "Date", "XA" },
+        { "Mon", "x" },
+        { "Tues", "Vac" },
+        { "Wed", "x" },
+        { "Thurs", "Holiday" },
+        { "Fri", "x" },
+        { "Sat", "onsite" },
+        { "Sun", "x" },
+    });
+
+    const auto schedule = parse_schedule(t, "^Requirement", "^Date$", default_terms());
+    std::vector<std::vector<int64_t>> all_remote(schedule.days.size());
+
+    // Mon/Wed/Fri form a three-remote-workday run; Vac and Holiday are skipped rather than counted. Sat breaks it.
+    CHECK(consecutive_remote_penalty(schedule, all_remote, 2) == 1);
+    CHECK(consecutive_remote_penalty(schedule, all_remote, 3) == 0);
+    CHECK(consecutive_remote_penalty(schedule, all_remote, 0) == 0);
+}
+
+TEST_CASE("ScheduleCoverage: consecutive remote objective breaks long remote runs"){
+    const auto t = make_table({
+        { "Date", "XA" },
+        { "Mon", "x" },
+        { "Tues", "x" },
+        { "Wed", "x" },
+        { "Thurs", "x" },
+        { "Fri", "x" },
+    });
+
+    const auto schedule = parse_schedule(t, "^Requirement", "^Date$", default_terms());
+    const auto model = build_requirement_model(schedule);
+
+    SolverConfig config;
+    config.fairness_weight = 0.0;
+    config.preference_weight = 0.0;
+    config.max_consecutive_remote_days = 2;
+    config.consecutive_remote_weight = 1.0;
+    config.n_variations = 3;
+    config.seed = 19;
+
+    const auto solutions = produce_variations(schedule, model, config);
+    REQUIRE(!solutions.empty());
+    for(const auto &s : solutions){
+        CHECK(s.consecutive_remote_penalty == 0);
+    }
+}
+
+TEST_CASE("ScheduleCoverage: operation docs expose consecutive remote controls"){
+    const auto doc = OpArgDocScheduleCoverage();
+    const auto has_arg = [&](const std::string &name){
+        return std::any_of(doc.args.begin(), doc.args.end(), [&](const auto &arg){ return arg.name == name; });
+    };
+    CHECK(has_arg("MaxConsecutiveRemoteDays"));
+    CHECK(has_arg("ConsecutiveRemoteWeight"));
 }
 
 TEST_CASE("ScheduleCoverage: rendering preserves immutable cells and removes undecided terms"){
