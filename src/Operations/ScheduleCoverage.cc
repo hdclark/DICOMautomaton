@@ -1679,11 +1679,11 @@ OperationDoc OpArgDocScheduleCoverage(){
     out.args.emplace_back();
     out.args.back().name = "RequirementRegex";
     out.args.back().desc =
-        "Legacy-named regular expression identifying Hard Constraint / Soft Constraint labels in column 0."
+        "Regular expression identifying Hard Constraint / Soft Constraint labels in column 0."
         " Constraint-looking rows excluded by this regex cause an error rather than being silently ignored.";
-    out.args.back().default_val = "^(Hard|Soft)\\s+Constraint|^Requirement";
+    out.args.back().default_val = "^(Hard|Soft).Constraint";
     out.args.back().expected = true;
-    out.args.back().examples = { "^(Hard|Soft)\\s+Constraint|^Requirement", "Constraint" };
+    out.args.back().examples = { "^(Hard|Soft).Constraint", "Constraint" };
 
     out.args.emplace_back();
     out.args.back().name = "HeaderRegex";
