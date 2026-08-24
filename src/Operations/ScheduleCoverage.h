@@ -76,7 +76,7 @@ struct Day {
 };
 
 struct ParsedSchedule {
-    std::vector<Requirement> requirements;      // Hard constraints.
+    std::vector<Requirement> requirements;
     std::vector<SoftConstraint> soft_constraints;
     std::vector<std::string> staff;
     std::vector<int64_t> staff_columns;
@@ -105,7 +105,7 @@ struct ConstraintModel {
 struct DayCandidate {
     std::vector<int64_t> onsite;
     std::vector<int64_t> overridden;
-    std::vector<int64_t> violation; // Per-hard-constraint deficit.
+    std::vector<int64_t> violation;
 };
 
 struct Solution {
@@ -113,22 +113,36 @@ struct Solution {
     std::vector<std::vector<int64_t>> day_overridden;
     std::vector<std::vector<int64_t>> day_violation;
     std::vector<int64_t> violation_sum;
-    std::vector<int64_t> soft_penalty; // Raw penalty units, one value per soft constraint.
+    std::vector<int64_t> soft_penalty;
+    std::vector<int64_t> staff_onsite;
+
     int64_t hard_violation_units = 0;
     int64_t overrides = 0;
     double fairness = 0.0;
     double soft_constraint_cost = 0.0;
-    double annealing_cost = 0.0;       // Always evaluated with the end-user's configured weights.
-    bool pareto_nondominated = false;  // Nondominated among all unique schedules explored in this invocation.
-    std::vector<int64_t> staff_onsite;
+    double annealing_cost = 0.0;
+
+    bool hard_optimal = false;       // Matches the provably lexicographic-optimal hard-violation vector.
+    bool pareto_nondominated = false;
+
+    // Search diagnostics are copied onto every returned solution so rendered tables are auditable.
+    int64_t annealing_runs = 0;
+    int64_t annealing_proposals = 0;
+    int64_t requested_variations = 0;
+    int64_t returned_variations = 0;
 };
 
 struct SolverConfig {
     std::string fairness_metric = "range";
     double fairness_weight = 1.0;
     double preference_weight = 1.0;
+
+    // This weight controls the cost of *temporary* hard-constraint excursions during annealing and
+    // contributes to the reported scalar cost for unavoidable deficits. Returned solutions are
+    // always restricted to the lexicographically optimal hard-constraint surface.
     double requirement_violation_weight = 1000.0;
-    int64_t annealing_iterations = 100000; // Per annealing run; 0 disables annealing and returns the baseline/front.
+
+    int64_t annealing_iterations = 100000; // Proposals per annealing run. 0 disables annealing.
     int64_t seed = 0;
     int64_t n_variations = 3;
 };
@@ -141,8 +155,8 @@ bool parse_quota(const std::string &quota,
                  int64_t &min_onsite,
                  std::vector<std::string> &subset);
 
-// The regex is applied to the first column and normally matches both "Hard Constraint N" and "Soft Constraint N".
-// Hard constraints use columns 1-2. Soft constraints use columns 1-3, where column 3 must be Weight=<non-negative>.
+// The legacy argument name RequirementRegex now identifies both Hard Constraint and Soft Constraint rows.
+// Constraint-looking rows excluded by this regex are rejected rather than silently ignored.
 ParsedSchedule parse_schedule(const tables::table2 &table,
                               const std::string &constraint_regex,
                               const std::string &header_regex,
@@ -171,6 +185,7 @@ std::vector<Solution> produce_variations(const ParsedSchedule &schedule,
 
 tables::table2 render_variation(const tables::table2 &original,
                                 const ParsedSchedule &schedule,
-                                const Solution &solution);
+                                const Solution &solution,
+                                const SolverConfig *config = nullptr);
 
 } // namespace ScheduleCoverageCore
