@@ -1,7 +1,6 @@
 // OptimizeSchedule.cc - Automated onsite/remote schedule optimization.
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -103,108 +102,6 @@ double parse_decimal(const std::string &text, const std::string &what){
     return v;
 }
 
-struct CivilDate {
-    int year = 0;
-    int month = 0;
-    int day = 0;
-    int64_t key = 0;
-    int iso_year = 0;
-    int iso_week = 0;
-    std::string iso;
-};
-
-bool leap(int y){ return ((y % 4) == 0 && (y % 100) != 0) || ((y % 400) == 0); }
-
-int64_t days_from_civil(int y, unsigned m, unsigned d){
-    y -= (m <= 2);
-    const int era = (y >= 0 ? y : y - 399) / 400;
-    const unsigned yoe = static_cast<unsigned>(y - era * 400);
-    const unsigned adjusted_month = m > 2 ? m - 3U : m + 9U;
-    const unsigned doy = (153U * adjusted_month + 2U) / 5U + d - 1U;
-    const unsigned doe = yoe * 365U + yoe / 4U - yoe / 100U + doy;
-    return static_cast<int64_t>(era) * 146097 + static_cast<int64_t>(doe) - 719468;
-}
-
-std::array<int, 3> civil_from_days(int64_t z){
-    z += 719468;
-    const int64_t era = (z >= 0 ? z : z - 146096) / 146097;
-    const unsigned doe = static_cast<unsigned>(z - era * 146097);
-    const unsigned yoe = (doe - doe / 1460U + doe / 36524U - doe / 146096U) / 365U;
-    int y = static_cast<int>(yoe) + static_cast<int>(era) * 400;
-    const unsigned doy = doe - (365U * yoe + yoe / 4U - yoe / 100U);
-    const unsigned mp = (5U * doy + 2U) / 153U;
-    const unsigned d = doy - (153U * mp + 2U) / 5U + 1U;
-    const unsigned m = mp < 10 ? mp + 3U : mp - 9U;
-    y += (m <= 2);
-    return {{y, static_cast<int>(m), static_cast<int>(d)}};
-}
-
-int weekday_monday0(int64_t key){
-    int v = static_cast<int>((key + 3) % 7);
-    if(v < 0) v += 7;
-    return v;
-}
-
-CivilDate make_date(int y, int m, int d, const std::string &source){
-    if(y < 1 || y > 9999 || m < 1 || m > 12) throw std::invalid_argument("invalid Gregorian date '" + source + "'");
-    static const int month_days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
-    const int md = month_days[m - 1] + ((m == 2 && leap(y)) ? 1 : 0);
-    if(d < 1 || d > md) throw std::invalid_argument("invalid Gregorian date '" + source + "'");
-    CivilDate out;
-    out.year = y; out.month = m; out.day = d; out.key = days_from_civil(y, static_cast<unsigned>(m), static_cast<unsigned>(d));
-    const int wd = weekday_monday0(out.key);
-    const auto thursday = civil_from_days(out.key + (3 - wd));
-    out.iso_year = thursday[0];
-    const int64_t jan4 = days_from_civil(out.iso_year, 1, 4);
-    const int64_t week1 = jan4 - weekday_monday0(jan4);
-    out.iso_week = static_cast<int>((out.key - week1) / 7 + 1);
-    std::ostringstream os;
-    os.imbue(std::locale::classic());
-    os << std::setfill('0') << std::setw(4) << y << '-' << std::setw(2) << m << '-' << std::setw(2) << d;
-    out.iso = os.str();
-    return out;
-}
-
-bool try_parse_date(const std::string &source, CivilDate &out, std::string &error){
-    const auto s = trim(source);
-    std::smatch m;
-    try {
-        static const std::regex iso(R"(^([0-9]{4})-([0-9]{2})-([0-9]{2})$)", std::regex::icase);
-        if(std::regex_match(s, m, iso)){
-            out = make_date(static_cast<int>(parse_u64(m[1], "year")), static_cast<int>(parse_u64(m[2], "month")), static_cast<int>(parse_u64(m[3], "day")), source);
-            return true;
-        }
-        static const std::regex words(R"(^(?:([A-Za-z]+)\s*,\s*)?([A-Za-z]+)\s+([0-9]{1,2})\s*,\s*([0-9]{4})$)");
-        if(!std::regex_match(s, m, words)) return false;
-        static const std::map<std::string, int> months = {
-            {"jan",1},{"january",1},{"feb",2},{"february",2},{"mar",3},{"march",3},{"apr",4},{"april",4},
-            {"may",5},{"jun",6},{"june",6},{"jul",7},{"july",7},{"aug",8},{"august",8},{"sep",9},{"sept",9},
-            {"september",9},{"oct",10},{"october",10},{"nov",11},{"november",11},{"dec",12},{"december",12}
-        };
-        const auto mi = months.find(fold(m[2]));
-        if(mi == months.end()) throw std::invalid_argument("unknown English month in date '" + source + "'");
-        out = make_date(static_cast<int>(parse_u64(m[4], "year")), mi->second, static_cast<int>(parse_u64(m[3], "day")), source);
-        if(m[1].matched){
-            static const std::map<std::string, int> weekdays = {
-                {"mon",0},{"monday",0},{"tue",1},{"tues",1},{"tuesday",1},{"wed",2},{"wednesday",2},
-                {"thu",3},{"thur",3},{"thurs",3},{"thursday",3},{"fri",4},{"friday",4},{"sat",5},{"saturday",5},
-                {"sun",6},{"sunday",6}
-            };
-            const auto wi = weekdays.find(fold(m[1]));
-            if(wi == weekdays.end()) throw std::invalid_argument("unknown weekday in date '" + source + "'");
-            if(wi->second != weekday_monday0(out.key)) throw std::invalid_argument("weekday does not match Gregorian date '" + source + "'");
-        }
-        return true;
-    } catch(const std::invalid_argument &e){ error = e.what(); return false; }
-}
-
-bool looks_date_like(const std::string &source){
-    const auto s = trim(source);
-    static const std::regex numeric(R"(^[0-9]{4}\s*[-/]\s*[0-9]{1,2}\s*[-/]\s*[0-9]{1,2}$)");
-    static const std::regex english(R"(^(?:[A-Za-z]+\s*,\s*)?[A-Za-z]+\s+[0-9]{1,2}\s*,?\s+[0-9]{4}$)");
-    return std::regex_match(s, numeric) || std::regex_match(s, english);
-}
-
 enum class ConstraintKind { Minimum, Group, Consecutive, Exclusivity, Weekly, FairRemote, FairOverrides };
 
 struct Constraint {
@@ -230,17 +127,16 @@ struct Cell {
 struct Staff { std::string label; std::string key; int64_t column = 0; };
 
 struct Day {
-    CivilDate date;
-    std::string date_text;
+    std::string label;
     int64_t row = 0;
+    std::size_t week = 0;
     bool active = true;
-    std::string exclusion;
     std::vector<Cell> cells;
 };
 
 struct Variable { std::size_t day = 0; std::size_t staff = 0; bool preference = false; int64_t row = 0; int64_t col = 0; };
 struct Feasibility { std::size_t day = 0; std::size_t constraint = 0; uint64_t maximum = 0; };
-struct Week { int year = 0; int week = 0; std::vector<std::size_t> days; };
+struct Week { std::size_t index = 0; std::vector<std::size_t> days; };
 
 struct Problem {
     std::vector<Staff> staff;
@@ -379,7 +275,7 @@ Constraint parse_constraint(const RawConstraint &raw, const Problem &p){
     return c;
 }
 
-Problem parse_problem(const Sparse_Table &source, const std::set<std::string> &excluded_statuses){
+Problem parse_problem(const Sparse_Table &source){
     const auto &t = source.table;
     if(t.data.empty()) throw std::invalid_argument("OptimizeSchedule selected table is empty");
     for(const auto &cell : t.data) if(cell.val == report_marker) throw std::invalid_argument("selected table already contains a Schedule Optimizer Report; select the original template");
@@ -392,8 +288,7 @@ Problem parse_problem(const Sparse_Table &source, const std::set<std::string> &e
     int64_t header_date_column = 0;
     std::vector<std::pair<int64_t, std::string>> header_layout;
     std::set<int64_t> staff_columns;
-    std::set<int64_t> seen_dates;
-    int64_t previous_date = std::numeric_limits<int64_t>::min();
+    std::size_t current_week = 0;
     for(int64_t row = rb.first;; ++row){
         int64_t first_col = 0;
         std::string first;
@@ -439,42 +334,37 @@ Problem parse_problem(const Sparse_Table &source, const std::set<std::string> &e
                         throw std::invalid_argument(row_error(row, layout[i].first, "schedule header differs from the first Date header"));
                 }
             }
+            current_week = p.active_weeks.size();
+            p.active_weeks.push_back({current_week, {}});
         }else{
-            CivilDate date;
-            std::string date_error;
-            const bool valid_date = try_parse_date(first, date, date_error);
-            if(!in_block){
-                if(valid_date || !date_error.empty() || looks_date_like(first))
-                    throw std::invalid_argument(row_error(row, first_col, date_error.empty() ? "schedule date-like row appears before a Date header or is malformed" : date_error));
-            }else if(valid_date){
+            bool staff_populated = false;
+            for(const auto &staff : p.staff) staff_populated = staff_populated || !trim(t.value(row, staff.column).value_or("")).empty();
+            if(in_block && staff_populated){
                 if(first_col != header_date_column) throw std::invalid_argument(row_error(row, first_col, "date is not in the Date header column"));
-                if(!seen_dates.insert(date.key).second) throw std::invalid_argument(row_error(row, first_col, "duplicate schedule date '" + first + "'"));
-                if(date.key <= previous_date) throw std::invalid_argument(row_error(row, first_col, "schedule dates must be strictly increasing"));
-                previous_date = date.key;
                 Day day;
-                day.date = date; day.date_text = first; day.row = row;
+                day.label = first; day.row = row; day.week = current_week;
+                bool holiday = false;
+                for(int64_t col = cb.first; col <= cb.second; ++col){
+                    holiday = holiday || canonical_status(t.value(row, col).value_or("")) == "holiday";
+                }
                 for(std::size_t s = 0; s < p.staff.size(); ++s){
                     const auto val = t.value(row, p.staff[s].column).value_or("");
-                    if(trim(val).empty()) throw std::invalid_argument(row_error(row, p.staff[s].column, "missing staff status cell"));
+                    if(!holiday && trim(val).empty()) throw std::invalid_argument(row_error(row, p.staff[s].column, "missing staff status cell"));
                     Cell cell;
                     cell.original = val; cell.status = canonical_status(val);
-                    cell.mutable_cell = cell.status == "x" || cell.status == "pref";
+                    cell.mutable_cell = !holiday && (cell.status == "x" || cell.status == "pref");
                     cell.preference = cell.status == "pref";
                     day.cells.push_back(std::move(cell));
                 }
-                for(int64_t col = cb.first; col <= cb.second; ++col){
+                if(!holiday) for(int64_t col = cb.first; col <= cb.second; ++col){
                     if(col == first_col || staff_columns.count(col) != 0) continue;
                     if(!trim(t.value(row, col).value_or("")).empty()) throw std::invalid_argument(row_error(row, col, "populated cell lies outside declared staff columns"));
                 }
-                bool unanimous = !excluded_statuses.empty();
-                const auto status = day.cells.front().status;
-                for(const auto &cell : day.cells) unanimous = unanimous && cell.status == status;
-                if(unanimous && excluded_statuses.count(status) != 0){ day.active = false; day.exclusion = status; }
+                day.active = !holiday;
+                if(day.active) p.active_weeks[current_week].days.push_back(p.days.size());
                 p.days.push_back(std::move(day));
             }else{
-                bool staff_populated = false;
-                for(const auto &staff : p.staff) staff_populated = staff_populated || !trim(t.value(row, staff.column).value_or("")).empty();
-                if(staff_populated || !date_error.empty()) throw std::invalid_argument(row_error(row, first_col, date_error.empty() ? "non-date row has populated staff columns inside a schedule block" : date_error));
+                in_block = false;
             }
         }
         if(row == rb.second) break;
@@ -496,13 +386,8 @@ Problem parse_problem(const Sparse_Table &source, const std::set<std::string> &e
             }
         }
     }
-    if(active_days == 0) throw std::invalid_argument("ExcludeUnanimousStatuses leaves no active schedule days");
-    if(p.variables.empty()) throw std::invalid_argument("OptimizeSchedule found no mutable x or Pref schedule cells");
-    std::map<std::pair<int, int>, std::vector<std::size_t>> active_weeks;
-    for(std::size_t d = 0; d < p.days.size(); ++d){
-        if(p.days[d].active) active_weeks[{p.days[d].date.iso_year, p.days[d].date.iso_week}].push_back(d);
-    }
-    for(auto &entry : active_weeks) p.active_weeks.push_back({entry.first.first, entry.first.second, std::move(entry.second)});
+    if(p.variables.empty() && active_days != 0) throw std::invalid_argument("OptimizeSchedule found no mutable x or Pref schedule cells");
+    p.active_weeks.erase(std::remove_if(p.active_weeks.begin(), p.active_weeks.end(), [](const Week &w){ return w.days.empty(); }), p.active_weeks.end());
     for(const auto &raw : raw_constraints) p.constraints.push_back(parse_constraint(raw, p));
     for(std::size_t ci = 0; ci < p.constraints.size(); ++ci){
         const auto &c = p.constraints[ci];
@@ -523,7 +408,7 @@ Problem parse_problem(const Sparse_Table &source, const std::set<std::string> &e
 }
 
 struct DayViolation { std::size_t day = 0; std::size_t constraint = 0; uint64_t observed = 0; uint64_t required = 0; std::string description; };
-struct WeeklyRecord { int year = 0; int week = 0; std::size_t staff = 0; std::size_t constraint = 0; uint64_t count = 0; uint64_t limit = 0; uint64_t excess = 0; };
+struct WeeklyRecord { std::size_t week = 0; std::size_t staff = 0; std::size_t constraint = 0; uint64_t count = 0; uint64_t limit = 0; uint64_t excess = 0; };
 struct FairDetail { std::size_t staff = 0; uint64_t numerator = 0; uint64_t denominator = 0; double ratio = 0.0; };
 struct ConstraintDetail { std::vector<FairDetail> fairness; double mean = 0.0; double deviation = 0.0; };
 
@@ -571,7 +456,7 @@ Score score_candidate(const Problem &p, const std::vector<uint8_t> &a, bool deta
                     if(detailed && c.weight > 0.0 && deficit > 0) out.violations.push_back({d, ci, count, c.requirement, "coverage deficit of " + std::to_string(deficit) + " staff using statuses=" + status_set_text(c.statuses)});
                 }
             }
-            component /= active_days;
+            component = active_days == 0.0 ? 0.0 : component / active_days;
         }else if(c.kind == ConstraintKind::Consecutive){
             uint64_t excess_total = 0;
             for(std::size_t s = 0; s < p.staff.size(); ++s){
@@ -587,7 +472,7 @@ Score score_candidate(const Problem &p, const std::vector<uint8_t> &a, bool deta
                     }else run = 0;
                 }
             }
-            component = static_cast<double>(excess_total) / (active_days * static_cast<double>(p.staff.size()));
+            component = active_days == 0.0 ? 0.0 : static_cast<double>(excess_total) / (active_days * static_cast<double>(p.staff.size()));
         }else if(c.kind == ConstraintKind::Weekly){
             uint64_t excess_total = 0, denominator = 0;
             for(const auto &limit : c.weekly_limits){
@@ -602,7 +487,7 @@ Score score_candidate(const Problem &p, const std::vector<uint8_t> &a, bool deta
                     }
                     const uint64_t excess = count > limit.second ? count - limit.second : 0;
                     excess_total += excess;
-                    if(detailed) out.weekly.push_back({week.year, week.week, limit.first, ci, count, limit.second, excess});
+                    if(detailed) out.weekly.push_back({week.index, limit.first, ci, count, limit.second, excess});
                 }
             }
             component = denominator == 0 ? 0.0 : static_cast<double>(excess_total) / static_cast<double>(denominator);
@@ -928,35 +813,6 @@ SearchResult optimize(const Problem &p, const Settings &settings, std::chrono::s
     const auto add_unique = [&](std::vector<Entry> &dest, const Entry &e){
         if(std::none_of(dest.begin(), dest.end(), [&](const Entry &x){ return x.assignment == e.assignment; })) dest.push_back(e);
     };
-    while(selected.size() < settings.outputs){
-        if(settings.runtime > 0.0 && clock::now() >= selection_deadline) break;
-        std::size_t pick = store.archive.size();
-        double best_distance = -1.0;
-        std::vector<double> mins, spans;
-        if(!store.archive.empty() && !store.archive.front().pareto.empty()){
-            mins.assign(store.archive.front().pareto.size(), std::numeric_limits<double>::infinity());
-            std::vector<double> maxs(mins.size(), -std::numeric_limits<double>::infinity());
-            for(const auto &e : store.archive) for(std::size_t j = 0; j < mins.size(); ++j){ mins[j] = std::min(mins[j], e.pareto[j]); maxs[j] = std::max(maxs[j], e.pareto[j]); }
-            spans.resize(mins.size()); for(std::size_t j = 0; j < mins.size(); ++j) spans[j] = maxs[j] - mins[j];
-        }
-        for(std::size_t i = 0; i < store.archive.size(); ++i){
-            if(std::any_of(selected.begin(), selected.end(), [&](const Entry &x){ return x.assignment == store.archive[i].assignment; })) continue;
-            double nearest = std::numeric_limits<double>::infinity();
-            for(const auto &chosen : selected){
-                double sum = 0.0;
-                for(std::size_t j = 0; j < spans.size(); ++j){ const double diff = spans[j] <= 0.0 ? 0.0 : (store.archive[i].pareto[j] - chosen.pareto[j]) / spans[j]; sum += diff * diff; }
-                nearest = std::min(nearest, std::sqrt(sum));
-            }
-            if(pick == store.archive.size() || nearest > best_distance ||
-               (nearest == best_distance &&
-                (store.archive[i].score.objective < store.archive[pick].score.objective ||
-                 (store.archive[i].score.objective == store.archive[pick].score.objective && store.archive[i].sequence < store.archive[pick].sequence)))){
-                pick = i; best_distance = nearest;
-            }
-        }
-        if(pick == store.archive.size()) break;
-        add_unique(selected, store.archive[pick]);
-    }
     for(const auto &e : store.elite) if(selected.size() < settings.outputs) add_unique(selected, e);
     std::sort(selected.begin(), selected.end(), better_entry);
     SearchResult result;
@@ -1024,17 +880,16 @@ std::shared_ptr<Sparse_Table> render(const Sparse_Table &source, const Problem &
         report_row(out->table, row, {report_marker, "Component", std::to_string(c.row), c.label, number(c.weight), number(full.components[ci]), number(c.weight * full.components[ci]), c.weight == 0.0 ? "disabled/advisory" : "active"});
     }
     auto violations = full.violations;
-    std::sort(violations.begin(), violations.end(), [&](const DayViolation &a, const DayViolation &b){ return std::tie(p.days[a.day].date.key, p.constraints[a.constraint].row) < std::tie(p.days[b.day].date.key, p.constraints[b.constraint].row); });
-    for(const auto &v : violations) report_row(out->table, row, {report_marker, "DayViolation", p.days[v.day].date.iso, std::to_string(p.constraints[v.constraint].row), p.constraints[v.constraint].label, std::to_string(v.observed), std::to_string(v.required), v.description});
+    std::sort(violations.begin(), violations.end(), [&](const DayViolation &a, const DayViolation &b){ return std::tie(a.day, p.constraints[a.constraint].row) < std::tie(b.day, p.constraints[b.constraint].row); });
+    for(const auto &v : violations) report_row(out->table, row, {report_marker, "DayViolation", p.days[v.day].label, std::to_string(p.constraints[v.constraint].row), p.constraints[v.constraint].label, std::to_string(v.observed), std::to_string(v.required), v.description});
     for(std::size_t d = 0; d < p.days.size(); ++d) for(std::size_t s = 0; s < p.staff.size(); ++s){
         const auto &cell = p.days[d].cells[s];
-        if(cell.preference && entry.assignment[cell.variable]) report_row(out->table, row, {report_marker, "Override", p.days[d].date.iso, p.staff[s].label, "Pref", "Onsite*", "remote preference overridden"});
+        if(p.days[d].active && cell.preference && entry.assignment[cell.variable]) report_row(out->table, row, {report_marker, "Override", p.days[d].label, p.staff[s].label, "Pref", "Onsite*", "remote preference overridden"});
     }
     auto weekly = full.weekly;
-    std::sort(weekly.begin(), weekly.end(), [](const WeeklyRecord &a, const WeeklyRecord &b){ return std::tie(a.year,a.week,a.staff,a.constraint) < std::tie(b.year,b.week,b.staff,b.constraint); });
+    std::sort(weekly.begin(), weekly.end(), [](const WeeklyRecord &a, const WeeklyRecord &b){ return std::tie(a.week,a.staff,a.constraint) < std::tie(b.week,b.staff,b.constraint); });
     for(const auto &w : weekly){
-        std::ostringstream wk; wk.imbue(std::locale::classic()); wk << w.year << "-W" << std::setfill('0') << std::setw(2) << w.week;
-        report_row(out->table, row, {report_marker, "Weekly", wk.str(), p.staff[w.staff].label, p.constraints[w.constraint].label, std::to_string(w.count), std::to_string(w.limit), std::to_string(w.excess)});
+        report_row(out->table, row, {report_marker, "Weekly", "Week " + std::to_string(w.week + 1U), p.staff[w.staff].label, p.constraints[w.constraint].label, std::to_string(w.count), std::to_string(w.limit), std::to_string(w.excess)});
     }
     for(std::size_t s = 0; s < p.staff.size(); ++s){
         uint64_t assigned_on = 0, assigned_remote = 0, pref = 0, override = 0, total_on = 0, total_remote = 0;
@@ -1053,8 +908,7 @@ std::shared_ptr<Sparse_Table> render(const Sparse_Table &source, const Problem &
         const auto eligible = assigned_on + assigned_remote;
         report_row(out->table, row, {report_marker, "StaffTally", p.staff[s].label, std::to_string(assigned_on), std::to_string(assigned_remote), std::to_string(pref), std::to_string(override), std::to_string(assigned_remote), eligible ? number(static_cast<double>(assigned_remote) / eligible) : "0", std::to_string(total_on), std::to_string(total_remote)});
     }
-    for(const auto &day : p.days) if(!day.active) report_row(out->table, row, {report_marker, "ExcludedDay", day.date.iso, day.exclusion, "unanimous explicitly excluded status"});
-    for(const auto &f : p.feasibility) report_row(out->table, row, {report_marker, "Feasibility", p.days[f.day].date.iso, std::to_string(p.constraints[f.constraint].row), p.constraints[f.constraint].label, std::to_string(f.maximum), std::to_string(p.constraints[f.constraint].requirement), "daily coverage requirement is provably impossible independently of other constraints"});
+    for(const auto &f : p.feasibility) report_row(out->table, row, {report_marker, "Feasibility", p.days[f.day].label, std::to_string(p.constraints[f.constraint].row), p.constraints[f.constraint].label, std::to_string(f.maximum), std::to_string(p.constraints[f.constraint].requirement), "daily coverage requirement is provably impossible independently of other constraints"});
     return out;
 }
 
@@ -1065,7 +919,7 @@ std::string required_arg(const OperationArgPkg &args, const std::string &name){
 }
 
 Settings parse_settings(const OperationArgPkg &args){
-    if(!args.containsExactly({"TableSelection", "RandomSeed", "Iterations", "RuntimeSeconds", "OutputSchedules", "ParetoArchiveSize", "TemperatureStart", "TemperatureEnd", "RestartCount", "ExcludeUnanimousStatuses", "TableLabel"}))
+    if(!args.containsExactly({"TableSelection", "RandomSeed", "Iterations", "RuntimeSeconds", "OutputSchedules", "ParetoArchiveSize", "TemperatureStart", "TemperatureEnd", "RestartCount", "TableLabel"}))
         throw std::invalid_argument("OptimizeSchedule requires exactly its documented arguments; an argument is missing or unknown");
     Settings s;
     s.seed = parse_u64(required_arg(args, "RandomSeed"), "RandomSeed");
@@ -1103,7 +957,8 @@ OperationDoc OpArgDocOptimizeSchedule(){
     out.notes.emplace_back("Default counted statuses are Onsite for minimum_onsite/group, Onsite|Prim|Sec for exclusivity, and Remote for consecutive/weekly/fairness_remote. A trailing statuses=StatusA|StatusB policy replaces that default for every type except fairness_overrides; status matching is case-insensitive and Onsite* is canonicalized to Onsite.");
     out.notes.emplace_back("fairness_remote considers only active mutable cells for each staff member: its custom statuses policy selects which generated Onsite/Remote assignments form the numerator, while all eligible mutable cells form the denominator. fairness_overrides instead counts Pref cells assigned Onsite and combines override rate with staff-rate deviation.");
     out.notes.emplace_back("Report direct-violations counts emitted per-day/per-occurrence violation records and excludes aggregate fairness deviation. StaffTally reports generated mutable Onsite, generated mutable Remote, Pref cells, overridden Pref cells, mutable Remote count and fraction, then total active-day Onsite and Remote including fixed cells; Weekly and Feasibility records are separate.");
-    out.notes.emplace_back("Pareto labels are relative to the final retained bounded archive, not a proven global Pareto front. Returned schedules do not prove staffing safety or global optimality.");
+    out.notes.emplace_back("Rows containing Holiday are passed through unchanged and excluded from optimization and reports. Schedule row labels are not parsed as dates; repeated Date headers delimit weekly constraint blocks.");
+    out.notes.emplace_back("Pareto labels are relative to the final retained bounded archive, not a proven global Pareto front. Alternatives are emitted in weighted-objective order and do not prove staffing safety or global optimality.");
     out.notes.emplace_back("A seed and iteration count are reproducible only for the same inputs, build, standard-library/platform floating-point behaviour, and optimizer version. Runtime mode is deadline-driven and is not reproducible by seed alone.");
     out.notes.emplace_back("Each annealing chain uses mt19937_64 seeded by a fixed SplitMix64-style mix of RandomSeed and the zero-based chain index. auto temperature samples 16 to 128 seeded single flips, uses the lower median positive objective increase, and chooses the temperature that accepts that increase with probability 0.8; if none is uphill it uses max(1e-9, abs(objective)*1e-3).");
     out.notes.emplace_back("Move probabilities are single flip 65%, same-day swap 15%, same-staff swap 10%, and targeted repair 10%; unavailable moves fall back to a single flip.");
@@ -1119,7 +974,6 @@ OperationDoc OpArgDocOptimizeSchedule(){
     add("TemperatureStart", "auto, or a finite positive initial annealing temperature.", "auto", {"auto", "1.0"});
     add("TemperatureEnd", "Finite positive ending-temperature fraction strictly below one.", "0.001", {"0.001", "0.01"});
     add("RestartCount", "auto uses min(OutputSchedules,8), otherwise an integer in [1,64].", "auto", {"auto", "4"});
-    add("ExcludeUnanimousStatuses", "Case-insensitive | separated statuses whose unanimous fully populated days are inactive.", "", {"", "Holiday", "Holiday|Closure"});
     add("TableLabel", "Base label for emitted tables; a one-based result number is appended.", "Optimized Schedule", {"Optimized Schedule"});
     return out;
 }
@@ -1130,19 +984,24 @@ bool OptimizeSchedule(Drover &DICOM_data,
                       const std::string& FilenameLex){
     const auto settings = parse_settings(OptArgs);
     const auto table_selection = required_arg(OptArgs, "TableSelection");
-    std::set<std::string> excluded;
-    const auto excluded_text = required_arg(OptArgs, "ExcludeUnanimousStatuses");
-    if(!trim(excluded_text).empty()) for(auto &status : split_statuses(excluded_text, 0, 0)) excluded.insert(std::move(status));
     auto selected = Whitelist(All_STs(DICOM_data), table_selection);
     if(selected.size() != 1) throw std::invalid_argument("OptimizeSchedule requires exactly one selected table; selected " + std::to_string(selected.size()));
     const auto source = *selected.front();
     if(!source) throw std::invalid_argument("OptimizeSchedule selected a null table");
-    const auto problem = parse_problem(*source, excluded);
-    for(const auto &f : problem.feasibility) YLOGWARN("OptimizeSchedule: " << problem.days[f.day].date.iso << " constraint row " << problem.constraints[f.constraint].row << " can provide at most " << f.maximum << " of required " << problem.constraints[f.constraint].requirement);
+    const auto problem = parse_problem(*source);
+    for(const auto &f : problem.feasibility) YLOGWARN("OptimizeSchedule: " << problem.days[f.day].label << " constraint row " << problem.constraints[f.constraint].row << " can provide at most " << f.maximum << " of required " << problem.constraints[f.constraint].requirement);
     if(settings.runtime > 0.0) YLOGINFO("OptimizeSchedule runtime mode ignores Iterations and reserves finalization time");
     YLOGINFO("OptimizeSchedule optimizing " << problem.variables.size() << " mutable cells across " << problem.days.size() << " schedule days with seed " << settings.seed);
     const auto started = std::chrono::steady_clock::now();
-    auto search = optimize(problem, settings, started);
+    SearchResult search;
+    if(problem.variables.empty()){
+        std::vector<uint8_t> assignment;
+        auto score = score_candidate(problem, assignment, false);
+        search.selected.push_back({assignment, score, pareto_vector(problem, score), 0});
+        search.archive = search.selected;
+    }else{
+        search = optimize(problem, settings, started);
+    }
     if(search.selected.empty()) throw std::runtime_error("OptimizeSchedule search retained no candidates");
     Explicator X(FilenameLex);
     std::list<std::shared_ptr<Sparse_Table>> outputs;

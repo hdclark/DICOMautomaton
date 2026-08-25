@@ -134,9 +134,8 @@ TEST_CASE("OptimizeSchedule documents its complete public argument contract"){
     for(const auto &arg : doc.args) names.insert(arg.name);
     CHECK(names == std::set<std::string>{"TableSelection", "RandomSeed", "Iterations", "RuntimeSeconds",
                                          "OutputSchedules", "ParetoArchiveSize", "TemperatureStart",
-                                         "TemperatureEnd", "RestartCount", "ExcludeUnanimousStatuses",
-                                         "TableLabel"});
-    CHECK(doc.args.size() == 11U);
+                                         "TemperatureEnd", "RestartCount", "TableLabel"});
+    CHECK(doc.args.size() == 10U);
 }
 
 TEST_CASE("OptimizeSchedule loads and resolves the provided schedule template"){
@@ -168,14 +167,13 @@ TEST_CASE("OptimizeSchedule loads and resolves the provided schedule template"){
     d.table_data.push_back(source);
     const auto source_data = source->table.data;
     run(d, { {"Iterations", "300"}, {"OutputSchedules", "3"}, {"ParetoArchiveSize", "32"},
-             {"RestartCount", "2"}, {"RandomSeed", "20260821"},
-             {"ExcludeUnanimousStatuses", "Holiday"} });
+             {"RestartCount", "2"}, {"RandomSeed", "20260821"} });
     REQUIRE(d.table_data.size() == 4U);
     CHECK(source->table.data == source_data);
     for(auto it = std::next(d.table_data.begin()); it != d.table_data.end(); ++it){
         CHECK(report_rows(**it, "Component").size() == 11U);
         CHECK(report_rows(**it, "StaffTally").size() == 11U);
-        CHECK(report_rows(**it, "ExcludedDay").size() == 2U);
+        CHECK(report_rows(**it, "ExcludedDay").empty());
         CHECK(summary_value(**it, "active-days") == "23");
     }
 }
@@ -247,33 +245,34 @@ TEST_CASE("OptimizeSchedule consecutive runs cross weekends and reset at exclude
         {"2026-09-03", "Away", "Onsite", "x"},
     }));
     run(d, {{"Iterations", "20"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "8"},
-            {"RestartCount", "1"}, {"ExcludeUnanimousStatuses", "Holiday"}});
+            {"RestartCount", "1"}});
     const auto &out = **std::next(d.table_data.begin());
     CHECK(as_double(component_row(out, "max_consecutive_remote")[5]) == doctest::Approx(1.0 / 6.0));
     const auto violations = report_rows(out, "DayViolation");
     REQUIRE(violations.size() == 2U);
     CHECK(violations[0][2] == "2026-08-31");
     CHECK(violations[1][2] == "2026-09-03");
-    REQUIRE(report_rows(out, "ExcludedDay").size() == 1U);
+    CHECK(report_rows(out, "ExcludedDay").empty());
 }
 
-TEST_CASE("OptimizeSchedule weekly limits use ISO week-years"){
+TEST_CASE("OptimizeSchedule weekly limits use repeated schedule headers"){
     Drover d;
     d.table_data.push_back(make_table({
         {"Constraint", "max_weekly_remote", "1", "A=1", "statuses=Away"},
         {"Date", "A", "B"},
         {"2020-12-31", "Away", "x"},
         {"2021-01-01", "Away", "x"},
+        {"Date", "A", "B"},
         {"2021-01-04", "Away", "x"},
     }));
     run(d, {{"Iterations", "20"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "8"}, {"RestartCount", "1"}});
     const auto &out = **std::next(d.table_data.begin());
     const auto weekly = report_rows(out, "Weekly");
     REQUIRE(weekly.size() == 2U);
-    CHECK(weekly[0][2] == "2020-W53");
+    CHECK(weekly[0][2] == "Week 1");
     CHECK(weekly[0][5] == "2");
     CHECK(weekly[0][7] == "1");
-    CHECK(weekly[1][2] == "2021-W01");
+    CHECK(weekly[1][2] == "Week 2");
     CHECK(weekly[1][5] == "1");
     CHECK(as_double(component_row(out, "max_weekly_remote")[5]) == doctest::Approx(1.0 / 3.0));
 }
@@ -478,18 +477,6 @@ TEST_CASE("OptimizeSchedule terminates with conflicting onsite and remote covera
 }
 
 TEST_CASE("OptimizeSchedule rejects malformed inputs without changing the Drover"){
-    SUBCASE("weekday"){
-        check_rejects_unchanged({{"Date", "A"}, {"Tue, Aug 24, 2026", "x"}});
-    }
-    SUBCASE("date"){
-        check_rejects_unchanged({{"Date", "A"}, {"2026-02-30", "x"}});
-    }
-    SUBCASE("date order"){
-        check_rejects_unchanged({{"Date", "A"}, {"2026-08-25", "x"}, {"2026-08-24", "x"}});
-    }
-    SUBCASE("duplicate date"){
-        check_rejects_unchanged({{"Date", "A"}, {"2026-08-24", "x"}, {"Mon, Aug 24, 2026", "x"}});
-    }
     SUBCASE("repeated header layout"){
         check_rejects_unchanged({{"Date", "A"}, {"2026-08-24", "x"}, {"Date", "B"}, {"2026-08-25", "x"}});
     }
@@ -520,10 +507,6 @@ TEST_CASE("OptimizeSchedule rejects malformed inputs without changing the Drover
     SUBCASE("no mutable cells"){
         check_rejects_unchanged({{"Date", "A"}, {"2026-08-24", "Onsite"}});
     }
-    SUBCASE("no active days"){
-        check_rejects_unchanged({{"Date", "A", "B"}, {"2026-08-24", "Holiday", "Holiday"}},
-                                {{"ExcludeUnanimousStatuses", "holiday"}});
-    }
 }
 
 TEST_CASE("OptimizeSchedule rejects zero or multiple selected tables without mutation"){
@@ -546,22 +529,86 @@ TEST_CASE("OptimizeSchedule rejects zero or multiple selected tables without mut
     CHECK(multiple.table_data.back()->table.data == last);
 }
 
-TEST_CASE("OptimizeSchedule excludes only explicitly unanimous statuses"){
+TEST_CASE("OptimizeSchedule passes every row containing Holiday through unchanged"){
     Drover d;
     d.table_data.push_back(make_table({
-        {"Date", "A", "B"},
-        {"2026-08-24", "Holiday", "holiday"},
-        {"2026-08-25", "Holiday", "x"},
+        {"Constraint", "minimum_onsite", "10", "any 1 of A or B"},
+        {"Date", "A", "B", "C"},
+        {"opaque holiday label", "Holiday", "x", ""},
+        {"not a date", "x", "x", "Remote"},
     }));
     run(d, {{"Iterations", "10"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "4"},
-            {"RestartCount", "1"}, {"ExcludeUnanimousStatuses", "HOLIDAY"}});
+            {"RestartCount", "1"}});
     const auto &out = **std::next(d.table_data.begin());
     CHECK(summary_value(out, "active-days") == "1");
-    const auto excluded = report_rows(out, "ExcludedDay");
-    REQUIRE(excluded.size() == 1U);
-    CHECK(excluded[0][2] == "2026-08-24");
-    CHECK(out.table.value(1, 1) == "Holiday");
-    CHECK(out.table.value(1, 2) == "holiday");
+    CHECK(summary_value(out, "mutable-cells") == "2");
+    CHECK(report_rows(out, "ExcludedDay").empty());
+    CHECK(out.table.value(2, 0) == "opaque holiday label");
     CHECK(out.table.value(2, 1) == "Holiday");
-    CHECK(out.table.value(2, 2).value_or("") != "x");
+    CHECK(out.table.value(2, 2) == "x");
+    CHECK(out.table.value(2, 3) == std::nullopt);
+    CHECK(out.table.value(3, 1).value_or("") != "x");
+    CHECK(out.table.value(3, 2).value_or("") != "x");
+}
+
+TEST_CASE("OptimizeSchedule passes through an entirely holiday schedule without searching"){
+    Drover d;
+    auto source = make_table({
+        {"Constraint", "minimum_onsite", "10", "any 1 of A or B"},
+        {"Date", "A", "B"},
+        {"closed", "Holiday", ""},
+    });
+    const auto original = source->table.data;
+    d.table_data.push_back(source);
+    run(d);
+
+    REQUIRE(d.table_data.size() == 2U);
+    CHECK(source->table.data == original);
+    const auto &out = **std::next(d.table_data.begin());
+    CHECK(out.table.value(2, 0) == "closed");
+    CHECK(out.table.value(2, 1) == "Holiday");
+    CHECK(out.table.value(2, 2) == std::nullopt);
+    CHECK(summary_value(out, "active-days") == "0");
+    CHECK(summary_value(out, "mutable-cells") == "0");
+    CHECK(summary_value(out, "actual-iterations") == "0");
+    CHECK(report_rows(out, "DayViolation").empty());
+    CHECK(report_rows(out, "Feasibility").empty());
+}
+
+TEST_CASE("OptimizeSchedule uses opaque row labels in reports without date parsing"){
+    Drover d;
+    d.table_data.push_back(make_table({
+        {"Constraint", "minimum_onsite", "1", "any 2 of A or B"},
+        {"Date", "A", "B"},
+        {"2026-02-30", "Remote", "x"},
+        {"duplicate opaque label", "Remote", "x"},
+        {"duplicate opaque label", "Remote", "x"},
+    }));
+    run(d, {{"Iterations", "10"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "4"},
+            {"RestartCount", "1"}});
+    const auto &out = **std::next(d.table_data.begin());
+    const auto feasibility = report_rows(out, "Feasibility");
+    REQUIRE(feasibility.size() == 3U);
+    CHECK(feasibility[0][2] == "2026-02-30");
+    CHECK(feasibility[1][2] == "duplicate opaque label");
+    CHECK(feasibility[2][2] == "duplicate opaque label");
+}
+
+TEST_CASE("OptimizeSchedule emits objective-ranked viable alternatives"){
+    Drover d;
+    d.table_data.push_back(make_table({
+        {"Constraint", "minimum_onsite", "100", "any 2 of A or B or C"},
+        {"Constraint", "fairness_remote", "1", ""},
+        {"Date", "A", "B", "C"},
+        {"day", "x", "x", "x"},
+    }));
+    run(d, {{"Iterations", "100"}, {"OutputSchedules", "3"}, {"ParetoArchiveSize", "16"},
+            {"RestartCount", "2"}, {"RandomSeed", "7"}});
+    REQUIRE(d.table_data.size() == 4U);
+    for(auto it = std::next(d.table_data.begin()); it != d.table_data.end(); ++it){
+        std::size_t onsite = 0;
+        for(int64_t col = 1; col <= 3; ++col) onsite += ((*it)->table.value(3, col) == "Onsite");
+        CHECK(onsite >= 2U);
+        CHECK(as_double(summary_value(**it, "weighted-objective")) < 1.0);
+    }
 }

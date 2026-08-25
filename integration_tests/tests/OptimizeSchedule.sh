@@ -20,7 +20,6 @@ outputs="schedule-outputs.csv"
     -p OutputSchedules=3 \
     -p ParetoArchiveSize=32 \
     -p RestartCount=2 \
-    -p ExcludeUnanimousStatuses=Holiday \
   -o TestConditions \
     -p Conditions='table_count(4)' \
   -o ExportTables \
