@@ -4,7 +4,7 @@ Status convention: `[ ]` not started, `[~]` in progress, `[x]` complete, `[!]` b
 item should reference the implementing commit or validation evidence.
 
 Validation evidence (2026-08-25): dependency-free standalone release and debug harnesses compiled the
-Operation as strict C++17. All 18 focused doctest cases passed (312 assertions). The provided fixture
+Operation as strict C++17. All 25 focused doctest cases passed (363 assertions). The provided fixture
 completed 250,000 proposals and emitted three schedules in 15.93 seconds in the release harness. Full
 repository CMake configuration was blocked in this environment because its Ygor package configuration
 was not discoverable, although the installed Ygor library and headers supported direct compilation.
@@ -39,14 +39,14 @@ was not discoverable, although the installed Ygor library and headers supported 
 - [x] Implement ISO year/week derivation without timezone dependence.
 - [x] Implement `ExcludeUnanimousStatuses` and report inactive dates.
 - [x] Reject missing staff cells, malformed date-like rows in a schedule block, and zero active days.
-- [x] Classify `x`, `Pref`, `Onsite`, `Onsite*`, `Remote`, known immutable statuses, and arbitrary immutable statuses.
+- [x] Classify `x`, `Pref`, `Onsite`, `Onsite*`, `Remote`, `Remote*`, known immutable statuses, and arbitrary immutable statuses.
 - [x] Reject pre-existing `Schedule Optimizer Report` rows.
 - [x] Reject no schedule, inconsistent shape, populated unknown columns, and no mutable cells.
 
 ## D. Constraint parser and validation
 
 - [x] Parse finite non-negative weights and preserve source row identifiers.
-- [x] Parse `minimum_onsite` and `group (name)` any-of expressions.
+- [x] Parse `minimum_onsite`, `maximum_onsite`, and `group (name)` any-of expressions.
 - [x] Parse `exclusivity (name)` xor expressions with required `any 1` semantics.
 - [x] Parse `max_consecutive_remote` non-negative integer limits.
 - [x] Parse one or more `max_weekly_remote` staff-limit assignments.
@@ -60,6 +60,7 @@ was not discoverable, although the installed Ygor library and headers supported 
 
 - [x] Implement candidate semantic-status lookup without rendering strings.
 - [x] Implement normalized minimum onsite cost and daily deficit records.
+- [x] Implement normalized maximum onsite cost and daily excess records.
 - [x] Implement independent normalized group costs, including overlap cases.
 - [x] Implement exclusivity excess cost and present-staff violation records.
 - [x] Implement consecutive remote run cost and excess-day attribution.
@@ -104,7 +105,7 @@ was not discoverable, although the installed Ygor library and headers supported 
 ## H. Rendering and metadata
 
 - [x] Deep-copy the selected input table for each result without modifying the source.
-- [x] Render `x` decisions as `Onsite`/`Remote`.
+- [x] Render `x` decisions as `Onsite`/`Remote*`.
 - [x] Render `Pref` decisions as `Onsite*`/`Remote`.
 - [x] Prove all immutable cell values and coordinates are byte-for-byte preserved.
 - [x] Append a blank separator and deterministic machine-readable report records.
@@ -141,7 +142,7 @@ was not discoverable, although the installed Ygor library and headers supported 
 
 - [x] Add `integration_tests/tests/OptimizeSchedule.sh` in repository style.
 - [x] Add the provided schedule template as the primary end-to-end fixture.
-- [x] Assert the comma-delimited `.tsv` fixture parses as 11 constraints, 11 staff, 25 dated rows, and 2 unanimous Holiday rows.
+- [x] Assert the comma-delimited `.tsv` fixture parses as 15 constraints, 11 staff, 25 dated rows, and 2 unanimous Holiday rows.
 - [ ] Add minimal malformed and impossible fixtures for negative/soft-failure cases.
 - [ ] Verify requested unique output table count and unchanged source table.
 - [ ] Verify all mutable cells resolve and immutable cells remain exact.

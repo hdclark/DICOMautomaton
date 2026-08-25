@@ -9,7 +9,7 @@ new `Sparse_Table` schedule alternatives. The source table must not be modified.
 The Operation must:
 
 - preserve immutable input text exactly;
-- replace each `x` with `Onsite` or `Remote`;
+- replace each `x` with `Onsite` or `Remote*`;
 - replace each `Pref` with `Remote`, or with `Onsite*` when the preference is overridden;
 - evaluate all configured constraints case-insensitively;
 - use simulated annealing without introducing a third-party dependency;
@@ -40,11 +40,11 @@ The following definitions remove ambiguity from the implementation.
 | Direct violation | A violation attributable to a particular day or cells, suitable for the daily report. |
 | Global penalty | A fairness penalty that cannot honestly be attributed to one day. |
 
-`Onsite*` is semantically identical to `Onsite` during constraint evaluation. If it occurs in input,
-it is immutable and preserved. `Remote` in input is also immutable but is recognized as remote for
-constraints. Recognizing output statuses makes an exported result safe to assess again without making
-it mutable. Unrecognized statuses remain immutable and count as neither onsite nor remote unless a
-constraint's explicit status set includes them.
+`Onsite*` and `Remote*` are semantically identical to `Onsite` and `Remote` respectively during constraint
+evaluation. If either occurs in input, it is immutable and preserved. `Remote` in input is also recognized
+as remote for constraints. Recognizing output statuses makes an exported result safe to assess again
+without making it mutable. Unrecognized statuses remain immutable and count as neither onsite nor remote
+unless a constraint's explicit status set includes them.
 
 All string keywords, constraint names, status names, and staff references are matched after trimming
 ASCII whitespace and ASCII case-folding. Original text is retained for output and diagnostics.
@@ -144,9 +144,9 @@ name. Reports label zero-weight rows `disabled/advisory`; their component is sho
 `DayViolation` records or count as unmet active constraints.
 
 The common optional policy is `statuses=A|B|C`. It replaces the default status set for that individual
-constraint row. `Onsite*` is canonicalized to `Onsite` when status sets are parsed. Duplicate statuses
-are harmless. An empty status set is invalid. Unknown policy keys and policy fields without `=` are
-errors so typographical mistakes do not silently alter clinical operations.
+constraint row. `Onsite*` and `Remote*` are canonicalized to their unstarred forms when status sets are
+parsed. Duplicate statuses are harmless. An empty status set is invalid. Unknown policy keys and policy
+fields without `=` are errors so typographical mistakes do not silently alter clinical operations.
 An explicit status policy can reclassify an otherwise unknown immutable status for that row only; without
 such a policy, unknown values retain the required Vac-like behavior of counting as neither onsite nor
 remote.
@@ -155,6 +155,7 @@ Supported type grammar is anchored and case-insensitive:
 
 ```text
 minimum_onsite
+maximum_onsite
 group (<non-empty name>)
 max_consecutive_remote
 exclusivity (<non-empty name>)
@@ -175,8 +176,9 @@ any 1 of <staff> (xor <staff>)+
 
 The standalone integer applies only to `max_consecutive_remote`. The assignment list applies only to
 `max_weekly_remote`; the any-of and xor forms apply only to their corresponding coverage/exclusivity
-types. Integers use ASCII digits only with full-token consumption and overflow checking. Weights use a
-locale-independent decimal grammar with optional exponent and full-token consumption.
+types. The any-of integer may be zero only for `maximum_onsite`; it must be positive for minimum and group
+coverage. Integers use ASCII digits only with full-token consumption and overflow checking. Weights use
+a locale-independent decimal grammar with optional exponent and full-token consumption.
 
 Whitespace around tokens is flexible. Staff identifiers are looked up case-insensitively but must be
 unambiguous. Referencing an unknown staff identifier, repeating one in a list, requesting more staff
@@ -193,6 +195,7 @@ Default status sets are:
 | Constraint | Default `statuses` |
 |---|---|
 | `minimum_onsite` | `Onsite` |
+| `maximum_onsite` | `Onsite` |
 | `group (...)` | `Onsite` |
 | `exclusivity (...)` | `Onsite|Prim|Sec` |
 | `max_consecutive_remote` | `Remote` |
@@ -282,7 +285,7 @@ objective(candidate) = sum(weight[c] * component_cost[c])
 
 Each parsed constraint row contributes one component. The report must include both its component and
 weighted contribution. Status membership always uses the row's status set and the candidate's rendered
-semantic status (`Pref` decisions become `Remote` or `Onsite`; `x` decisions likewise).
+semantic status (`Pref` and `x` decisions both become semantic `Remote` or `Onsite`).
 
 ### 6.1 Minimum onsite and group
 
@@ -298,7 +301,19 @@ The component cost is the mean daily deficit across active days. Every day with 
 direct violation. Its report includes the observed count, required count, status set, and missing staff
 count. `minimum_onsite` and each `group` row are scored independently, including overlapping groups.
 
-### 6.2 Exclusivity
+### 6.2 Maximum onsite
+
+For each active day, count candidate staff whose status is in the constraint status set. Given maximum
+`k`, candidate count `m`, and observed count `n`, daily excess is:
+
+```text
+excess = max(0, n - k) / max(1, m - k)
+```
+
+The component cost is the mean daily excess across active days. A maximum of zero is valid. Every day
+with non-zero excess is a direct violation reporting the observed count and configured maximum.
+
+### 6.3 Exclusivity
 
 For each active day, count listed staff whose status is in the status set. The normalized excess is:
 
@@ -310,7 +325,7 @@ The component is mean excess over active days. A non-zero excess is a direct vio
 simultaneously present staff. The `xor` syntax means "at most one present," not exactly one; zero or one
 is valid. In particular, two absent staff must never be penalized.
 
-### 6.3 Maximum consecutive remote
+### 6.4 Maximum consecutive remote
 
 For each staff member, inspect active schedule rows in chronological order. An inactive day or any active
 cell not in the row's remote status set terminates a run. Missing weekend dates do not themselves break a
@@ -323,7 +338,7 @@ denominator is impossible after active-day validation. The `(L+1)`th and subsequ
 direct violations and identify the staff member and current run length. `L=0` is valid and penalizes
 every remote-status day.
 
-### 6.4 Maximum weekly remote
+### 6.5 Maximum weekly remote
 
 The expression maps one or more staff members to individual limits. Group active days by ISO year/week.
 For each configured staff/week pair, let `r` be days in the remote status set and `L` the configured
@@ -334,7 +349,7 @@ Every remote-status day after the first `L` such days in chronological order tha
 direct violation. The report also includes one weekly summary with the actual and allowed totals. This
 attribution is deterministic and does not imply that the last day is uniquely responsible.
 
-### 6.5 Remote fairness
+### 6.6 Remote fairness
 
 Fairness is based only on opportunities controlled by this optimizer. For staff `i`:
 
@@ -361,7 +376,7 @@ changes which decision outcome is equalized and must be described as such in `Op
 statuses can never occur in eligible mutable cells. This configurability supports the requirement that
 the end user can choose statuses counted by an individual constraint.
 
-### 6.6 Preference override fairness and cost
+### 6.7 Preference override fairness and cost
 
 For staff `i` with at least one input `Pref` on an active day:
 
@@ -392,7 +407,7 @@ with positive weight. Omitting it or assigning zero weight explicitly opts out o
 cost, though overrides remain visibly rendered and reported. `OperationDoc` must make this consequence
 prominent; there is no hidden, unweighted objective.
 
-### 6.7 No constraints and impossible constraints
+### 6.8 No constraints and impossible constraints
 
 With no positive-weight rows, all assignments have objective zero. The initializer should honor `Pref`
 as `Remote` and choose `Remote` for `x`; additional requested outputs may vary any mutable cells,
@@ -523,7 +538,7 @@ Start from a complete copy of the input `Sparse_Table`, including metadata. For 
 | Input | Decision | Output |
 |---|---|---|
 | `x` | onsite | `Onsite` |
-| `x` | remote | `Remote` |
+| `x` | remote | `Remote*` |
 | `Pref` | onsite | `Onsite*` |
 | `Pref` | remote | `Remote` |
 

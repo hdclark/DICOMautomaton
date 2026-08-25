@@ -55,6 +55,7 @@ std::string fold(const std::string &s){
 std::string canonical_status(const std::string &s){
     auto out = fold(s);
     if(out == "onsite*") out = "onsite";
+    if(out == "remote*") out = "remote";
     return out;
 }
 
@@ -102,7 +103,7 @@ double parse_decimal(const std::string &text, const std::string &what){
     return v;
 }
 
-enum class ConstraintKind { Minimum, Group, Consecutive, Exclusivity, Weekly, FairRemote, FairOverrides };
+enum class ConstraintKind { Minimum, Maximum, Group, Consecutive, Exclusivity, Weekly, FairRemote, FairOverrides };
 
 struct Constraint {
     ConstraintKind kind = ConstraintKind::Minimum;
@@ -205,13 +206,14 @@ Constraint parse_constraint(const RawConstraint &raw, const Problem &p){
     }else{
         const auto t = fold(type);
         if(t == "minimum_onsite") c.kind = ConstraintKind::Minimum;
+        else if(t == "maximum_onsite") c.kind = ConstraintKind::Maximum;
         else if(t == "max_consecutive_remote") c.kind = ConstraintKind::Consecutive;
         else if(t == "max_weekly_remote") c.kind = ConstraintKind::Weekly;
         else if(t == "fairness_remote") c.kind = ConstraintKind::FairRemote;
         else if(t == "fairness_overrides") c.kind = ConstraintKind::FairOverrides;
         else throw std::invalid_argument(row_error(raw.row, raw.base_col + 1, "unknown constraint type '" + type + "'"));
     }
-    if(c.kind == ConstraintKind::Minimum || c.kind == ConstraintKind::Group) c.statuses = {"onsite"};
+    if(c.kind == ConstraintKind::Minimum || c.kind == ConstraintKind::Maximum || c.kind == ConstraintKind::Group) c.statuses = {"onsite"};
     if(c.kind == ConstraintKind::Exclusivity) c.statuses = {"onsite", "prim", "sec"};
     if(c.kind == ConstraintKind::Consecutive || c.kind == ConstraintKind::Weekly || c.kind == ConstraintKind::FairRemote) c.statuses = {"remote"};
     for(std::size_t i = 4; i < raw.fields.size(); ++i){
@@ -255,7 +257,7 @@ Constraint parse_constraint(const RawConstraint &raw, const Problem &p){
     if(c.kind == ConstraintKind::Exclusivity){ c.requirement = 1; }
     else {
         c.requirement = parse_u64(m[1], row_error(raw.row, raw.base_col + 3, "coverage requirement"));
-        if(c.requirement == 0) throw std::invalid_argument(row_error(raw.row, raw.base_col + 3, "coverage requirement must be positive"));
+        if(c.requirement == 0 && c.kind != ConstraintKind::Maximum) throw std::invalid_argument(row_error(raw.row, raw.base_col + 3, "coverage requirement must be positive"));
     }
     const std::string candidates = c.kind == ConstraintKind::Exclusivity ? m[1].str() : m[2].str();
     const bool all_candidates = c.kind != ConstraintKind::Exclusivity && fold(candidates) == "all";
@@ -434,7 +436,7 @@ Score score_candidate(const Problem &p, const std::vector<uint8_t> &a, bool deta
     for(std::size_t ci = 0; ci < p.constraints.size(); ++ci){
         const auto &c = p.constraints[ci];
         double component = 0.0;
-        if(c.kind == ConstraintKind::Minimum || c.kind == ConstraintKind::Group || c.kind == ConstraintKind::Exclusivity){
+        if(c.kind == ConstraintKind::Minimum || c.kind == ConstraintKind::Maximum || c.kind == ConstraintKind::Group || c.kind == ConstraintKind::Exclusivity){
             for(std::size_t d = 0; d < p.days.size(); ++d){
                 if(!p.days[d].active) continue;
                 uint64_t count = 0;
@@ -450,6 +452,11 @@ Score score_candidate(const Problem &p, const std::vector<uint8_t> &a, bool deta
                         for(const auto &name : present) os << ' ' << name;
                         out.violations.push_back({d, ci, count, 1, os.str()});
                     }
+                }else if(c.kind == ConstraintKind::Maximum){
+                    const uint64_t excess = count > c.requirement ? count - c.requirement : 0;
+                    const auto capacity = std::max<uint64_t>(1, static_cast<uint64_t>(c.staff.size()) - c.requirement);
+                    component += static_cast<double>(excess) / static_cast<double>(capacity);
+                    if(detailed && c.weight > 0.0 && excess > 0) out.violations.push_back({d, ci, count, c.requirement, "onsite excess of " + std::to_string(excess) + " staff using statuses=" + status_set_text(c.statuses)});
                 }else{
                     const uint64_t deficit = count < c.requirement ? c.requirement - count : 0;
                     component += static_cast<double>(deficit) / static_cast<double>(c.requirement);
@@ -837,7 +844,7 @@ std::shared_ptr<Sparse_Table> render(const Sparse_Table &source, const Problem &
     auto out = std::make_shared<Sparse_Table>(source);
     for(std::size_t v = 0; v < p.variables.size(); ++v){
         const auto &var = p.variables[v];
-        out->table.inject(var.row, var.col, entry.assignment[v] ? (var.preference ? "Onsite*" : "Onsite") : "Remote");
+        out->table.inject(var.row, var.col, entry.assignment[v] ? (var.preference ? "Onsite*" : "Onsite") : (var.preference ? "Remote" : "Remote*"));
     }
     const std::string label = settings.label + " " + std::to_string(index + 1);
     out->table.metadata["TableLabel"] = label;
@@ -951,10 +958,10 @@ OperationDoc OpArgDocOptimizeSchedule(){
     out.name = "OptimizeSchedule";
     out.tags.emplace_back("category: table processing");
     out.tags.emplace_back("category: optimization");
-    out.desc = "Optimizes mutable x and Pref schedule cells into Onsite/Remote assignments using exact soft-constraint scoring and seeded simulated annealing. The selected source table is never modified; each result is an auditable decision-support alternative.";
-    out.notes.emplace_back("Pref is rendered Remote unless overridden as Onsite*. Override cost exists only when a positive-weight fairness_overrides row is supplied; there is no hidden objective.");
-    out.notes.emplace_back("Constraint rows are: Constraint | type | non-negative weight | expression | optional policies. Types and expressions are minimum_onsite or group(name) with 'any N of all' or 'any N of A or B ...'; exclusivity(name) with 'any 1 of A xor B ...'; max_consecutive_remote with a non-negative integer; max_weekly_remote with 'staff=limit, ...'; and fairness_remote or fairness_overrides with an empty expression.");
-    out.notes.emplace_back("Default counted statuses are Onsite for minimum_onsite/group, Onsite|Prim|Sec for exclusivity, and Remote for consecutive/weekly/fairness_remote. A trailing statuses=StatusA|StatusB policy replaces that default for every type except fairness_overrides; status matching is case-insensitive and Onsite* is canonicalized to Onsite.");
+    out.desc = "Optimizes mutable x and Pref schedule cells into onsite/remote assignments using exact soft-constraint scoring and seeded simulated annealing. The selected source table is never modified; each result is an auditable decision-support alternative.";
+    out.notes.emplace_back("x is rendered Onsite or Remote*, while Pref is rendered Remote unless overridden as Onsite*. Remote* and Onsite* are semantically identical to Remote and Onsite respectively. Override cost exists only when a positive-weight fairness_overrides row is supplied; there is no hidden objective.");
+    out.notes.emplace_back("Constraint rows are: Constraint | type | non-negative weight | expression | optional policies. Types and expressions are minimum_onsite, maximum_onsite, or group(name) with 'any N of all' or 'any N of A or B ...'; exclusivity(name) with 'any 1 of A xor B ...'; max_consecutive_remote with a non-negative integer; max_weekly_remote with 'staff=limit, ...'; and fairness_remote or fairness_overrides with an empty expression. maximum_onsite permits N=0.");
+    out.notes.emplace_back("Default counted statuses are Onsite for minimum_onsite/maximum_onsite/group, Onsite|Prim|Sec for exclusivity, and Remote for consecutive/weekly/fairness_remote. A trailing statuses=StatusA|StatusB policy replaces that default for every type except fairness_overrides; status matching is case-insensitive and starred statuses are canonicalized to their unstarred equivalents.");
     out.notes.emplace_back("fairness_remote considers only active mutable cells for each staff member: its custom statuses policy selects which generated Onsite/Remote assignments form the numerator, while all eligible mutable cells form the denominator. fairness_overrides instead counts Pref cells assigned Onsite and combines override rate with staff-rate deviation.");
     out.notes.emplace_back("Report direct-violations counts emitted per-day/per-occurrence violation records and excludes aggregate fairness deviation. StaffTally reports generated mutable Onsite, generated mutable Remote, Pref cells, overridden Pref cells, mutable Remote count and fraction, then total active-day Onsite and Remote including fixed cells; Weekly and Feasibility records are separate.");
     out.notes.emplace_back("Rows containing Holiday are passed through unchanged and excluded from optimization and reports. Schedule row labels are not parsed as dates; repeated Date headers delimit weekly constraint blocks.");

@@ -158,7 +158,7 @@ TEST_CASE("OptimizeSchedule loads and resolves the provided schedule template"){
         if(cell.get_col() == 0 && cell.val.find(", 2026") != std::string::npos) ++dates;
         if(cell.val == "Holiday") ++holidays;
     }
-    CHECK(constraints == 11U);
+    CHECK(constraints == 15U);
     CHECK(headers == 5U);
     CHECK(dates == 25U);
     CHECK(holidays == 22U);
@@ -171,7 +171,7 @@ TEST_CASE("OptimizeSchedule loads and resolves the provided schedule template"){
     REQUIRE(d.table_data.size() == 4U);
     CHECK(source->table.data == source_data);
     for(auto it = std::next(d.table_data.begin()); it != d.table_data.end(); ++it){
-        CHECK(report_rows(**it, "Component").size() == 11U);
+        CHECK(report_rows(**it, "Component").size() == 15U);
         CHECK(report_rows(**it, "StaffTally").size() == 11U);
         CHECK(report_rows(**it, "ExcludedDay").empty());
         CHECK(summary_value(**it, "active-days") == "23");
@@ -231,6 +231,56 @@ TEST_CASE("OptimizeSchedule reports hand-computable minimum group and exclusivit
     CHECK(as_double(component_row(out, "group(team)")[5]) == doctest::Approx(0.5));
     CHECK(as_double(component_row(out, "exclusivity(room)")[5]) == doctest::Approx(1.0 / 3.0));
     CHECK(report_rows(out, "DayViolation").size() == 5U);
+}
+
+TEST_CASE("OptimizeSchedule reports hand-computable maximum onsite scores"){
+    Drover d;
+    d.table_data.push_back(make_table({
+        {"Constraint", "maximum_onsite", "2", "any 2 of A or B or C"},
+        {"Date", "A", "B", "C", "D"},
+        {"2026-08-24", "Onsite*", "Onsite", "Onsite", "x"},
+        {"2026-08-25", "Onsite", "Onsite*", "Remote*", "x"},
+        {"2026-08-26", "Onsite", "Remote", "Remote*", "x"},
+    }));
+    run(d, {{"Iterations", "20"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "4"}, {"RestartCount", "1"}});
+    const auto &out = **std::next(d.table_data.begin());
+    CHECK(as_double(component_row(out, "maximum_onsite")[5]) == doctest::Approx(1.0 / 3.0));
+    const auto violations = report_rows(out, "DayViolation");
+    REQUIRE(violations.size() == 1U);
+    CHECK(violations[0][2] == "2026-08-24");
+    CHECK(violations[0][5] == "3");
+    CHECK(violations[0][6] == "2");
+}
+
+TEST_CASE("OptimizeSchedule permits a zero maximum onsite limit"){
+    Drover d;
+    d.table_data.push_back(make_table({
+        {"Constraint", "maximum_onsite", "1", "any 0 of all"},
+        {"Date", "A", "B"},
+        {"2026-08-24", "Onsite", "x"},
+    }));
+    run(d, {{"Iterations", "20"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "4"}, {"RestartCount", "1"}});
+    const auto &out = **std::next(d.table_data.begin());
+    CHECK(out.table.value(2, 2) == "Remote*");
+    CHECK(as_double(component_row(out, "maximum_onsite")[5]) == doctest::Approx(0.5));
+}
+
+TEST_CASE("OptimizeSchedule distinguishes generated remote cells while preserving remote semantics"){
+    Drover d;
+    d.table_data.push_back(make_table({
+        {"Constraint", "max_consecutive_remote", "0", "1"},
+        {"Date", "A", "B", "C"},
+        {"2026-08-24", "x", "Pref", "Remote*"},
+        {"2026-08-25", "x", "Pref", "Remote*"},
+    }));
+    run(d, {{"Iterations", "10"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "4"}, {"RestartCount", "1"}});
+    const auto &out = **std::next(d.table_data.begin());
+    CHECK(out.table.value(2, 1) == "Remote*");
+    CHECK(out.table.value(2, 2) == "Remote");
+    CHECK(out.table.value(3, 1) == "Remote*");
+    CHECK(out.table.value(3, 2) == "Remote");
+    CHECK(out.table.value(2, 3) == "Remote*");
+    CHECK(as_double(component_row(out, "max_consecutive_remote")[5]) == doctest::Approx(0.5));
 }
 
 TEST_CASE("OptimizeSchedule consecutive runs cross weekends and reset at excluded breaks"){
@@ -294,7 +344,7 @@ TEST_CASE("OptimizeSchedule fairness uses each staff member's mutable eligibilit
         const auto a0 = t.value(2, 1).value_or("");
         const auto b0 = t.value(2, 2).value_or("");
         const auto a1 = t.value(3, 1).value_or("");
-        if(a0 == "Remote" && b0 == "Remote" && a1 == "Onsite") chosen = it->get();
+        if(a0 == "Remote*" && b0 == "Remote*" && a1 == "Onsite") chosen = it->get();
     }
     REQUIRE(chosen != nullptr);
     CHECK(as_double(component_row(*chosen, "fairness_remote")[5]) == doctest::Approx(0.25));
@@ -380,7 +430,7 @@ TEST_CASE("OptimizeSchedule emits all unique schedules in an undersized one-vari
         assignments.insert((*it)->table.value(1, 1).value_or(""));
         CHECK(summary_value(**it, "result").find("/2") != std::string::npos);
     }
-    CHECK(assignments == std::set<std::string>{"Onsite", "Remote"});
+    CHECK(assignments == std::set<std::string>{"Onsite", "Remote*"});
 }
 
 TEST_CASE("OptimizeSchedule fills requested alternatives despite fallback collisions"){
