@@ -260,6 +260,10 @@ set_target_properties(  Font_DCMA_Minimal_obj PROPERTIES POSITION_INDEPENDENT_CO
 add_library(            Doctest_impl_obj OBJECT doctest20251212/doctest_impl.cc )
 set_target_properties(  Doctest_impl_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            OptimizeSchedule_Tests_obj OBJECT OptimizeSchedule_Tests.cc )
+set_target_properties(  OptimizeSchedule_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+target_compile_definitions( OptimizeSchedule_Tests_obj PRIVATE DCMA_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}" )
+
 if(WITH_EIGEN)
     add_library(            MRI_IVIM_obj OBJECT MRI_IVIM.cc )
     set_target_properties(  MRI_IVIM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -567,6 +571,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
     $<TARGET_OBJECTS:Operations_objs>
+    $<TARGET_OBJECTS:OptimizeSchedule_Tests_obj>
     $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
     $<TARGET_OBJECTS:DCMA_Version_obj>
     $<TARGET_OBJECTS:Doctest_impl_obj>
@@ -695,6 +700,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
         $<TARGET_OBJECTS:Operations_objs>
+        $<TARGET_OBJECTS:OptimizeSchedule_Tests_obj>
         $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
         $<TARGET_OBJECTS:DCMA_Version_obj>
         $<TARGET_OBJECTS:Doctest_impl_obj>
