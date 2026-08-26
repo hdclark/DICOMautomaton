@@ -103,7 +103,7 @@ double parse_decimal(const std::string &text, const std::string &what){
     return v;
 }
 
-enum class ConstraintKind { Minimum, Maximum, Group, Consecutive, Exclusivity, Weekly, FairRemote, FairOverrides };
+enum class ConstraintKind { Minimum, Maximum, Group, Consecutive, Exclusivity, Weekly, FairRemote, FairOverrides, AlignPreferences };
 
 struct Constraint {
     ConstraintKind kind = ConstraintKind::Minimum;
@@ -189,6 +189,24 @@ void reject_duplicate_staff(const std::vector<std::size_t> &staff, int64_t row, 
     if(unique.size() != staff.size()) throw std::invalid_argument(row_error(row, col, "constraint expression repeats a staff identifier"));
 }
 
+std::vector<std::size_t> parse_staff_list(const Problem &p, const std::string &expr,
+                                          const std::string &quantifier, int64_t row, int64_t col){
+    std::smatch m;
+    const std::regex grammar("^\\s*" + quantifier + R"(\s+of\s+(.+)\s*$)", std::regex::icase);
+    if(!std::regex_match(expr, m, grammar))
+        throw std::invalid_argument(row_error(row, col, "expected '" + quantifier + " of <staff> and <staff> ...'"));
+    std::vector<std::size_t> out;
+    static const std::regex staff_grammar(R"(^[A-Za-z0-9_.-]+$)");
+    for(const auto &name : regex_list(m[1], "and")){
+        if(!std::regex_match(name, staff_grammar))
+            throw std::invalid_argument(row_error(row, col, "invalid staff identifier or delimiter in expression"));
+        out.push_back(lookup_staff(p, name, row, col));
+    }
+    reject_duplicate_staff(out, row, col);
+    if(out.empty()) throw std::invalid_argument(row_error(row, col, "constraint expression requires at least one staff identifier"));
+    return out;
+}
+
 Constraint parse_constraint(const RawConstraint &raw, const Problem &p){
     const auto field = [&](std::size_t i) -> std::string { return i < raw.fields.size() ? raw.fields[i] : ""; };
     Constraint c;
@@ -211,6 +229,7 @@ Constraint parse_constraint(const RawConstraint &raw, const Problem &p){
         else if(t == "max_weekly_remote") c.kind = ConstraintKind::Weekly;
         else if(t == "fairness_remote") c.kind = ConstraintKind::FairRemote;
         else if(t == "fairness_overrides") c.kind = ConstraintKind::FairOverrides;
+        else if(t == "align_with_preferences") c.kind = ConstraintKind::AlignPreferences;
         else throw std::invalid_argument(row_error(raw.row, raw.base_col + 1, "unknown constraint type '" + type + "'"));
     }
     if(c.kind == ConstraintKind::Minimum || c.kind == ConstraintKind::Maximum || c.kind == ConstraintKind::Group) c.statuses = {"onsite"};
@@ -222,14 +241,22 @@ Constraint parse_constraint(const RawConstraint &raw, const Problem &p){
         if(eq == std::string::npos) throw std::invalid_argument(row_error(raw.row, raw.base_col + static_cast<int64_t>(i), "policy field must be key=value"));
         const auto key = fold(raw.fields[i].substr(0, eq));
         if(key != "statuses") throw std::invalid_argument(row_error(raw.row, raw.base_col + static_cast<int64_t>(i), "unknown policy key '" + trim(raw.fields[i].substr(0, eq)) + "'"));
-        if(c.kind == ConstraintKind::FairOverrides) throw std::invalid_argument(row_error(raw.row, raw.base_col + static_cast<int64_t>(i), "fairness_overrides does not accept statuses"));
+        if(c.kind == ConstraintKind::FairOverrides || c.kind == ConstraintKind::AlignPreferences)
+            throw std::invalid_argument(row_error(raw.row, raw.base_col + static_cast<int64_t>(i), c.label + " does not accept statuses"));
         c.statuses.clear();
         for(auto &s : split_statuses(raw.fields[i].substr(eq + 1), raw.row, raw.base_col + static_cast<int64_t>(i))) c.statuses.insert(std::move(s));
     }
     const auto expr = trim(field(3));
-    const bool no_expr = c.kind == ConstraintKind::FairRemote || c.kind == ConstraintKind::FairOverrides;
-    if(no_expr){
-        if(!expr.empty()) throw std::invalid_argument(row_error(raw.row, raw.base_col + 3, "this constraint does not accept an expression"));
+    if(c.kind == ConstraintKind::FairRemote || c.kind == ConstraintKind::FairOverrides){
+        if(expr.empty()){
+            c.staff.resize(p.staff.size());
+            std::iota(c.staff.begin(), c.staff.end(), 0);
+        }else c.staff = parse_staff_list(p, expr, "all", raw.row, raw.base_col + 3);
+        return c;
+    }
+    if(c.kind == ConstraintKind::AlignPreferences){
+        if(expr.empty()) throw std::invalid_argument(row_error(raw.row, raw.base_col + 3, "constraint expression is required"));
+        c.staff = parse_staff_list(p, expr, "each", raw.row, raw.base_col + 3);
         return c;
     }
     if(expr.empty()) throw std::invalid_argument(row_error(raw.row, raw.base_col + 3, "constraint expression is required"));
@@ -498,16 +525,18 @@ Score score_candidate(const Problem &p, const std::vector<uint8_t> &a, bool deta
                 }
             }
             component = denominator == 0 ? 0.0 : static_cast<double>(excess_total) / static_cast<double>(denominator);
-        }else if(c.kind == ConstraintKind::FairRemote || c.kind == ConstraintKind::FairOverrides){
+        }else if(c.kind == ConstraintKind::FairRemote || c.kind == ConstraintKind::FairOverrides || c.kind == ConstraintKind::AlignPreferences){
             std::vector<double> ratios;
-            ratios.reserve(p.staff.size());
-            for(std::size_t s = 0; s < p.staff.size(); ++s){
+            ratios.reserve(c.staff.size());
+            for(const auto s : c.staff){
                 uint64_t numerator = 0, denominator = 0;
                 for(const auto v : p.vars_by_staff[s]){
                     const auto &var = p.variables[v];
                     if(!p.days[var.day].active || (c.kind == ConstraintKind::FairOverrides && !var.preference)) continue;
                     ++denominator;
-                    if(c.kind == ConstraintKind::FairOverrides ? (a[v] != 0) : (c.statuses.count(a[v] ? "onsite" : "remote") != 0)) ++numerator;
+                    if(c.kind == ConstraintKind::FairOverrides ? (a[v] != 0)
+                       : c.kind == ConstraintKind::AlignPreferences ? ((a[v] != 0) == var.preference)
+                       : (c.statuses.count(a[v] ? "onsite" : "remote") != 0)) ++numerator;
                 }
                 if(denominator != 0){
                     const double ratio = static_cast<double>(numerator) / static_cast<double>(denominator);
@@ -521,7 +550,9 @@ Score score_candidate(const Problem &p, const std::vector<uint8_t> &a, bool deta
                 for(const auto ratio : ratios) deviation += std::abs(ratio - mean);
                 deviation /= static_cast<double>(ratios.size());
                 if(detailed){ out.details[ci].mean = mean; out.details[ci].deviation = deviation; }
-                component = c.kind == ConstraintKind::FairOverrides ? 0.5 * mean + 0.5 * deviation : deviation;
+                component = c.kind == ConstraintKind::FairOverrides ? 0.5 * mean + 0.5 * deviation
+                          : c.kind == ConstraintKind::AlignPreferences ? mean
+                          : deviation;
             }
         }
         if(!std::isfinite(component) || component < 0.0) throw std::runtime_error("OptimizeSchedule produced a non-finite component score");
@@ -876,9 +907,10 @@ std::shared_ptr<Sparse_Table> render(const Sparse_Table &source, const Problem &
         const auto &c = p.constraints[ci];
         const auto &detail = full.details[ci];
         if(detail.fairness.empty()) continue;
-        summary("fairness-source-row-" + std::to_string(c.row), "mean=" + number(detail.mean) + "; deviation=" + number(detail.deviation));
+        const auto detail_prefix = c.kind == ConstraintKind::AlignPreferences ? "alignment-source-row-" : "fairness-source-row-";
+        summary(detail_prefix + std::to_string(c.row), "mean=" + number(detail.mean) + "; deviation=" + number(detail.deviation));
         for(const auto &staff : detail.fairness){
-            summary("fairness-source-row-" + std::to_string(c.row) + "-staff-" + p.staff[staff.staff].label,
+            summary(detail_prefix + std::to_string(c.row) + "-staff-" + p.staff[staff.staff].label,
                     "numerator=" + std::to_string(staff.numerator) + "; denominator=" + std::to_string(staff.denominator) + "; ratio=" + number(staff.ratio));
         }
     }
@@ -959,10 +991,10 @@ OperationDoc OpArgDocOptimizeSchedule(){
     out.tags.emplace_back("category: table processing");
     out.tags.emplace_back("category: optimization");
     out.desc = "Optimizes mutable x and Pref schedule cells into onsite/remote assignments using exact soft-constraint scoring and seeded simulated annealing. The selected source table is never modified; each result is an auditable decision-support alternative.";
-    out.notes.emplace_back("x is rendered Onsite or Remote*, while Pref is rendered Remote unless overridden as Onsite*. Remote* and Onsite* are semantically identical to Remote and Onsite respectively. Override cost exists only when a positive-weight fairness_overrides row is supplied; there is no hidden objective.");
-    out.notes.emplace_back("Constraint rows are: Constraint | type | non-negative weight | expression | optional policies. Types and expressions are minimum_onsite, maximum_onsite, or group(name) with 'any N of all' or 'any N of A or B ...'; exclusivity(name) with 'any 1 of A xor B ...'; max_consecutive_remote with a non-negative integer; max_weekly_remote with 'staff=limit, ...'; and fairness_remote or fairness_overrides with an empty expression. maximum_onsite permits N=0.");
-    out.notes.emplace_back("Default counted statuses are Onsite for minimum_onsite/maximum_onsite/group, Onsite|Prim|Sec for exclusivity, and Remote for consecutive/weekly/fairness_remote. A trailing statuses=StatusA|StatusB policy replaces that default for every type except fairness_overrides; status matching is case-insensitive and starred statuses are canonicalized to their unstarred equivalents.");
-    out.notes.emplace_back("fairness_remote considers only active mutable cells for each staff member: its custom statuses policy selects which generated Onsite/Remote assignments form the numerator, while all eligible mutable cells form the denominator. fairness_overrides instead counts Pref cells assigned Onsite and combines override rate with staff-rate deviation.");
+    out.notes.emplace_back("x is rendered Onsite or Remote*, while Pref is rendered Remote unless overridden as Onsite*. Remote* and Onsite* are semantically identical to Remote and Onsite respectively. Preference alignment or override cost exists only when a corresponding positive-weight constraint row is supplied; there is no hidden objective.");
+    out.notes.emplace_back("Constraint rows are: Constraint | type | non-negative weight | expression | optional policies. Types and expressions are minimum_onsite, maximum_onsite, or group(name) with 'any N of all' or 'any N of A or B ...'; exclusivity(name) with 'any 1 of A xor B ...'; max_consecutive_remote with a non-negative integer; max_weekly_remote with 'staff=limit, ...'; fairness_remote or fairness_overrides with 'all of A and B ...'; and align_with_preferences with 'each of A and B ...'. Empty fairness expressions retain the legacy all-staff meaning. maximum_onsite permits N=0.");
+    out.notes.emplace_back("Default counted statuses are Onsite for minimum_onsite/maximum_onsite/group, Onsite|Prim|Sec for exclusivity, and Remote for consecutive/weekly/fairness_remote. A trailing statuses=StatusA|StatusB policy replaces that default except for fairness_overrides and align_with_preferences; status matching is case-insensitive and starred statuses are canonicalized to their unstarred equivalents.");
+    out.notes.emplace_back("fairness_remote considers only active mutable cells for each selected staff member: its custom statuses policy selects which generated Onsite/Remote assignments form the numerator, while all eligible mutable cells form the denominator. fairness_overrides instead counts selected Pref cells assigned Onsite and combines override rate with staff-rate deviation. align_with_preferences averages each selected staff member's mismatch rate, where x assigned Remote or Pref assigned Onsite is a mismatch.");
     out.notes.emplace_back("Report direct-violations counts emitted per-day/per-occurrence violation records and excludes aggregate fairness deviation. StaffTally reports generated mutable Onsite, generated mutable Remote, Pref cells, overridden Pref cells, mutable Remote count and fraction, then total active-day Onsite and Remote including fixed cells; Weekly and Feasibility records are separate.");
     out.notes.emplace_back("Rows containing Holiday are passed through unchanged and excluded from optimization and reports. Schedule row labels are not parsed as dates; repeated Date headers delimit weekly constraint blocks.");
     out.notes.emplace_back("Pareto labels are relative to the final retained bounded archive, not a proven global Pareto front. Alternatives are emitted in weighted-objective order and do not prove staffing safety or global optimality.");

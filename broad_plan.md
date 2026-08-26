@@ -162,6 +162,7 @@ exclusivity (<non-empty name>)
 max_weekly_remote
 fairness_remote
 fairness_overrides
+align_with_preferences
 ```
 
 Supported expressions are:
@@ -172,19 +173,22 @@ any <positive integer> of <staff> (or <staff>)+
 any 1 of <staff> (xor <staff>)+
 <non-negative integer>
 <staff> = <non-negative integer> (, <staff> = <non-negative integer>)*
+all of <staff> (and <staff>)*
+each of <staff> (and <staff>)*
 ```
 
 The standalone integer applies only to `max_consecutive_remote`. The assignment list applies only to
 `max_weekly_remote`; the any-of and xor forms apply only to their corresponding coverage/exclusivity
-types. The any-of integer may be zero only for `maximum_onsite`; it must be positive for minimum and group
+types. The all-of form selects staff for fairness rows, and each-of selects staff for
+`align_with_preferences`. For compatibility, an empty fairness expression selects all staff. The any-of
+integer may be zero only for `maximum_onsite`; it must be positive for minimum and group
 coverage. Integers use ASCII digits only with full-token consumption and overflow checking. Weights use
 a locale-independent decimal grammar with optional exponent and full-token consumption.
 
 Whitespace around tokens is flexible. Staff identifiers are looked up case-insensitively but must be
 unambiguous. Referencing an unknown staff identifier, repeating one in a list, requesting more staff
-than the candidate set contains, supplying an expression to a no-expression constraint, or omitting a
-required expression is an error. The exclusivity grammar deliberately requires `any 1`; accepting any
-other number would disguise a malformed policy.
+than the candidate set contains, or omitting a required expression is an error. The exclusivity grammar
+deliberately requires `any 1`; accepting any other number would disguise a malformed policy.
 
 For the initial implementation, staff identifiers must match `[A-Za-z0-9_.-]+`. Validate header labels
 against this grammar. This avoids ambiguity with the reserved expression delimiters `or`, `xor`, comma,
@@ -202,6 +206,7 @@ Default status sets are:
 | `max_weekly_remote` | `Remote` |
 | `fairness_remote` | `Remote` |
 | `fairness_overrides` | Not configurable; it specifically detects `Pref` to `Onsite*`. |
+| `align_with_preferences` | Not configurable; it detects `x` to `Remote*` and `Pref` to `Onsite*`. |
 
 Thus the sample's minimum and group constraints exclude `Prim` and `Sec`, while exclusivity includes
 them. A user can override this per row, for example:
@@ -351,7 +356,8 @@ attribution is deterministic and does not imply that the last day is uniquely re
 
 ### 6.6 Remote fairness
 
-Fairness is based only on opportunities controlled by this optimizer. For staff `i`:
+Fairness is based only on opportunities controlled by this optimizer and only on staff selected by the
+row's all-of expression. For selected staff `i`:
 
 ```text
 eligible_i = active cells initially equal to x or Pref
@@ -378,7 +384,7 @@ the end user can choose statuses counted by an individual constraint.
 
 ### 6.7 Preference override fairness and cost
 
-For staff `i` with at least one input `Pref` on an active day:
+For selected staff `i` with at least one input `Pref` on an active day:
 
 ```text
 pref_i     = number of active Pref cells
@@ -407,7 +413,16 @@ with positive weight. Omitting it or assigning zero weight explicitly opts out o
 cost, though overrides remain visibly rendered and reported. `OperationDoc` must make this consequence
 prominent; there is no hidden, unweighted objective.
 
-### 6.8 No constraints and impossible constraints
+### 6.8 Preference alignment
+
+For each staff member selected by the each-of expression, a mutable `x` aligned with preferences is
+assigned Onsite and a mutable `Pref` is assigned Remote. The per-staff mismatch ratio is therefore the
+fraction of that staff member's active mutable cells assigned in the opposite direction. Staff with no
+eligible cells are excluded, and the component is the mean of the included per-staff mismatch ratios.
+This gives every selected staff member equal influence regardless of their number of mutable days. The
+row is optional and weighted like every other constraint; it accepts no `statuses` policy.
+
+### 6.9 No constraints and impossible constraints
 
 With no positive-weight rows, all assignments have objective zero. The initializer should honor `Pref`
 as `Remote` and choose `Remote` for `x`; additional requested outputs may vary any mutable cells,

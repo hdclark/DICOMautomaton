@@ -50,7 +50,8 @@ was not discoverable, although the installed Ygor library and headers supported 
 - [x] Parse `exclusivity (name)` xor expressions with required `any 1` semantics.
 - [x] Parse `max_consecutive_remote` non-negative integer limits.
 - [x] Parse one or more `max_weekly_remote` staff-limit assignments.
-- [x] Parse no-expression `fairness_remote` and `fairness_overrides` rows.
+- [x] Parse staff-scoped `fairness_remote` and `fairness_overrides` all-of expressions, retaining empty expressions as the legacy all-staff form.
+- [x] Parse `align_with_preferences` each-of expressions.
 - [x] Parse per-row `statuses=A|B|C` policies and apply documented defaults.
 - [x] Reject unknown types, policy keys, malformed expressions, duplicate list members, and unknown staff.
 - [x] Permit duplicate constraint types/names as independent source-row components.
@@ -67,6 +68,7 @@ was not discoverable, although the installed Ygor library and headers supported 
 - [x] Implement ISO weekly remote cost, weekly summaries, and deterministic excess-day attribution.
 - [x] Implement opportunity-adjusted remote fairness and per-staff details.
 - [x] Implement preference override mean/dispersion cost and override records.
+- [x] Implement equal-per-staff preference alignment cost for selected staff.
 - [x] Implement weighted objective summation with finite-value checks.
 - [x] Implement optimizer-controlled and total semantic-status staff tallies.
 - [x] Implement per-day upper-bound feasibility warnings for minimum/group constraints.

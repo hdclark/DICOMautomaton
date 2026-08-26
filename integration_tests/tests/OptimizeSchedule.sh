@@ -31,4 +31,6 @@ outputs="schedule-outputs.csv"
 
 cmp "${source_before}" "${source_after}"
 test "$(grep -c '"Schedule Optimizer Report","Summary","result"' "${outputs}")" -eq 3
+test "$(grep -c '"Schedule Optimizer Report","Component"' "${outputs}")" -eq 48
+test "$(grep -c '"Schedule Optimizer Report","Component",[^,]*,"align_with_preferences"' "${outputs}")" -eq 3
 ! grep -E '^"(Mon|Tues|Wed|Thurs|Fri)[^"]*".*,"(x|Pref)"(,|$)' "${outputs}"

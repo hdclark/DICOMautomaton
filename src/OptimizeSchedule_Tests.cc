@@ -158,7 +158,7 @@ TEST_CASE("OptimizeSchedule loads and resolves the provided schedule template"){
         if(cell.get_col() == 0 && cell.val.find(", 2026") != std::string::npos) ++dates;
         if(cell.val == "Holiday") ++holidays;
     }
-    CHECK(constraints == 15U);
+    CHECK(constraints == 16U);
     CHECK(headers == 5U);
     CHECK(dates == 25U);
     CHECK(holidays == 22U);
@@ -171,7 +171,7 @@ TEST_CASE("OptimizeSchedule loads and resolves the provided schedule template"){
     REQUIRE(d.table_data.size() == 4U);
     CHECK(source->table.data == source_data);
     for(auto it = std::next(d.table_data.begin()); it != d.table_data.end(); ++it){
-        CHECK(report_rows(**it, "Component").size() == 15U);
+        CHECK(report_rows(**it, "Component").size() == 16U);
         CHECK(report_rows(**it, "StaffTally").size() == 11U);
         CHECK(report_rows(**it, "ExcludedDay").empty());
         CHECK(summary_value(**it, "active-days") == "23");
@@ -350,6 +350,111 @@ TEST_CASE("OptimizeSchedule fairness uses each staff member's mutable eligibilit
     CHECK(as_double(component_row(*chosen, "fairness_remote")[5]) == doctest::Approx(0.25));
     CHECK(summary_value(*chosen, "fairness-source-row-0-staff-A").find("denominator=2") != std::string::npos);
     CHECK(summary_value(*chosen, "fairness-source-row-0-staff-B").find("denominator=1") != std::string::npos);
+}
+
+TEST_CASE("OptimizeSchedule fairness constraints include only listed staff"){
+    SUBCASE("remote fairness"){
+        Drover d;
+        d.table_data.push_back(make_table({
+            {"Constraint", "fairness_remote", "1", "all of A and B"},
+            {"Date", "A", "B", "C"},
+            {"day", "x", "x", "x"},
+        }));
+        run(d, {{"Iterations", "20"}, {"OutputSchedules", "8"}, {"ParetoArchiveSize", "8"},
+                {"RestartCount", "1"}, {"RandomSeed", "5"}});
+        const Sparse_Table *chosen = nullptr;
+        for(auto it = std::next(d.table_data.begin()); it != d.table_data.end(); ++it){
+            if((*it)->table.value(2, 1) == "Remote*" && (*it)->table.value(2, 2) == "Onsite" &&
+               (*it)->table.value(2, 3) == "Remote*") chosen = it->get();
+        }
+        REQUIRE(chosen != nullptr);
+        CHECK(as_double(component_row(*chosen, "fairness_remote")[5]) == doctest::Approx(0.5));
+        CHECK(summary_value(*chosen, "fairness-source-row-0-staff-A").find("denominator=1") != std::string::npos);
+        CHECK(summary_value(*chosen, "fairness-source-row-0-staff-B").find("denominator=1") != std::string::npos);
+        for(const auto &row : report_rows(*chosen, "Summary")) CHECK(row[2] != "fairness-source-row-0-staff-C");
+    }
+
+    SUBCASE("override fairness"){
+        Drover d;
+        d.table_data.push_back(make_table({
+            {"Constraint", "fairness_overrides", "1", "all of A and B"},
+            {"Date", "A", "B", "C"},
+            {"day", "Pref", "Pref", "Pref"},
+        }));
+        run(d, {{"Iterations", "20"}, {"OutputSchedules", "8"}, {"ParetoArchiveSize", "8"},
+                {"RestartCount", "1"}, {"RandomSeed", "6"}});
+        const Sparse_Table *chosen = nullptr;
+        for(auto it = std::next(d.table_data.begin()); it != d.table_data.end(); ++it){
+            if((*it)->table.value(2, 1) == "Remote" && (*it)->table.value(2, 2) == "Onsite*" &&
+               (*it)->table.value(2, 3) == "Onsite*") chosen = it->get();
+        }
+        REQUIRE(chosen != nullptr);
+        CHECK(as_double(component_row(*chosen, "fairness_overrides")[5]) == doctest::Approx(0.5));
+        for(const auto &row : report_rows(*chosen, "Summary")) CHECK(row[2] != "fairness-source-row-0-staff-C");
+    }
+}
+
+TEST_CASE("OptimizeSchedule aligns selected mutable cells with preferences"){
+    Drover d;
+    d.table_data.push_back(make_table({
+        {"Constraint", "align_with_preferences", "7", " EaCh of a AnD B "},
+        {"Date", "A", "B", "C", "D"},
+        {"day", "x", "Pref", "x", "Vac"},
+    }));
+    run(d, {{"Iterations", "40"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "8"},
+            {"RestartCount", "1"}, {"RandomSeed", "7"}});
+    const auto &out = **std::next(d.table_data.begin());
+    CHECK(out.table.value(2, 1) == "Onsite");
+    CHECK(out.table.value(2, 2) == "Remote");
+    CHECK(out.table.value(2, 4) == "Vac");
+    CHECK(as_double(component_row(out, "align_with_preferences")[5]) == doctest::Approx(0.0));
+    CHECK(summary_value(out, "alignment-source-row-0-staff-A").find("numerator=0") != std::string::npos);
+    CHECK(summary_value(out, "alignment-source-row-0-staff-B").find("numerator=0") != std::string::npos);
+    for(const auto &row : report_rows(out, "Summary")) CHECK(row[2] != "alignment-source-row-0-staff-C");
+}
+
+TEST_CASE("OptimizeSchedule gives each selected staff member equal alignment influence"){
+    Drover d;
+    d.table_data.push_back(make_table({
+        {"Constraint", "align_with_preferences", "4", "each of A and B"},
+        {"Date", "A", "B"},
+        {"day 1", "x", "Pref"},
+        {"day 2", "x", "Fixed"},
+    }));
+    run(d, {{"Iterations", "20"}, {"OutputSchedules", "8"}, {"ParetoArchiveSize", "8"},
+            {"RestartCount", "1"}, {"RandomSeed", "10"}});
+    const Sparse_Table *chosen = nullptr;
+    for(auto it = std::next(d.table_data.begin()); it != d.table_data.end(); ++it){
+        if((*it)->table.value(2, 1) == "Remote*" && (*it)->table.value(3, 1) == "Remote*" &&
+           (*it)->table.value(2, 2) == "Remote") chosen = it->get();
+    }
+    REQUIRE(chosen != nullptr);
+    CHECK(as_double(component_row(*chosen, "align_with_preferences")[5]) == doctest::Approx(0.5));
+    CHECK(as_double(component_row(*chosen, "align_with_preferences")[6]) == doctest::Approx(2.0));
+}
+
+TEST_CASE("OptimizeSchedule alignment weight controls preference tradeoffs"){
+    const auto solve = [](const std::string &maximum_weight, const std::string &alignment_weight){
+        Drover d;
+        d.table_data.push_back(make_table({
+            {"Constraint", "maximum_onsite", maximum_weight, "any 0 of all"},
+            {"Constraint", "align_with_preferences", alignment_weight, "each of A"},
+            {"Date", "A"},
+            {"day", "x"},
+        }));
+        run(d, {{"Iterations", "30"}, {"OutputSchedules", "1"}, {"ParetoArchiveSize", "4"},
+                {"RestartCount", "1"}, {"RandomSeed", "8"}});
+        return d;
+    };
+
+    const auto coverage_wins = solve("2", "1");
+    const auto alignment_wins = solve("1", "2");
+    const auto &remote = **std::next(coverage_wins.table_data.begin());
+    const auto &onsite = **std::next(alignment_wins.table_data.begin());
+    CHECK(remote.table.value(3, 1) == "Remote*");
+    CHECK(onsite.table.value(3, 1) == "Onsite");
+    CHECK(as_double(component_row(remote, "align_with_preferences")[6]) == doctest::Approx(1.0));
+    CHECK(as_double(component_row(onsite, "maximum_onsite")[6]) == doctest::Approx(1.0));
 }
 
 TEST_CASE("OptimizeSchedule reports all preference overrides and weighted contributions"){
@@ -543,6 +648,30 @@ TEST_CASE("OptimizeSchedule rejects malformed inputs without changing the Drover
     }
     SUBCASE("duplicate weekly staff"){
         check_rejects_unchanged({{"Constraint", "max_weekly_remote", "1", "A=1, a=2"},
+                                 {"Date", "A"}, {"2026-08-24", "x"}});
+    }
+    SUBCASE("unknown fairness staff"){
+        check_rejects_unchanged({{"Constraint", "fairness_remote", "1", "all of A and Missing"},
+                                 {"Date", "A"}, {"2026-08-24", "x"}});
+    }
+    SUBCASE("duplicate fairness staff"){
+        check_rejects_unchanged({{"Constraint", "fairness_overrides", "1", "all of A and a"},
+                                 {"Date", "A"}, {"2026-08-24", "Pref"}});
+    }
+    SUBCASE("wrong fairness quantifier"){
+        check_rejects_unchanged({{"Constraint", "fairness_remote", "1", "each of A"},
+                                 {"Date", "A"}, {"2026-08-24", "x"}});
+    }
+    SUBCASE("wrong alignment quantifier"){
+        check_rejects_unchanged({{"Constraint", "align_with_preferences", "1", "all of A"},
+                                 {"Date", "A"}, {"2026-08-24", "x"}});
+    }
+    SUBCASE("malformed staff list delimiter"){
+        check_rejects_unchanged({{"Constraint", "align_with_preferences", "1", "each of A or B"},
+                                 {"Date", "A", "B"}, {"2026-08-24", "x", "Pref"}});
+    }
+    SUBCASE("alignment statuses policy"){
+        check_rejects_unchanged({{"Constraint", "align_with_preferences", "1", "each of A", "statuses=Remote"},
                                  {"Date", "A"}, {"2026-08-24", "x"}});
     }
     SUBCASE("argument number"){
