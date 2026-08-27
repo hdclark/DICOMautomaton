@@ -5,6 +5,17 @@ Below is a simplified timeline of `DICOMautomaton` development, broken down by m
 
 Note: this list is periodically updated and is likely to be out-of-date!
 
+## 202608
+
+- Added the `ScheduleCoverage` operation: an automated on-site coverage scheduler that ingests a staff-rostering
+  schedule (as a sparse table), classifies every cell, solves a prioritized on-site coverage optimization, balances
+  long-term fairness across staff, honors remote-work preferences, and emits several Pareto-front schedule variations
+  each with an appended audit report.
+- The scheduler is dependency-free beyond Ygor: per-day candidate enumeration, lexicographic requirement
+  optimization, deterministic simulated-annealing refinement, and Pareto-front projection are all hand-written C++17.
+- Added comprehensive unit tests (`ScheduleCoverage_Tests.cc`) and an integration test
+  (`integration_tests/tests/ScheduleCoverage.sh`) that runs the operation on the shipped schedule template.
+
 ## 202206
 
 - CI: added custom gitlab runner tags.

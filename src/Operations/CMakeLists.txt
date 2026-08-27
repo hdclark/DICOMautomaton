@@ -202,6 +202,7 @@ add_library(Operations_objs OBJECT
     RigidWarpImages.cc
     SamplePoints.cc
     ScalePixels.cc
+    ScheduleCoverage.cc
     SelectDirectory.cc
     SelectFilename.cc
     SelectionIsPresent.cc

@@ -964,10 +964,12 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct table_display_t {
         int64_t table_num = -1;
         bool use_keyword_highlighting = true;
-        std::map<std::string, ImVec4> colours = { { std::string("pass"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
-                                                  { std::string("true"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
-                                                  { std::string("fail"),  ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
-                                                  { std::string("false"), ImVec4(0.600f, 0.100f, 0.000f, 1.00f) } };
+        std::map<std::string, ImVec4> colours = { { std::string("pass"),   ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
+                                                  { std::string("true"),   ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
+                                                  { std::string("fail"),   ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
+                                                  { std::string("false"),  ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
+                                                  { std::string("onsite"), ImVec4(0.200f, 0.700f, 0.400f, 1.00f) },
+                                                  { std::string("remote"), ImVec4(0.200f, 0.400f, 0.700f, 1.00f) } };
 
         ImVec4 selected_colour = ImVec4(0.260f, 0.590f, 0.980f, 0.50f);
         //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
