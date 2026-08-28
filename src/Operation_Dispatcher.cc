@@ -228,6 +228,7 @@
 #include "Operations/SelectionIsPresent.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SimplifyContours.h"
+#include "Operations/SplitGPX.h"
 #include "Operations/SimplifySurfaceMeshes.h"
 #include "Operations/SimulateRadiograph.h"
 #include "Operations/Sleep.h"
@@ -530,6 +531,7 @@ known_ops_t Known_Operations(){
     out["SelectionIsPresent"] = std::make_pair(OpArgDocSelectionIsPresent, SelectionIsPresent);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
+    out["SplitGPX"] = std::make_pair(OpArgDocSplitGPX, SplitGPX);
     out["SimplifySurfaceMeshes"] = std::make_pair(OpArgDocSimplifySurfaceMeshes, SimplifySurfaceMeshes);
     out["SimulateRadiograph"] = std::make_pair(OpArgDocSimulateRadiograph, SimulateRadiograph);
     out["Sleep"] = std::make_pair(OpArgDocSleep, Sleep);

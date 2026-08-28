@@ -207,6 +207,7 @@ add_library(Operations_objs OBJECT
     SelectionIsPresent.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
+    SplitGPX.cc
     SimplifySurfaceMeshes.cc
     SimulateRadiograph.cc
     Sleep.cc
