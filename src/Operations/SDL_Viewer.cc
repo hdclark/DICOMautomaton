@@ -8677,6 +8677,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::Combo("Procedure", &proc_idx, proc_items, 6)){
                         active.procedure.kind = static_cast<sketch_procedure_kind_t>(proc_idx);
                     }
+                    int boolean_engine_idx = static_cast<int>(active.procedure.boolean_engine);
+                    const char *boolean_engine_items[] = {
+                        "YgorMeshesBoolean",
+                        "YgorMeshesBoolean2",
+                        "YgorMeshesBoolean3",
+                        "YgorMeshesBoolean4"
+                    };
+                    if(ImGui::Combo("Boolean engine", &boolean_engine_idx, boolean_engine_items, 4)){
+                        active.procedure.boolean_engine = static_cast<sketch_boolean_engine_t>(boolean_engine_idx);
+                    }
+                    ImGui::TextWrapped("Used by extend and carve procedures. The selected engine is used directly; failures are reported without trying another engine.");
                 }
 
                 // Extrusion parameters.

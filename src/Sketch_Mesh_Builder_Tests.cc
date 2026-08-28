@@ -68,6 +68,7 @@ static Sketch make_sparse_circle_sketch(){
 TEST_CASE("Sketch_Procedure write/read round-trip"){
     Sketch_Procedure proc;
     proc.kind = sketch_procedure_kind_t::extrusion;
+    proc.boolean_engine = sketch_boolean_engine_t::ygor_4;
     proc.extrusion_options.into_frame_length = 7.5;
     proc.extrusion_options.out_of_frame_length = 3.25;
     proc.extrusion_options.into_frame_angle_degrees = 1.0;
@@ -81,12 +82,32 @@ TEST_CASE("Sketch_Procedure write/read round-trip"){
     Sketch_Procedure loaded;
     REQUIRE(Sketch_Procedure::read_from(ss, loaded));
     CHECK(loaded.kind == sketch_procedure_kind_t::extrusion);
+    CHECK(loaded.boolean_engine == sketch_boolean_engine_t::ygor_4);
     CHECK(loaded.extrusion_options.into_frame_length == doctest::Approx(7.5));
     CHECK(loaded.extrusion_options.out_of_frame_length == doctest::Approx(3.25));
     CHECK(loaded.extrusion_options.into_frame_angle_degrees == doctest::Approx(1.0));
     CHECK(loaded.extrusion_options.out_of_frame_angle_degrees == doctest::Approx(-2.0));
     CHECK(loaded.extrusion_options.curve_segments == 32U);
     CHECK(loaded.extrusion_options.max_discretization_error == doctest::Approx(0.05));
+}
+
+TEST_CASE("Sketch_Procedure Boolean engine string conversion"){
+    for(auto engine : { sketch_boolean_engine_t::ygor_1,
+                        sketch_boolean_engine_t::ygor_2,
+                        sketch_boolean_engine_t::ygor_3,
+                        sketch_boolean_engine_t::ygor_4 }){
+        const auto s = sketch_boolean_engine_to_string(engine);
+        sketch_boolean_engine_t out = sketch_boolean_engine_t::ygor_2;
+        REQUIRE(string_to_sketch_boolean_engine(s, out));
+        CHECK(out == engine);
+    }
+
+    sketch_boolean_engine_t legacy = sketch_boolean_engine_t::ygor_2;
+    REQUIRE(string_to_sketch_boolean_engine("YgorMeshesBoolean3", legacy));
+    CHECK(legacy == sketch_boolean_engine_t::ygor_3);
+
+    sketch_boolean_engine_t dummy;
+    CHECK_FALSE(string_to_sketch_boolean_engine("invalid_boolean_engine", dummy));
 }
 
 TEST_CASE("Sketch_Procedure kind string conversion"){
@@ -245,6 +266,7 @@ TEST_CASE("Sketch_Mesh_Builder write/read round-trip with sketches"){
     builder.append_default_node();
     builder.node(1).sketch = make_circle_sketch(5.0, 5.0, 3.0);
     builder.node(1).procedure.kind = sketch_procedure_kind_t::through_hole;
+    builder.node(1).procedure.boolean_engine = sketch_boolean_engine_t::ygor_3;
     builder.set_active_node_index(1U);
 
     std::stringstream ss;
@@ -257,6 +279,7 @@ TEST_CASE("Sketch_Mesh_Builder write/read round-trip with sketches"){
     CHECK(loaded.node(0).procedure.kind == sketch_procedure_kind_t::extrusion);
     CHECK(loaded.node(0).procedure.extrusion_options.into_frame_length == doctest::Approx(5.0));
     CHECK(loaded.node(1).procedure.kind == sketch_procedure_kind_t::through_hole);
+    CHECK(loaded.node(1).procedure.boolean_engine == sketch_boolean_engine_t::ygor_3);
     // Verify sketch data survived.
     CHECK(loaded.node(0).sketch.has_plane());
     CHECK(loaded.node(1).sketch.has_plane());
