@@ -19,9 +19,12 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <set>
+#include <cstdint>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/Compute/Extract_Histograms.h"
 #include "ExtractImageHistograms.h"
 #include "Explicator.h"       //Needed for Explicator class.
@@ -78,10 +81,12 @@ OperationDoc OpArgDocExtractImageHistograms(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based. Use '-1' to operate on all available channels.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "-1";
     out.args.back().expected = true;
-    out.args.back().examples = { "-1", "0", "1", "2" };
+    out.args.back().examples = { "-1", "0", "1", "2", "0,2" };
 
 
     out.args.emplace_back();
@@ -235,7 +240,7 @@ bool ExtractImageHistograms(Drover &DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
@@ -315,7 +320,7 @@ bool ExtractImageHistograms(Drover &DICOM_data,
 
         ud.dDose = dDoseOpt;
         ud.bin_count = BinCountOpt;
-        ud.channel = Channel;
+        ud.channels = Channels;
         ud.lower_threshold = Lower;
         ud.upper_threshold = Upper;
 

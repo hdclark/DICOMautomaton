@@ -10,9 +10,12 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <set>
+#include <cstdint>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/Compute/Compare_Images.h"
 #include "ComparePixels.h"
 #include "YgorImages.h"
@@ -119,12 +122,15 @@ OperationDoc OpArgDocComparePixels(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to compare (zero-based)."
+                           " Specify a single channel (e.g., '0') or multiple comma-separated channels"
+                           " (e.g., '0,2')."
                            " Note that both test images and reference images will share this specifier.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "0",
                                  "1",
-                                 "2" };
+                                 "2",
+                                 "0,2" };
 
     out.args.emplace_back();
     out.args.back().name = "TestImgLowerThreshold";
@@ -322,7 +328,7 @@ bool ComparePixels(Drover &DICOM_data,
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto TestImgLowerThreshold = std::stod( OptArgs.getValueStr("TestImgLowerThreshold").value() );
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
     const auto RefImgLowerThreshold = std::stod( OptArgs.getValueStr("RefImgLowerThreshold").value() );
@@ -418,7 +424,7 @@ bool ComparePixels(Drover &DICOM_data,
             throw std::invalid_argument("Interpolation method not understood. Cannot continue.");
         }
 
-        ud.channel = Channel;
+        ud.channels = Channels;
 
         ud.inc_lower_threshold = TestImgLowerThreshold;
         ud.inc_upper_threshold = TestImgUpperThreshold;

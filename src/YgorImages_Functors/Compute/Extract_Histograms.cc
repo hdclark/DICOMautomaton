@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <set>
 #include <cstdint>
 
 #include "../../Thread_Pool.h"
@@ -119,6 +120,8 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
             wq.submit_task([&,img_refw]() -> void {
 
+                const auto resolved_channels = img_refw.get().resolve_channels(user_data_s->channels);
+
                 // Cycle over all the alike-named contour collections.
                 for(auto & named_ccsl : named_ccsls){
                     double local_minimum = std::numeric_limits<double>::infinity();
@@ -130,7 +133,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                                          std::reference_wrapper<planar_image<float,double>> /*l_img_refw*/,
                                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                          float &voxel_val) {
-                        if( ( (user_data_s->channel < 0) || (user_data_s->channel == channel))
+                        if( ( resolved_channels.count(channel) != 0 )
                         &&  std::isfinite(voxel_val)  // Ignore infinite and NaN voxels.
                         &&  (user_data_s->lower_threshold <= voxel_val)
                         &&  (voxel_val <= user_data_s->upper_threshold) ){
@@ -258,6 +261,8 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                 const auto pxl_dz = img_refw.get().pxl_dz;
                 const auto pxl_vol = pxl_dx * pxl_dy * pxl_dz;
 
+                const auto resolved_channels = img_refw.get().resolve_channels(user_data_s->channels);
+
                 std::vector<size_t> shuttle;  // Thread-specific storage buffer.
                 const size_t N_shuttle = 1000; // Size of buffer.
                 shuttle.reserve(N_shuttle);
@@ -288,7 +293,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                          float &voxel_val){
 
-                        if( ( (user_data_s->channel < 0) || (user_data_s->channel == channel))
+                        if( ( resolved_channels.count(channel) != 0 )
                         &&  std::isfinite(voxel_val)  // Ignore infinite and NaN voxels.
                         &&  (user_data_s->lower_threshold <= voxel_val)
                         &&  (voxel_val <= user_data_s->upper_threshold) ){

@@ -458,3 +458,18 @@ std::string convert_wstring_to_string(const std::wstring &wstr){
     return l_conv.to_bytes(wstr);
 }
 
+// Parser for comma-separated channel specifications.
+std::set<int64_t>
+parse_channel_set(const std::string &in){
+    auto split = SplitStringToVector(in, ',', 'd');
+
+    std::set<int64_t> channels;
+    for(const auto &w : split){
+        const auto trimmed = Canonicalize_String2(w, CANONICALIZE::TRIM_ENDS);
+        if(trimmed.empty()) continue;
+        const auto x = std::stol(trimmed);
+        channels.insert(x);
+    }
+    return channels;
+}
+

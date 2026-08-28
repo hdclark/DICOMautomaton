@@ -6,6 +6,7 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <cstdint>
 #include <optional>
@@ -48,12 +49,12 @@ struct ComputeExtractHistogramsUserData {
     double upper_threshold =  (std::numeric_limits<double>::infinity());
 
     // -----------------------------
-    // The channel to consider. 
+    // The channels to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
-    //       Negative values will use all channels.
+    //       Negative values or an empty set will select all channels.
     //
-    int64_t channel = -1;
+    std::set<int64_t> channels;
 
     // -----------------------------
     // How contours with differing names should be handled.

@@ -200,7 +200,7 @@ bool SupersampleImageGrid(Drover &DICOM_data,
             // Interpolate the slices using the original slices as a reference.
             std::list<std::reference_wrapper<planar_image_collection<float, double>>> IARL = { std::ref( (*iap_it)->imagecoll ) };
             ComputeInterpolateImageSlicesUserData ud;
-            ud.channel = -1; // Operate on all channels to maintain consistency with in-plane only methods.
+            ud.channels = {}; // Operate on all channels to maintain consistency with in-plane only methods.
             ud.description = "Supersampled "_s
                            + std::to_string(RowScaleFactor) + "x, "_s
                            + std::to_string(ColumnScaleFactor) + "x, "_s

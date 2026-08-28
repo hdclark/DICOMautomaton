@@ -5,6 +5,7 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <set>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -17,11 +18,11 @@ template <class T> class contour_collection;
 struct ComputeJointPixelSamplerUserData {
 
     // -----------------------------
-    // The channel to consider. 
+    // The channels to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
-    //       Negative values will use all channels.
-    int64_t channel = -1;
+    //       Negative values or an empty set will select all channels.
+    std::set<int64_t> channels;
 
     // -----------------------------
     // Parameters for pixel thresholds.

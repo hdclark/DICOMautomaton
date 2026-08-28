@@ -25,6 +25,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Thread_Pool.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 
@@ -65,10 +66,11 @@ OperationDoc OpArgDocImprintImages(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Comma-separated values (e.g., '0,2') are supported.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
-    out.args.back().examples = { "0", "1", "2" };
+    out.args.back().examples = { "0", "1", "2", "0,2" };
 
     return out;
 }
@@ -87,7 +89,7 @@ bool ImprintImages(Drover &DICOM_data,
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
 
     const auto VoxelValue = std::stod( OptArgs.getValueStr("VoxelValue").value() );
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -100,6 +102,8 @@ bool ImprintImages(Drover &DICOM_data,
     for(auto & pcp_it : PCs){
         for(auto & iap_it : IAs){
             for(auto &img : (*iap_it)->imagecoll.images){
+                const auto resolved_chnls = img.resolve_channels(Channels);
+                const auto Channel = (resolved_chnls.empty()) ? static_cast<int64_t>(0) : *std::begin(resolved_chnls);
 
                 if(false){
 /*

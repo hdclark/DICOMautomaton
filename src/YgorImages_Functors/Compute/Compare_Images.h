@@ -6,6 +6,7 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <set>
 #include <cstdint>
 
 
@@ -15,10 +16,10 @@ template <class T> class contour_collection;
 struct ComputeCompareImagesUserData {
 
     // -----------------------------
-    // The channel to consider. 
+    // The channels to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
-    int64_t channel = 0;
+    std::set<int64_t> channels = {0};
 
 
     // -----------------------------

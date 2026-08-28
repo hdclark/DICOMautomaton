@@ -18,6 +18,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Metadata.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -102,12 +103,14 @@ OperationDoc OpArgDocNormalizePixels(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operate on (zero-based)."
-                           " Negative values will cause all channels to be operated on.";
+                           " Negative values will cause all channels to be operated on."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2').";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
 
     out.args.emplace_back();
@@ -167,7 +170,7 @@ bool NormalizePixels(Drover &DICOM_data,
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -211,6 +214,7 @@ bool NormalizePixels(Drover &DICOM_data,
     for(auto & iap_it : IAs){
         
         if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
 
         PartitionedImageVoxelVisitorMutatorUserData ud;
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -244,7 +248,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     if(val < 0.0) val = 0.0;
                     if(1.0 < val) val = 1.0;
                 }
@@ -263,7 +267,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                std::reference_wrapper<planar_image<float,double>>,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     minmax.Digest(val);
                 }
                 return;
@@ -281,7 +285,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                                                    std::reference_wrapper<planar_image<float,double>>,
                                                                    std::reference_wrapper<planar_image<float,double>>,
                                                                    float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
 
                     if(op_is_st01){
                         val = ((max - val)/(max - min));
@@ -303,7 +307,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                std::reference_wrapper<planar_image<float,double>>,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     total_sum += val;
                     ++total_count;
                 }
@@ -321,7 +325,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                                    std::reference_wrapper<planar_image<float,double>>,
                                                    std::reference_wrapper<planar_image<float,double>>,
                                                    float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     val -= per_voxel_sum;
                 }
                 return;
@@ -355,7 +359,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                                    std::reference_wrapper<planar_image<float,double>>,
                                                    std::reference_wrapper<planar_image<float,double>>,
                                                    float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     const auto mass_in_grams = mass.value() * 1000.0;
                     val = val * mass_in_grams / rnd.value();
                 }
@@ -368,7 +372,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     val = 0.0f;
                 }
                 return;
@@ -380,7 +384,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     val = 1.0f;
                 }
                 return;
@@ -392,7 +396,7 @@ bool NormalizePixels(Drover &DICOM_data,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      float &val) {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     val = std::numeric_limits<float>::quiet_NaN();
                 }
                 return;

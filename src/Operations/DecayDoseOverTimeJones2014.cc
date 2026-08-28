@@ -153,7 +153,7 @@ bool DecayDoseOverTimeJones2014(Drover &DICOM_data,
 
     DecayDoseOverTimeUserData ud;
     ud.model = DecayDoseOverTimeMethod::Jones_and_Grant_2014; 
-    ud.channel = 0; // A second channel (added on-the-fly) will be used to store a modification mask.
+    ud.channels = {0}; // A second channel (added on-the-fly) will be used to store a modification mask.
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();

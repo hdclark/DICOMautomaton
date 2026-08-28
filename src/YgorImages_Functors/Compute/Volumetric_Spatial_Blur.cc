@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <set>
 #include <cstdint>
 
 #include "YgorImages.h"
@@ -104,7 +105,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
         {
             YLOGINFO("Convolving row-aligned direction now..");
             ComputeVolumetricNeighbourhoodSamplerUserData ud;
-            ud.channel = user_data_s->channel;
+            ud.channels = user_data_s->channels;
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
             ud.f_reduce = f_reduce;
 
@@ -128,7 +129,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
         {
             YLOGINFO("Convolving column-aligned direction now..");
             ComputeVolumetricNeighbourhoodSamplerUserData ud;
-            ud.channel = user_data_s->channel;
+            ud.channels = user_data_s->channels;
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
             ud.f_reduce = f_reduce;
 
@@ -151,7 +152,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
         {
             YLOGINFO("Convolving ortho-aligned direction now..");
             ComputeVolumetricNeighbourhoodSamplerUserData ud;
-            ud.channel = user_data_s->channel;
+            ud.channels = user_data_s->channels;
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
             ud.f_reduce = f_reduce;
 

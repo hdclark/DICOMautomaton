@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <set>
 #include <mutex>
 #include <cstdint>
 
@@ -65,7 +66,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
         return false;
     }
 
-    const auto ud_channel = user_data_s->channel;
+    const auto ud_channels = user_data_s->channels;
 
     // Determine a reasonable spatial 'scale' to gauge alignment.
     //
@@ -162,6 +163,8 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                 YLOGDEBUG("Reference images do not all exact-overlap; using per-image sampling");
             }
 
+            const auto resolved_channels = img_refw.get().resolve_channels(ud_channels);
+
             auto f_bounded = [&](int64_t E_row,  // "edit-image" row.
                                  int64_t E_col,  // "edit-image" column.
                                  int64_t channel, 
@@ -176,7 +179,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                 &&  !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
                     return; // No-op if outside of the thresholds.
                 }
-                if( (ud_channel >= 0) && (channel != ud_channel) ){
+                if( resolved_channels.count(channel) == 0 ){
                     return; // No-op if this is the wrong channel.
                 }
 

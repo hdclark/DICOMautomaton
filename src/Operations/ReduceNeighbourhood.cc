@@ -14,6 +14,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -74,12 +75,14 @@ OperationDoc OpArgDocReduceNeighbourhood(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operated on (zero-based)."
-                           " Negative values will cause all channels to be operated on.";
+                           " Negative values will cause all channels to be operated on."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2').";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
     out.args.emplace_back();
     out.args.back().name = "Neighbourhood";
@@ -203,7 +206,7 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const auto NeighbourhoodStr = OptArgs.getValueStr("Neighbourhood").value();
     const auto ReductionStr = OptArgs.getValueStr("Reduction").value();
@@ -287,7 +290,7 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
     for(auto & iap_it : IAs){
 
         ComputeVolumetricNeighbourhoodSamplerUserData ud;
-        ud.channel = Channel;
+        ud.channels = Channels;
         ud.maximum_distance = MaxDistance;
         ud.description = "Neighbourhood-reduced";
 

@@ -4,6 +4,7 @@
 #include <any>
 #include <functional>
 #include <list>
+#include <set>
 #include <cstdint>
 
 
@@ -20,8 +21,8 @@ struct ComputeVolumetricSpatialBlurUserData {
 
     VolumetricSpatialBlurEstimator estimator = VolumetricSpatialBlurEstimator::Gaussian;
 
-    // The channel to analyze. If negative, all channels are analyzed.
-    int64_t channel = -1;
+    // The channels to analyze. Negative values or an empty set will select all channels.
+    std::set<int64_t> channels;
 
 };
 
