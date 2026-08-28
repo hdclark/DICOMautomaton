@@ -176,6 +176,7 @@
 #include "Operations/LoadFilesInteractively.h"
 #include "Operations/LogScale.h"
 #include "Operations/MapTableToParameters.h"
+#include "Operations/MaskContours.h"
 #include "Operations/MaskParameters.h"
 #include "Operations/MaskVerbosity.h"
 #include "Operations/MaxMinPixels.h"
@@ -475,6 +476,7 @@ known_ops_t Known_Operations(){
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MapTableToParameters"] = std::make_pair(OpArgDocMapTableToParameters, MapTableToParameters);
     out["MakeMeshesConvex"] = std::make_pair(OpArgDocMakeMeshesConvex, MakeMeshesConvex);
+    out["MaskContours"] = std::make_pair(OpArgDocMaskContours, MaskContours);
     out["MaskParameters"] = std::make_pair(OpArgDocMaskParameters, MaskParameters);
     out["MaskVerbosity"] = std::make_pair(OpArgDocMaskVerbosity, MaskVerbosity);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
