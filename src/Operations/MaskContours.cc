@@ -69,10 +69,11 @@ bool point_on_segment_xy(const vec3<double> &p,
                          double eps = 1.0E-10){
     const auto scale = std::max({1.0, std::abs(a.x), std::abs(a.y), std::abs(b.x), std::abs(b.y),
                                       std::abs(p.x), std::abs(p.y)});
-    const auto tol = eps * scale;
-    if(std::abs(orient2(a,b,p)) > tol) return false;
-    return (std::min(a.x,b.x)-tol <= p.x) && (p.x <= std::max(a.x,b.x)+tol)
-        && (std::min(a.y,b.y)-tol <= p.y) && (p.y <= std::max(a.y,b.y)+tol);
+    const auto tol_xy = eps * scale;
+    const auto tol_area = eps * scale * scale;
+    if(std::abs(orient2(a,b,p)) > tol_area) return false;
+    return (std::min(a.x,b.x)-tol_xy <= p.x) && (p.x <= std::max(a.x,b.x)+tol_xy)
+        && (std::min(a.y,b.y)-tol_xy <= p.y) && (p.y <= std::max(a.y,b.y)+tol_xy);
 }
 
 bool segments_intersect_xy(const vec3<double> &a,
