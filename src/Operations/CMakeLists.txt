@@ -175,6 +175,7 @@ add_library(Operations_objs OBJECT
     NormalizeLineSamples.cc
     NormalizePixels.cc
     NotifyUser.cc
+    OptimizeSchedule.cc
     OptimizeStaticBeams.cc
     OrderImages.cc
     PartitionContours.cc

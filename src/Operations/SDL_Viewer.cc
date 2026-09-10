@@ -14,6 +14,7 @@
 #include <fstream>
 #include <functional>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -650,6 +651,30 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
     return;
 }
 
+std::map<std::string, std::array<float, 4>> ParseSDLViewerKeywordColours(const std::string &text){
+    std::map<std::string, std::array<float, 4>> out;
+    if(text.empty()) return out;
+    for(const auto &function : parse_functions(text)){
+        if(function.name != "keyword" || !function.children.empty() || function.parameters.size() != 5U){
+            throw std::invalid_argument("KeywordColours entries must have the form keyword('text', red, green, blue, alpha)");
+        }
+        const auto &keyword = function.parameters.front().raw;
+        if(keyword.empty()) throw std::invalid_argument("KeywordColours keywords cannot be empty");
+        std::array<float, 4> colour{};
+        for(std::size_t i = 0; i < colour.size(); ++i){
+            const auto value = get_as<double>(function.parameters.at(i + 1U).raw);
+            if(!value || !std::isfinite(*value) || *value < 0.0 || 1.0 < *value){
+                throw std::invalid_argument("KeywordColours colour components must be finite numbers in [0,1]");
+            }
+            colour[i] = static_cast<float>(*value);
+        }
+        if(!out.emplace(keyword, colour).second){
+            throw std::invalid_argument("KeywordColours contains duplicate keyword '" + keyword + "'");
+        }
+    }
+    return out;
+}
+
 OperationDoc OpArgDocSDL_Viewer(){
     OperationDoc out;
     out.name = "SDL_Viewer";
@@ -681,6 +706,13 @@ OperationDoc OpArgDocSDL_Viewer(){
     out.args.back().expected = false;
     out.args.back().examples = { "Step 1---Step 2---Step 3" };
 
+    out.args.emplace_back();
+    out.args.back().name = "KeywordColours";
+    out.args.back().desc = "Semicolon-separated exact cell keyword highlights in the form keyword('text', red, green, blue, alpha), with colour components in [0,1]. Supply an empty value to disable keyword highlighting.";
+    out.args.back().default_val = "keyword('pass',0.175,0.500,0.000,1.0);keyword('true',0.175,0.500,0.000,1.0);keyword('fail',0.600,0.100,0.000,1.0);keyword('false',0.600,0.100,0.000,1.0)";
+    out.args.back().expected = true;
+    out.args.back().examples = { "keyword('Onsite',0.1,0.5,0.1,1.0);keyword('Remote',0.1,0.2,0.6,1.0)", "" };
+
     return out;
 }
 
@@ -693,6 +725,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto DefaultLexiconCustomizerStr = OptArgs.getValueStr("LexiconCustomizer").value();
     const auto DefaultContouringStr = OptArgs.getValueStr("Contouring").value();
     const auto GuideOpt = OptArgs.getValueStr("Guide");
+    const auto KeywordColours = ParseSDLViewerKeywordColours(OptArgs.getValueStr("KeywordColours").value());
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto TrueRegex = Compile_Regex("^tr?u?e?$");
@@ -964,15 +997,16 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct table_display_t {
         int64_t table_num = -1;
         bool use_keyword_highlighting = true;
-        std::map<std::string, ImVec4> colours = { { std::string("pass"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
-                                                  { std::string("true"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
-                                                  { std::string("fail"),  ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
-                                                  { std::string("false"), ImVec4(0.600f, 0.100f, 0.000f, 1.00f) } };
+        std::map<std::string, ImVec4> colours;
 
         ImVec4 selected_colour = ImVec4(0.260f, 0.590f, 0.980f, 0.50f);
         //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
         //ImVec4 fail_colour = ImVec4(0.600f, 0.100f, 0.000f, 1.00f);
     } table_display;
+    for(const auto &entry : KeywordColours){
+        const auto &c = entry.second;
+        table_display.colours.emplace(entry.first, ImVec4(c[0], c[1], c[2], c[3]));
+    }
     using table_cell_bounds_t = std::pair<tables::cell_coord_t, tables::cell_coord_t>; // row_bounds, col_bounds
     std::set< tables::cell_coord_t > table_selection;
     std::optional< tables::cell_coord_t > cell_selected;

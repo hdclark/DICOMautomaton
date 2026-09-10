@@ -196,6 +196,7 @@
 #include "Operations/NormalizeLineSamples.h"
 #include "Operations/NormalizePixels.h"
 #include "Operations/NotifyUser.h"
+#include "Operations/OptimizeSchedule.h"
 #include "Operations/OptimizeStaticBeams.h"
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
@@ -495,6 +496,7 @@ known_ops_t Known_Operations(){
     out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
     out["NotifyUser"] = std::make_pair(OpArgDocNotifyUser, NotifyUser);
+    out["OptimizeSchedule"] = std::make_pair(OpArgDocOptimizeSchedule, OptimizeSchedule);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
     out["OrientMeshes"] = std::make_pair(OpArgDocOrientMeshes, OrientMeshes);
