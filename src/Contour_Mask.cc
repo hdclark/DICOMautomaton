@@ -1,8 +1,10 @@
 // Contour_Mask.cc - A part of DICOMautomaton 2026. Written by hal clark.
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <initializer_list>
 #include <limits>
 #include <list>
 #include <map>
@@ -68,6 +70,145 @@ void validate_polygon(mask_polygon &poly){
             }
         }
     }
+}
+
+std::string canonical_region_name(const std::string &name){
+    std::string out;
+    for(const auto c : name){
+        const auto uc = static_cast<unsigned char>(c);
+        if(std::isalnum(uc)) out.push_back(static_cast<char>(std::tolower(uc)));
+    }
+    return out;
+}
+
+mask_region make_geographic_region(const std::string &name,
+                                   const std::initializer_list<std::pair<double, double>> &lat_lon_vertices){
+    mask_region region;
+    region.name = name;
+    mask_polygon polygon;
+    for(const auto &lat_lon : lat_lon_vertices){
+        const auto xy = dcma::gis::project_mercator(lat_lon.first, lat_lon.second);
+        polygon.vertices.emplace_back(xy.first, xy.second);
+    }
+    validate_polygon(polygon);
+    region.polygons.emplace_back(std::move(polygon));
+    return region;
+}
+
+const std::vector<mask_region> &predefined_regions(){
+    // These irregular footprints encompass the concentrated trail networks while excluding nearby urban areas.
+    static const std::vector<mask_region> regions = {
+        make_geographic_region("Fromme", {
+            {49.326,-123.092}, {49.342,-123.101}, {49.369,-123.088}, {49.386,-123.068},
+            {49.374,-123.046}, {49.345,-123.052}
+        }),
+        make_geographic_region("Burke", {
+            {49.278,-122.755}, {49.298,-122.765}, {49.333,-122.744}, {49.351,-122.708},
+            {49.331,-122.672}, {49.300,-122.686}
+        }),
+        make_geographic_region("Eagle Mountain", {
+            {49.276,-122.883}, {49.300,-122.878}, {49.335,-122.855}, {49.347,-122.821},
+            {49.326,-122.797}, {49.294,-122.817}
+        }),
+        make_geographic_region("Cypress Mountain", {
+            {49.337,-123.219}, {49.357,-123.239}, {49.389,-123.235}, {49.407,-123.205},
+            {49.393,-123.174}, {49.362,-123.181}
+        }),
+        make_geographic_region("Grouse Mountain Bike Park", {
+            {49.337,-123.137}, {49.354,-123.149}, {49.380,-123.137}, {49.392,-123.116},
+            {49.373,-123.095}, {49.349,-123.105}
+        }),
+        make_geographic_region("Seymour Mountain", {
+            {49.312,-123.018}, {49.332,-123.028}, {49.366,-123.012}, {49.391,-122.980},
+            {49.377,-122.944}, {49.344,-122.951}, {49.320,-122.976}
+        }),
+        make_geographic_region("Burnaby Mountain", {
+            {49.267,-122.963}, {49.282,-122.966}, {49.296,-122.945}, {49.294,-122.913},
+            {49.277,-122.897}, {49.263,-122.925}
+        }),
+        make_geographic_region("Delta Watershed", {
+            {49.087,-122.937}, {49.103,-122.948}, {49.127,-122.939}, {49.143,-122.918},
+            {49.130,-122.892}, {49.104,-122.899}
+        }),
+        make_geographic_region("Bert Flinn Park", {
+            {49.289,-122.865}, {49.303,-122.873}, {49.322,-122.859}, {49.327,-122.836},
+            {49.311,-122.820}, {49.292,-122.836}
+        }),
+        make_geographic_region("Thornhill", {
+            {49.211,-122.594}, {49.229,-122.606}, {49.253,-122.594}, {49.267,-122.568},
+            {49.250,-122.541}, {49.226,-122.552}
+        }),
+        make_geographic_region("Woodlot 0007", {
+            {49.176,-122.596}, {49.193,-122.607}, {49.217,-122.596}, {49.229,-122.570},
+            {49.211,-122.545}, {49.187,-122.558}
+        }),
+        make_geographic_region("Bear Mountain", {
+            {49.158,-122.323}, {49.177,-122.335}, {49.205,-122.321}, {49.218,-122.292},
+            {49.198,-122.264}, {49.173,-122.278}
+        }),
+        make_geographic_region("Red Mountain", {
+            {49.142,-122.347}, {49.158,-122.358}, {49.179,-122.346}, {49.188,-122.321},
+            {49.170,-122.300}, {49.149,-122.315}
+        }),
+        make_geographic_region("Sumas Mountain", {
+            {49.086,-122.238}, {49.108,-122.252}, {49.139,-122.236}, {49.153,-122.202},
+            {49.131,-122.170}, {49.101,-122.187}
+        }),
+        make_geographic_region("Vedder Mountain", {
+            {49.071,-122.006}, {49.090,-122.020}, {49.118,-122.006}, {49.130,-121.975},
+            {49.110,-121.947}, {49.083,-121.961}
+        }),
+        make_geographic_region("Ledgeview", {
+            {49.045,-122.217}, {49.061,-122.228}, {49.082,-122.217}, {49.091,-122.194},
+            {49.074,-122.174}, {49.052,-122.187}
+        }),
+        make_geographic_region("Whistler Mountain Bike Park", {
+            {50.041,-122.979}, {50.064,-122.997}, {50.096,-122.979}, {50.112,-122.946},
+            {50.087,-122.914}, {50.057,-122.930}
+        }),
+        make_geographic_region("Mount Washington Bike Park", {
+            {49.724,-125.322}, {49.743,-125.338}, {49.770,-125.326}, {49.786,-125.299},
+            {49.768,-125.270}, {49.740,-125.282}
+        }),
+        make_geographic_region("Revelstoke Bike Park", {
+            {50.939,-118.190}, {50.960,-118.205}, {50.988,-118.188}, {51.000,-118.153},
+            {50.977,-118.126}, {50.950,-118.145}
+        }),
+        make_geographic_region("Kicking Horse Bike Park", {
+            {51.277,-117.070}, {51.298,-117.087}, {51.329,-117.071}, {51.344,-117.035},
+            {51.320,-117.006}, {51.291,-117.023}
+        }),
+        make_geographic_region("Sun Peaks Bike Park", {
+            {50.866,-119.928}, {50.885,-119.944}, {50.913,-119.927}, {50.926,-119.895},
+            {50.904,-119.867}, {50.877,-119.883}
+        }),
+        make_geographic_region("Kamloops Bike Ranch", {
+            {50.661,-120.279}, {50.672,-120.286}, {50.687,-120.278}, {50.692,-120.260},
+            {50.680,-120.248}, {50.666,-120.258}
+        }),
+        make_geographic_region("Winsport Bike Park", {
+            {51.073,-114.220}, {51.082,-114.227}, {51.094,-114.219}, {51.098,-114.204},
+            {51.088,-114.193}, {51.076,-114.202}
+        }),
+        make_geographic_region("Hinton Bike Park", {
+            {53.390,-117.583}, {53.403,-117.593}, {53.422,-117.581}, {53.430,-117.558},
+            {53.416,-117.538}, {53.398,-117.550}
+        }),
+    };
+    return regions;
+}
+
+mask_region lookup_predefined_region(const std::string &name){
+    auto key = canonical_region_name(name);
+    if(key == "seymour") key = "seymourmountain";
+    const auto &regions = predefined_regions();
+    const auto it = std::find_if(regions.begin(), regions.end(), [&](const auto &region){
+        return canonical_region_name(region.name) == key;
+    });
+    if(it == regions.end()){
+        throw std::invalid_argument("MaskContours: unknown NamedRegion '" + name + "'");
+    }
+    return *it;
 }
 
 mask_polygon parse_polygon(const parsed_function &f){
@@ -209,22 +350,29 @@ std::vector<mask_region> parse_regions(const std::string &spec){
 
     std::vector<mask_region> out;
     for(const auto &f : funcs){
-        if(Canonicalize_String2(f.name, CANONICALIZE::TO_LOWER) != "region"){
-            throw std::invalid_argument("MaskContours: top-level functions must be Region(name){...}");
-        }
-        if(f.parameters.size() != 1 || f.parameters.front().raw.empty()){
-            throw std::invalid_argument("MaskContours: Region requires exactly one non-empty name parameter");
-        }
-        if(f.children.empty()){
-            throw std::invalid_argument("MaskContours: Region requires at least one polygon child");
-        }
+        const auto fname = Canonicalize_String2(f.name, CANONICALIZE::TO_LOWER);
+        if(fname == "region"){
+            if(f.parameters.size() != 1 || f.parameters.front().raw.empty()){
+                throw std::invalid_argument("MaskContours: Region requires exactly one non-empty name parameter");
+            }
+            if(f.children.empty()){
+                throw std::invalid_argument("MaskContours: Region requires at least one polygon child");
+            }
 
-        mask_region r;
-        r.name = f.parameters.front().raw;
-        for(const auto &child : f.children){
-            r.polygons.emplace_back(parse_polygon(child));
+            mask_region r;
+            r.name = f.parameters.front().raw;
+            for(const auto &child : f.children){
+                r.polygons.emplace_back(parse_polygon(child));
+            }
+            out.emplace_back(std::move(r));
+        }else if(fname == "namedregion"){
+            if(f.parameters.size() != 1 || f.parameters.front().raw.empty() || !f.children.empty()){
+                throw std::invalid_argument("MaskContours: NamedRegion requires exactly one name parameter and no children");
+            }
+            out.emplace_back(lookup_predefined_region(f.parameters.front().raw));
+        }else{
+            throw std::invalid_argument("MaskContours: top-level functions must be Region(name){...} or NamedRegion(name)");
         }
-        out.emplace_back(std::move(r));
     }
 
     for(std::size_t i = 0; i < out.size(); ++i){
@@ -325,4 +473,3 @@ std::vector<contour_of_points<double>> slice_contour(const contour_of_points<dou
 }
 
 } // namespace dcma::mask_contours
-

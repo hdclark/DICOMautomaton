@@ -32,7 +32,8 @@ OperationDoc OpArgDocMaskContours(){
         "MaskContoursLabel, and MaskContoursDebounceDistance metadata.";
 
     out.notes.emplace_back(
-        "Regions use the parsed_function syntax Region(name){Polygon(...); GeoPolygon(...); ...}. A Region is the union "
+        "Regions use the parsed_function syntax Region(name){Polygon(...); GeoPolygon(...); ...} or NamedRegion(name). "
+        "A Region is the union "
         "of all of its polygon children. Polygon uses native contour x,y coordinates. Polygon3D accepts x,y,z triples "
         "but masking is performed in the x-y footprint. GeoPolygon accepts latitude,longitude pairs and applies the same "
         "Mercator projection used by the GPX loader. Polygon closure is implicit; repeating the first vertex is optional."
@@ -43,11 +44,19 @@ OperationDoc OpArgDocMaskContours(){
         "leave-and-return excursions without erasing short runs at the beginning or end of a trace."
     );
     out.notes.emplace_back(
-        "Derived contour collections are homogeneous in MaskContoursRegion and MaskContoursState so downstream metadata "
-        "partitioning/filtering can select a named region and inside/outside state reliably."
+        "All supplied regions form one mask union: a contour portion is inside when it is inside at least one region. "
+        "MaskContoursRegion lists the supplied region names in input order, separated by semicolons. Derived contour "
+        "collections are homogeneous in MaskContoursState for downstream metadata partitioning/filtering."
     );
     out.notes.emplace_back(
-        "The lower-mainland examples are intentionally coarse demonstration polygons, not authoritative park boundaries."
+        "Predefined regions are trail-focused approximate footprints, not legal or authoritative park boundaries."
+    );
+    out.notes.emplace_back(
+        "Available predefined regions are Fromme, Burke, Eagle Mountain, Cypress Mountain, Grouse Mountain Bike Park, "
+        "Seymour Mountain, Burnaby Mountain, Delta Watershed, Bert Flinn Park, Thornhill, Woodlot 0007, Bear Mountain, "
+        "Red Mountain, Sumas Mountain, Vedder Mountain, Ledgeview, Whistler Mountain Bike Park, Mount Washington Bike "
+        "Park, Revelstoke Bike Park, Kicking Horse Bike Park, Sun Peaks Bike Park, Kamloops Bike Ranch, Winsport Bike "
+        "Park, and Hinton Bike Park. Names are case-insensitive and spaces, hyphens, and punctuation are optional."
     );
 
     out.args.emplace_back();
@@ -68,15 +77,18 @@ OperationDoc OpArgDocMaskContours(){
     out.args.emplace_back();
     out.args.back().name = "Regions";
     out.args.back().desc =
-        "Semicolon-separated Region functions. Each Region(name){...} contains one or more Polygon(x,y,...), "
-        "Polygon3D(x,y,z,...), or GeoPolygon(latitude,longitude,...) child functions.";
+        "Semicolon-separated Region or NamedRegion functions. Each Region(name){...} contains one or more Polygon(x,y,...), "
+        "Polygon3D(x,y,z,...), or GeoPolygon(latitude,longitude,...) child functions. NamedRegion(name) selects a "
+        "predefined trail-focused geographic region.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
     out.args.back().examples = {
         "Region(test){Polygon(0,0, 10,0, 10,10, 0,10)}",
-        "Region(Fromme){GeoPolygon(49.327,-123.104, 49.392,-123.104, 49.392,-123.036, 49.327,-123.036)};"
-        "Region(Seymour){GeoPolygon(49.315,-123.010, 49.390,-123.010, 49.390,-122.925, 49.315,-122.925)};"
-        "Region(EagleMountain){GeoPolygon(49.275,-122.875, 49.345,-122.875, 49.345,-122.790, 49.275,-122.790)}"
+        "Region(CustomFromme){GeoPolygon(49.327,-123.104, 49.392,-123.104, 49.392,-123.036, 49.327,-123.036)};"
+        "Region(CustomSeymour){GeoPolygon(49.315,-123.010, 49.390,-123.010, 49.390,-122.925, 49.315,-122.925)};"
+        "Region(CustomEagleMountain){GeoPolygon(49.275,-122.875, 49.345,-122.875, 49.345,-122.790, 49.275,-122.790)}"
+        "NamedRegion(Fromme)",
+        "NamedRegion(Fromme);NamedRegion(Burke);NamedRegion(Eagle Mountain)"
     };
 
     out.args.emplace_back();
@@ -106,6 +118,13 @@ bool MaskContours(Drover &DICOM_data,
     }
     const auto regions = dcma::mask_contours::parse_regions(RegionSpec);
 
+    dcma::mask_contours::mask_region combined_region;
+    for(const auto &region : regions){
+        if(!combined_region.name.empty()) combined_region.name += ";";
+        combined_region.name += region.name;
+        combined_region.polygons.insert(combined_region.polygons.end(), region.polygons.begin(), region.polygons.end());
+    }
+
     auto cc_all = All_CCs(DICOM_data);
     auto cc_selected = Whitelist(cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection);
     if(cc_selected.empty()){
@@ -113,35 +132,37 @@ bool MaskContours(Drover &DICOM_data,
     }
 
     // Build all derived data separately so appending it cannot invalidate references in the selection list.
-    // Keep each appended collection homogeneous by (region,state), which makes the added metadata useful to
-    // collection-level selectors and partitioning operations.
+    // Keep each appended collection homogeneous by state, which makes the added metadata useful to collection-level
+    // selectors and partitioning operations.
     auto contour_storage = std::make_shared<Contour_Data>();
     for(const auto &cc_refw : cc_selected){
         const auto &src_cc = cc_refw.get();
-        for(const auto &region : regions){
-            contour_collection<double> inside_cc;
-            contour_collection<double> outside_cc;
+        contour_collection<double> inside_cc;
+        contour_collection<double> outside_cc;
 
-            for(const auto &source : src_cc.contours){
-                auto pieces = dcma::mask_contours::slice_contour(source, region, DebounceDistance);
-                for(auto &piece : pieces){
-                    const auto state_it = piece.metadata.find("MaskContoursState");
-                    if(state_it == piece.metadata.end()){
-                        throw std::logic_error("MaskContours: derived contour is missing MaskContoursState metadata");
-                    }
-                    if(state_it->second == "inside"){
-                        inside_cc.contours.emplace_back(std::move(piece));
-                    }else if(state_it->second == "outside"){
-                        outside_cc.contours.emplace_back(std::move(piece));
-                    }else{
-                        throw std::logic_error("MaskContours: derived contour has an invalid MaskContoursState value");
-                    }
+        for(const auto &source : src_cc.contours){
+            int64_t piece_num = 0;
+            auto pieces = dcma::mask_contours::slice_contour(source, combined_region, DebounceDistance);
+            for(auto &piece : pieces){
+                piece.metadata["ROIName"] += "_"_s + std::to_string(piece_num);
+
+                const auto state_it = piece.metadata.find("MaskContoursState");
+                if(state_it == piece.metadata.end()){
+                    throw std::logic_error("MaskContours: derived contour is missing MaskContoursState metadata");
                 }
+                if(state_it->second == "inside"){
+                    inside_cc.contours.emplace_back(std::move(piece));
+                }else if(state_it->second == "outside"){
+                    outside_cc.contours.emplace_back(std::move(piece));
+                }else{
+                    throw std::logic_error("MaskContours: derived contour has an invalid MaskContoursState value");
+                }
+                ++piece_num;
             }
-
-            if(!inside_cc.contours.empty()) contour_storage->ccs.emplace_back(std::move(inside_cc));
-            if(!outside_cc.contours.empty()) contour_storage->ccs.emplace_back(std::move(outside_cc));
         }
+
+        if(!inside_cc.contours.empty()) contour_storage->ccs.emplace_back(std::move(inside_cc));
+        if(!outside_cc.contours.empty()) contour_storage->ccs.emplace_back(std::move(outside_cc));
     }
 
     if(!contour_storage->ccs.empty()) DICOM_data.Consume(contour_storage);
