@@ -605,9 +605,10 @@ GenericSelectionInfo(const std::string &name_of_unit,
          + " Likewise, '#-N' selects the Nth-from-last "_s + name_of_unit + "."_s
          + " Positional specifiers can be inverted by prefixing with a '!'."_s
          + "\n\n"_s 
-         + "Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."_s
-         + " In order to invert metadata-based selectors, the regex logic must be inverted"_s
+         + "Metadata-based 'key@value' expressions are applied by matching the keys verbatim and the values with regex."_s
+         + " In order to invert 'key@value' metadata-based selectors, the regex logic must be inverted"_s
          + " (i.e., you can *not* prefix metadata-based selectors with a '!')."_s
+         + " Test for the absence of a key with 'keymissing@key'."_s
          + " Note regexes are case insensitive and should use extended POSIX syntax."_s
          + "\n\n"_s 
          + "Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'."_s
@@ -817,6 +818,7 @@ OperationArgDoc CCWhitelistOpArgDoc(){
                      "#0", "#-0",
                      "!last", "!#-3",
                      "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "keymissing@key",
                      "numerous", "fewest", "more-than(5)", "!fewer-than(10)" };
 
     return out;
@@ -931,6 +933,7 @@ OperationArgDoc IAWhitelistOpArgDoc(){
                      "#0", "#-0",
                      "!last", "!#-3",
                      "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "keymissing@key",
                      "numerous", "fewest", "more-than(5)", "!fewer-than(10)" };
 
     return out;
@@ -1031,6 +1034,7 @@ OperationArgDoc PCWhitelistOpArgDoc(){
                      "#0", "#-0",
                      "!last", "!#-3",
                      "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "keymissing@key",
                      "numerous", "fewest", "more-than(5)", "!fewer-than(10)" };
 
     return out;
@@ -1137,6 +1141,7 @@ OperationArgDoc SMWhitelistOpArgDoc(){
                      "#0", "#-0",
                      "!last", "!#-3",
                      "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "keymissing@key",
                      "numerous", "fewest", "more-than(5)", "!fewer-than(10)" };
 
     return out;
@@ -1243,6 +1248,7 @@ OperationArgDoc TPWhitelistOpArgDoc(){
                      "#0", "#-0",
                      "!last", "!#-3",
                      "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "keymissing@key",
                      "numerous", "fewest", "more-than(5)", "!fewer-than(10)" };
 
     return out;
@@ -1343,6 +1349,7 @@ OperationArgDoc LSWhitelistOpArgDoc(){
                      "#0", "#-0",
                      "!last", "!#-3",
                      "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "keymissing@key",
                      "numerous", "fewest", "more-than(5)", "!fewer-than(10)" };
 
     return out;
@@ -1440,7 +1447,8 @@ OperationArgDoc T3WhitelistOpArgDoc(){
     out.examples = { "last", "first", "all", "none", 
                      "#0", "#-0",
                      "!last", "!#-3",
-                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "keymissing@key" };
 
     return out;
 }
@@ -1540,6 +1548,7 @@ OperationArgDoc STWhitelistOpArgDoc(){
                      "#0", "#-0",
                      "!last", "!#-3",
                      "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "keymissing@key",
                      "numerous", "fewest", "more-than(5)", "!fewer-than(10)" };
 
     return out;
