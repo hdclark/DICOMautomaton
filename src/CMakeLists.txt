@@ -132,6 +132,12 @@ if(WITH_SDL)
     set_target_properties(  SDL_Viewer_Meshes_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 
+add_library(            Contour_Mask_obj OBJECT Contour_Mask.cc )
+set_target_properties(  Contour_Mask_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Contour_Mask_Tests_obj OBJECT Contour_Mask_Tests.cc )
+set_target_properties(  Contour_Mask_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Metadata_obj OBJECT Metadata.cc )
 set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -575,6 +581,8 @@ add_executable (dicomautomaton_dispatcher
 
     $<TARGET_OBJECTS:Operations_objs>
     $<TARGET_OBJECTS:OptimizeSchedule_Tests_obj>
+    $<TARGET_OBJECTS:Contour_Mask_obj>
+    $<TARGET_OBJECTS:Contour_Mask_Tests_obj>
     $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
     $<TARGET_OBJECTS:DCMA_Version_obj>
     $<TARGET_OBJECTS:Doctest_impl_obj>
@@ -707,6 +715,8 @@ if(WITH_WT)
         $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
         $<TARGET_OBJECTS:DCMA_Version_obj>
         $<TARGET_OBJECTS:Doctest_impl_obj>
+        $<TARGET_OBJECTS:Contour_Mask_obj>
+        $<TARGET_OBJECTS:Contour_Mask_Tests_obj>
     )
     target_link_libraries(dicomautomaton_webserver PUBLIC
         imebrashim

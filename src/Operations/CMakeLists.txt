@@ -155,6 +155,7 @@ add_library(Operations_objs OBJECT
     LoadFilesInteractively.cc
     LogScale.cc
     MapTableToParameters.cc
+    MaskContours.cc
     MaskParameters.cc
     MaskVerbosity.cc
     MaxMinPixels.cc
@@ -284,3 +285,4 @@ add_library(Operations_objs OBJECT
 )
 
 set_target_properties( Operations_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
