@@ -32,20 +32,28 @@ TEST_CASE("MaskContours splits a path into exact inside and outside portions"){
     CHECK(atoms.at(2).length() == doctest::Approx(1.0));
 }
 
-TEST_CASE("MaskContours tags every derived piece for downstream filtering"){
+TEST_CASE("MaskContours preserves parent metadata and tags every derived piece"){
     const auto r = parse_regions("Region(square){Polygon(-1,-1, 1,-1, 1,1, -1,1)}").front();
     contour_of_points<double> source;
     source.closed = false;
+    source.metadata["ROIName"] = "parent-track";
+    source.metadata["NormalizedROIName"] = "parent-track";
     source.metadata["SourceTag"] = "preserved";
     source.points.emplace_back(vec3<double>(-2.0,0.0,0.0));
     source.points.emplace_back(vec3<double>(2.0,0.0,0.0));
 
     const auto pieces = slice_contour(source, r, 0.0);
     REQUIRE(pieces.size() == 3);
-    for(const auto &piece : pieces){
+    for(std::size_t i = 0; i < pieces.size(); ++i){
+        const auto &piece = pieces.at(i);
+        for(const auto &kvp : source.metadata){
+            CHECK(piece.metadata.at(kvp.first) == kvp.second);
+        }
         CHECK(piece.metadata.at("MaskContoursRegion") == "square");
         CHECK((piece.metadata.at("MaskContoursState") == "inside" || piece.metadata.at("MaskContoursState") == "outside"));
-        CHECK(piece.metadata.at("SourceTag") == "preserved");
+        CHECK_FALSE(piece.metadata.at("MaskContoursLabel").empty());
+        CHECK_FALSE(piece.metadata.at("MaskContoursDebounceDistance").empty());
+        CHECK(piece.metadata.at("MaskContoursPieceNumber") == std::to_string(i));
     }
 }
 
@@ -113,6 +121,46 @@ TEST_CASE("MaskContours resolves predefined trail regions by canonical name"){
     CHECK(point_in_region_xy(vec3<double>(fromme_xy.first, fromme_xy.second, 0.0), rs.front()));
     CHECK(parse_regions("NamedRegion(Seymour)").front().name == "Seymour Mountain");
     CHECK_THROWS_AS(parse_regions("NamedRegion(not-a-real-place)"), std::invalid_argument);
+}
+
+TEST_CASE("MaskContours converts selected NamedRegion boundaries into one contour collection"){
+    const auto rs = parse_regions("NamedRegion(Fromme);NamedRegion(Burke)");
+    const auto cc = region_boundaries_as_contours(
+        rs, "MaskContours regions: Fromme;Burke", "maskcontours_regions_fromme_burke"
+    );
+
+    std::size_t expected_contours = 0;
+    for(const auto &region : rs) expected_contours += region.polygons.size();
+    REQUIRE(cc.contours.size() == expected_contours);
+
+    auto contour_it = cc.contours.begin();
+    for(const auto &region : rs){
+        for(std::size_t polygon_num = 0; polygon_num < region.polygons.size(); ++polygon_num){
+            REQUIRE(contour_it != cc.contours.end());
+            const auto &contour = *contour_it;
+            const auto &polygon = region.polygons.at(polygon_num);
+
+            CHECK(contour.closed);
+            CHECK(contour.metadata.at("ROIName") == "MaskContours regions: Fromme;Burke");
+            CHECK(contour.metadata.at("NormalizedROIName") == "maskcontours_regions_fromme_burke");
+            CHECK(contour.metadata.at("MaskContoursRegion") == region.name);
+            CHECK(contour.metadata.at("MaskContoursState") == "boundary");
+            CHECK(contour.metadata.at("MaskContoursPolygonNumber") == std::to_string(polygon_num));
+            REQUIRE(contour.points.size() == polygon.vertices.size());
+
+            auto point_it = contour.points.begin();
+            for(const auto &vertex : polygon.vertices){
+                REQUIRE(point_it != contour.points.end());
+                CHECK(point_it->x == doctest::Approx(vertex.x));
+                CHECK(point_it->y == doctest::Approx(vertex.y));
+                CHECK(point_it->z == doctest::Approx(0.0));
+                ++point_it;
+            }
+            CHECK(point_it == contour.points.end());
+            ++contour_it;
+        }
+    }
+    CHECK(contour_it == cc.contours.end());
 }
 
 TEST_CASE("MaskContours provides all documented predefined trail regions"){
