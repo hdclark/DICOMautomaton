@@ -209,6 +209,7 @@ add_library(Operations_objs OBJECT
     SelectionIsPresent.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
+    SplitGPX.cc
     SimplifySurfaceMeshes.cc
     SimulateRadiograph.cc
     Sleep.cc
@@ -285,4 +286,3 @@ add_library(Operations_objs OBJECT
 )
 
 set_target_properties( Operations_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-
