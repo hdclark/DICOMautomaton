@@ -93,6 +93,7 @@ add_library(Operations_objs OBJECT
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateParameters.cc
+    EstimateEquivalentSquare.cc
     EvaluateTCPModels.cc
     ExecuteShell.cc
     ExplodeImages.cc
