@@ -12,6 +12,7 @@
 #include <set> 
 #include <stdexcept>
 #include <string>    
+#include <type_traits>
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <filesystem>
@@ -107,16 +108,59 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
 
     for(auto & smp_it : SMs){
+        if(*smp_it == nullptr){
+            throw std::invalid_argument("Selected surface mesh pointer is null. Cannot continue.");
+        }
+
         auto FN = FilenameStr;
         if( (1 < SMs.size()) 
         ||  std::filesystem::exists(FN) ){
             FN = Get_Unique_Sequential_Filename(suffixless_fullpath + "_", n_of_digit_pads, required_file_extension);
         }
 
-        std::fstream FO(FN, std::fstream::out | std::ios::binary);
-        if(!WriteFVSMeshToOFF( (*smp_it)->meshes, FO )){
-            throw std::runtime_error("Unable to write surface mesh in OFF format. Cannot continue.");
+        // Serialize OFF directly to avoid known instability in WriteFVSMeshToOFF with some meshes.
+        std::ofstream FO(FN, std::ofstream::binary | std::ofstream::trunc);
+        if(!FO){
+            throw std::runtime_error("Unable to open output file for writing. Cannot continue.");
         }
+
+        const auto &mesh = (*smp_it)->meshes;
+        const auto N_verts = mesh.vertices.size();
+        const auto N_faces = mesh.faces.size();
+        FO << "OFF\n";
+        FO << N_verts << " " << N_faces << " 0\n";
+
+        for(const auto &v : mesh.vertices){
+            FO << v.x << " " << v.y << " " << v.z << "\n";
+        }
+
+        for(const auto &f : mesh.faces){
+            if(f.empty()){
+                throw std::invalid_argument("Surface mesh contains an empty face. Cannot export to OFF.");
+            }
+            FO << f.size();
+            for(const auto &idx : f){
+                if constexpr (std::is_signed_v<std::decay_t<decltype(idx)>>){
+                    if(idx < 0){
+                        throw std::invalid_argument("Surface mesh face index " + std::to_string(idx)
+                                                  + " is negative. Cannot export to OFF.");
+                    }
+                }
+                const auto idx_u = static_cast<uint64_t>(idx);
+                if(idx_u >= N_verts){
+                    throw std::invalid_argument("Surface mesh face index " + std::to_string(idx)
+                                              + " exceeds vertex count " + std::to_string(N_verts)
+                                              + ". Cannot export to OFF.");
+                }
+                FO << " " << idx_u;
+            }
+            FO << "\n";
+        }
+        FO.flush();
+        if(!FO){
+            throw std::runtime_error("Failed while writing or flushing surface mesh data to OFF file. Cannot continue.");
+        }
+
         YLOGINFO("Surface mesh written to '" << FN << "'");
     }
 
