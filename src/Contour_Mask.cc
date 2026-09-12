@@ -385,6 +385,35 @@ std::vector<mask_region> parse_regions(const std::string &spec){
     return out;
 }
 
+contour_collection<double> region_boundaries_as_contours(const std::vector<mask_region> &regions,
+                                                             const std::string &roi_name,
+                                                             const std::string &normalized_roi_name){
+    if(regions.empty()){
+        throw std::invalid_argument("MaskContours: no regions were provided for boundary contour emission");
+    }
+
+    contour_collection<double> out;
+    for(const auto &region : regions){
+        for(std::size_t polygon_num = 0; polygon_num < region.polygons.size(); ++polygon_num){
+            const auto &polygon = region.polygons.at(polygon_num);
+
+            contour_of_points<double> contour;
+            contour.closed = true;
+            contour.metadata["ROIName"] = roi_name;
+            contour.metadata["NormalizedROIName"] = normalized_roi_name;
+            contour.metadata["MaskContoursRegion"] = region.name;
+            contour.metadata["MaskContoursState"] = "boundary";
+            contour.metadata["MaskContoursPolygonNumber"] = std::to_string(polygon_num);
+
+            for(const auto &vertex : polygon.vertices){
+                contour.points.emplace_back(vertex.x, vertex.y, 0.0);
+            }
+            out.contours.emplace_back(std::move(contour));
+        }
+    }
+    return out;
+}
+
 bool point_in_region_xy(const vec3<double> &p, const mask_region &r){
     for(const auto &poly : r.polygons){
         if(point_in_polygon_xy(p, poly)) return true;
@@ -469,7 +498,12 @@ std::vector<contour_of_points<double>> slice_contour(const contour_of_points<dou
     std::vector<vec3<double>> points(source.points.begin(), source.points.end());
     auto atoms = atomize_path(points, source.closed, region);
     debounce_atoms(atoms, debounce_distance);
-    return contours_from_atoms(source, atoms, region, debounce_distance);
+
+    auto contours = contours_from_atoms(source, atoms, region, debounce_distance);
+    for(std::size_t piece_num = 0; piece_num < contours.size(); ++piece_num){
+        contours.at(piece_num).metadata["MaskContoursPieceNumber"] = std::to_string(piece_num);
+    }
+    return contours;
 }
 
 } // namespace dcma::mask_contours

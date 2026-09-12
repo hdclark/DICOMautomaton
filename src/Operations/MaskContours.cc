@@ -7,10 +7,13 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "Explicator.h"
 
 #include "YgorMath.h"
 #include "YgorString.h"
@@ -28,8 +31,8 @@ OperationDoc OpArgDocMaskContours(){
     out.tags.emplace_back("category: contour processing");
     out.desc =
         "Slices selected contours against one or more named polygonal regions. The original contours are retained; "
-        "derived inside/outside path portions are appended and tagged with MaskContoursRegion, MaskContoursState, "
-        "MaskContoursLabel, and MaskContoursDebounceDistance metadata.";
+        "derived inside/outside path portions are appended and tagged with MaskContours procedure metadata. "
+        "Optionally, the selected region boundaries can instead be emitted as contours for visualization.";
 
     out.notes.emplace_back(
         "Regions use the parsed_function syntax Region(name){Polygon(...); GeoPolygon(...); ...} or NamedRegion(name). "
@@ -37,6 +40,11 @@ OperationDoc OpArgDocMaskContours(){
         "of all of its polygon children. Polygon uses native contour x,y coordinates. Polygon3D accepts x,y,z triples "
         "but masking is performed in the x-y footprint. GeoPolygon accepts latitude,longitude pairs and applies the same "
         "Mercator projection used by the GPX loader. Polygon closure is implicit; repeating the first vertex is optional."
+    );
+    out.notes.emplace_back(
+        "When EmitRegionContours is true, all selected region polygons are emitted into one contour collection and no "
+        "source contours are masked. NamedRegion coordinates are already represented in the same Mercator projection "
+        "used by the GPX loader, so the emitted boundaries can be overlaid directly with GPX tracks."
     );
     out.notes.emplace_back(
         "DebounceDistance is measured along the source contour in native contour coordinate units. A short inside/outside "
@@ -92,6 +100,16 @@ OperationDoc OpArgDocMaskContours(){
     };
 
     out.args.emplace_back();
+    out.args.back().name = "EmitRegionContours";
+    out.args.back().desc =
+        "If true, emit all selected region polygons as closed contours in a single contour collection and return without "
+        "masking any source contours. If false, perform the normal MaskContours slicing behaviour.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+    out.args.emplace_back();
     out.args.back().name = "DebounceDistance";
     out.args.back().desc =
         "Maximum along-contour length of an interior run to absorb when it leaves one state and returns to that same "
@@ -106,16 +124,13 @@ OperationDoc OpArgDocMaskContours(){
 bool MaskContours(Drover &DICOM_data,
                   const OperationArgPkg& OptArgs,
                   std::map<std::string, std::string>& /*InvocationMetadata*/,
-                  const std::string& /*FilenameLex*/){
-    const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
-    const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
-    const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
+                  const std::string& FilenameLex){
     const auto RegionSpec = OptArgs.getValueStr("Regions").value();
-    const auto DebounceDistance = std::stod(OptArgs.getValueStr("DebounceDistance").value());
+    const auto EmitRegionContoursStr = OptArgs.getValueStr("EmitRegionContours").value();
 
-    if(!std::isfinite(DebounceDistance) || (DebounceDistance < 0.0)){
-        throw std::invalid_argument("MaskContours: DebounceDistance must be finite and non-negative");
-    }
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+    const bool EmitRegionContours = std::regex_match(EmitRegionContoursStr, regex_true);
+
     const auto regions = dcma::mask_contours::parse_regions(RegionSpec);
 
     dcma::mask_contours::mask_region combined_region;
@@ -123,6 +138,28 @@ bool MaskContours(Drover &DICOM_data,
         if(!combined_region.name.empty()) combined_region.name += ";";
         combined_region.name += region.name;
         combined_region.polygons.insert(combined_region.polygons.end(), region.polygons.begin(), region.polygons.end());
+    }
+
+    if(EmitRegionContours){
+        Explicator X(FilenameLex);
+        const auto RegionContourLabel = "MaskContours regions: "_s + combined_region.name;
+
+        auto contour_storage = std::make_shared<Contour_Data>();
+        auto region_cc = dcma::mask_contours::region_boundaries_as_contours(
+            regions, RegionContourLabel, X(RegionContourLabel)
+        );
+        contour_storage->ccs.emplace_back(std::move(region_cc));
+        DICOM_data.Consume(contour_storage);
+        return true;
+    }
+
+    const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
+    const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
+    const auto DebounceDistance = std::stod(OptArgs.getValueStr("DebounceDistance").value());
+
+    if(!std::isfinite(DebounceDistance) || (DebounceDistance < 0.0)){
+        throw std::invalid_argument("MaskContours: DebounceDistance must be finite and non-negative");
     }
 
     auto cc_all = All_CCs(DICOM_data);
@@ -141,11 +178,8 @@ bool MaskContours(Drover &DICOM_data,
         contour_collection<double> outside_cc;
 
         for(const auto &source : src_cc.contours){
-            int64_t piece_num = 0;
             auto pieces = dcma::mask_contours::slice_contour(source, combined_region, DebounceDistance);
             for(auto &piece : pieces){
-                piece.metadata["ROIName"] += "_"_s + std::to_string(piece_num);
-
                 const auto state_it = piece.metadata.find("MaskContoursState");
                 if(state_it == piece.metadata.end()){
                     throw std::logic_error("MaskContours: derived contour is missing MaskContoursState metadata");
@@ -157,7 +191,6 @@ bool MaskContours(Drover &DICOM_data,
                 }else{
                     throw std::logic_error("MaskContours: derived contour has an invalid MaskContoursState value");
                 }
-                ++piece_num;
             }
         }
 
