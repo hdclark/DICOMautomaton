@@ -28,10 +28,24 @@ enum class sketch_procedure_kind_t {
 std::string sketch_procedure_kind_to_string(sketch_procedure_kind_t kind);
 bool string_to_sketch_procedure_kind(const std::string &s, sketch_procedure_kind_t &out);
 
+// Supported Ygor b-rep mesh Boolean engines.
+enum class sketch_boolean_engine_t {
+    ygor_1,
+    ygor_2,
+    ygor_3,
+    ygor_4,
+};
+
+std::string sketch_boolean_engine_to_string(sketch_boolean_engine_t engine);
+bool string_to_sketch_boolean_engine(const std::string &s, sketch_boolean_engine_t &out);
+
 // Holds all information needed to apply a procedure that combines
 // a parent mesh with a sketch to produce a child mesh.
 struct Sketch_Procedure {
     sketch_procedure_kind_t kind = sketch_procedure_kind_t::clear;
+
+    // Boolean engine used when kind == extend or carve.
+    sketch_boolean_engine_t boolean_engine = sketch_boolean_engine_t::ygor_2;
 
     // Extrusion parameters (used when kind == extrusion or through_hole).
     Sketch::extrusion_options_t extrusion_options;
