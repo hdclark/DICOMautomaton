@@ -59,6 +59,39 @@ static point_set<double> create_asymmetric_cube_points(){
     return ps;
 }
 
+// Creates a deterministic anisotropic point cloud representative of real-world non-symmetric data.
+static point_set<double> create_anisotropic_realistic_points(){
+    point_set<double> ps;
+    for(int64_t i = 0; i < 5; ++i){
+        for(int64_t j = 0; j < 4; ++j){
+            for(int64_t k = 0; k < 3; ++k){
+                const double x = 0.35 * static_cast<double>(i) + 0.04 * static_cast<double>(j) - 0.03 * static_cast<double>(k);
+                const double y = 0.18 * static_cast<double>(j) + 0.06 * static_cast<double>(k) + 0.02 * static_cast<double>(i);
+                const double z = 0.22 * static_cast<double>(k) - 0.05 * static_cast<double>(j) + 0.015 * static_cast<double>(i);
+                ps.points.emplace_back( vec3<double>(x, y, z) );
+            }
+        }
+    }
+    ps.points.emplace_back( vec3<double>(1.73, 0.41, -0.16) ); // explicit asymmetry point
+    return ps;
+}
+
+static point_set<double> apply_rigid_transform(const point_set<double> &ps,
+                                               const vec3<double> &translation,
+                                               const vec3<double> &angles_xyz){
+    point_set<double> out;
+    out.points.reserve(ps.points.size());
+    for(const auto &p : ps.points){
+        out.points.emplace_back(
+            p.rotate_around_x(angles_xyz.x)
+             .rotate_around_y(angles_xyz.y)
+             .rotate_around_z(angles_xyz.z)
+            + translation
+        );
+    }
+    return out;
+}
+
 // Computes RMS error between transformed moving points and stationary points using affine_transform
 static double compute_rms_error_affine(const affine_transform<double>& t,
                                        const point_set<double>& moving,
@@ -453,6 +486,23 @@ TEST_CASE( "AlignViaOrthogonalProcrustes variance preservation" ){
     REQUIRE( std::abs(trans_variance - orig_variance) < 0.01 );
 }
 
+TEST_CASE( "AlignViaOrthogonalProcrustes low-dimensional degeneracy (single point)" ){
+    point_set<double> ps_moving;
+    ps_moving.points.emplace_back( vec3<double>(-1.2, 0.7, 3.5) );
+    point_set<double> ps_stationary;
+    ps_stationary.points.emplace_back( vec3<double>( 2.0, -0.1, 0.25) );
+
+    AlignViaOrthogonalProcrustesParams params;
+    params.permit_mirroring = false;
+    params.permit_isotropic_scaling = false;
+
+    auto result = AlignViaOrthogonalProcrustes(params, ps_moving, ps_stationary);
+    REQUIRE( result.has_value() );
+
+    const double rms_error = compute_rms_error_affine(result.value(), ps_moving, ps_stationary);
+    REQUIRE( rms_error < 1e-10 );
+}
+
 TEST_CASE( "AlignViaOrthogonalProcrustes error handling" ){
     point_set<double> ps_empty;
     point_set<double> ps_valid = create_unit_cube_points();
@@ -592,6 +642,40 @@ TEST_CASE( "AlignViaExhaustiveICP convergence behavior" ){
         const double orig_variance = compute_total_variance(ps_moving);
         REQUIRE( trans_variance > 0.3 * orig_variance );
     }
+}
+
+TEST_CASE( "AlignViaExhaustiveICP realistic anisotropic cloud stays rigid" ){
+    point_set<double> ps_moving = create_anisotropic_realistic_points();
+    const double orig_variance = compute_total_variance(ps_moving);
+
+    const auto ps_stationary = apply_rigid_transform(ps_moving,
+                                                     vec3<double>(0.35, -0.28, 0.17),
+                                                     vec3<double>(test_pi * 0.03,
+                                                                  -test_pi * 0.04,
+                                                                  test_pi * 0.06));
+
+    auto result = AlignViaExhaustiveICP(ps_moving, ps_stationary, 60, 1e-8);
+    REQUIRE( result.has_value() );
+
+    const double rms_error = compute_rms_error_affine(result.value(), ps_moving, ps_stationary);
+    REQUIRE( rms_error < 1e-9 );
+
+    const double trans_variance = compute_transformed_variance_affine(result.value(), ps_moving);
+    REQUIRE( trans_variance > 0.99 * orig_variance );
+    REQUIRE( trans_variance < 1.01 * orig_variance );
+}
+
+TEST_CASE( "AlignViaExhaustiveICP low-dimensional degeneracy (single point)" ){
+    point_set<double> ps_moving;
+    ps_moving.points.emplace_back( vec3<double>(0.3, -0.8, 1.4) );
+    point_set<double> ps_stationary;
+    ps_stationary.points.emplace_back( vec3<double>(-1.7, 2.2, 0.0) );
+
+    auto result = AlignViaExhaustiveICP(ps_moving, ps_stationary, 10, 1e-8);
+    REQUIRE( result.has_value() );
+
+    const double rms_error = compute_rms_error_affine(result.value(), ps_moving, ps_stationary);
+    REQUIRE( rms_error < 1e-10 );
 }
 
 TEST_CASE( "AlignViaExhaustiveICP asymmetric point clouds" ){
@@ -763,4 +847,3 @@ TEST_CASE( "Rigid alignment benchmark" ){
     }
 #endif // DCMA_USE_EIGEN
 }
-
