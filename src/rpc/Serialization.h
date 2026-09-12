@@ -140,6 +140,9 @@ void Deserialize( const dcma::rpc::Sparse_Table &in, Sparse_Table &out );
 void Serialize( const Drover &in, dcma::rpc::Drover &out ); 
 void Deserialize( const dcma::rpc::Drover &in, Drover &out ); 
 
+bool Serialize_Drover_To_Thrift_JSON( const Drover &in, std::string &out );
+bool Deserialize_Drover_From_Thrift_JSON( const std::string &in, Drover &out );
+
 // --------------------------------------------------------------------
 // DICOMautomaton RPC methods.
 // --------------------------------------------------------------------
@@ -161,4 +164,3 @@ void Deserialize( const dcma::rpc::Drover &in, Drover &out );
 //
 //void Serialize( const ExecuteScriptResponse &in, dcma::rpc::ExecuteScriptResponse &out );
 //void Deserialize( const dcma::rpc::ExecuteScriptResponse &in, ExecuteScriptResponse &out );
-

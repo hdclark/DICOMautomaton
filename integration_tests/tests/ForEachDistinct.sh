@@ -10,12 +10,8 @@ set -o pipefail
   \
   -o ForEachDistinct:KeysCommon='Modality' \
   -\( \
-      -o DroverDebug \
-  -\) |
-  tee -a fullstdout |
-  grep "Performing operation 'DroverDebug' now" | 
-  wc -l |
-  grep 3 | 
-  `# Ensure the output stream is not empty. ` \
-  grep .
-
+      -o GenerateVirtualDataPointCloudV1 \
+  -\) \
+  -o TestConditions \
+    -p Conditions='point_cloud_count(3)' |
+  tee -a fullstdout

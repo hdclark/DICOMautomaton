@@ -19,6 +19,9 @@
 #include <any>
 #include <cstdint>
 
+#include <thrift/transport/TBufferTransports.h>
+#include <thrift/protocol/TJSONProtocol.h>
+
 #include "YgorMisc.h"
 #include "YgorLog.h"
 #include "YgorMath.h"
@@ -36,6 +39,9 @@
 #include "gen-cpp/Receiver.h"
 
 #include "Serialization.h"
+
+using namespace ::apache::thrift::protocol;
+using namespace ::apache::thrift::transport;
 
 
 // Misc helpers.
@@ -112,6 +118,59 @@ void Serialize( const float &in, double &out ){
 void Deserialize( const double &in, float &out ){
     // Warning: conversion from double to float. (Thrift does not have float.)
     out = static_cast<float>(in);
+}
+
+bool
+Serialize_Drover_To_Thrift_JSON( const Drover &in,
+                                 std::string &out ){
+    out.clear();
+
+    try{
+        ::dcma::rpc::Drover d;
+        Serialize(in, d);
+
+        auto transport = std::make_shared<TMemoryBuffer>();
+        auto protocol = std::make_shared<TJSONProtocol>(transport);
+        d.write(protocol.get());
+
+        uint8_t *buffer = nullptr;
+        uint32_t buffer_size = 0U;
+        transport->getBuffer(&buffer, &buffer_size);
+        if( (buffer == nullptr) || (buffer_size == 0U) ){
+            return false;
+        }
+
+        out.assign(reinterpret_cast<const char*>(buffer),
+                   reinterpret_cast<const char*>(buffer) + buffer_size);
+        return true;
+    }catch(const std::exception &){
+        out.clear();
+    }
+
+    return false;
+}
+
+bool
+Deserialize_Drover_From_Thrift_JSON( const std::string &in,
+                                     Drover &out ){
+    if(in.empty()) return false;
+
+    try{
+        auto l_in = in;
+        auto *buffer = reinterpret_cast<uint8_t*>(l_in.data());
+        auto transport = std::make_shared<TMemoryBuffer>(buffer,
+                                                         static_cast<uint32_t>(l_in.size()),
+                                                         TMemoryBuffer::COPY);
+        auto protocol = std::make_shared<TJSONProtocol>(transport);
+
+        ::dcma::rpc::Drover d;
+        d.read(protocol.get());
+        Deserialize(d, out);
+        return true;
+    }catch(const std::exception &){
+    }
+
+    return false;
 }
 
 // --------------------------------------------------------------------
@@ -675,8 +734,6 @@ void Serialize( const Drover &in, dcma::rpc::Drover &out ){
     }
 
     if(in.Has_Tran3_Data()){
-        throw std::runtime_error("Transform data is not yet supported. Refusing to continue");
-
         std::vector<dcma::rpc::Transform3> shtl;
         for(const auto& ptr : in.trans_data){
             shtl.emplace_back();
@@ -772,4 +829,3 @@ void Deserialize( const dcma::rpc::Drover &in, Drover &out ){
 #undef SERIALIZE_CONTAINER
 
 #undef DESERIALIZE_CONTAINER
-
