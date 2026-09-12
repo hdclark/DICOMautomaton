@@ -29,6 +29,10 @@ namespace dcma::mask_contours {
     };
     
     std::vector<mask_region> parse_regions(const std::string &spec);
+
+    contour_collection<double> region_boundaries_as_contours(const std::vector<mask_region> &regions,
+                                                             const std::string &roi_name,
+                                                             const std::string &normalized_roi_name);
     
     bool point_in_region_xy(const vec3<double> &p, const mask_region &r);
     
