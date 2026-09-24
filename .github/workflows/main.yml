@@ -28,6 +28,58 @@ jobs:
         run: |
              ./scripts/perform_static_checks.sh
 
+  build_python_extension_debian_bookworm_x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: install_dependencies
+        run: |
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends \
+               build-essential ca-certificates cmake git libasio-dev libboost-dev \
+               libboost-iostreams-dev libboost-thread-dev pybind11-dev python3-dev \
+               python3-numpy zlib1g-dev
+      - name: verify_missing_pybind11_diagnostic
+        run: |
+             if cmake -S . -B build-missing-pybind11 \
+               -DWITH_PYTHON=ON \
+               -DWITH_PYTHON_EXTENSION=ON \
+               -DCMAKE_DISABLE_FIND_PACKAGE_pybind11=ON \
+               > missing-pybind11.log 2>&1; then
+                 cat missing-pybind11.log
+                 exit 1
+             fi
+             cat missing-pybind11.log
+             grep -F "pybind11 not found. Install the pybind11 development package" missing-pybind11.log
+      - name: configure
+        run: |
+             cmake -S . -B build-python \
+               -DCMAKE_BUILD_TYPE=Release \
+               -DMEMORY_CONSTRAINED_BUILD=ON \
+               -DWITH_EIGEN=OFF \
+               -DWITH_CGAL=OFF \
+               -DWITH_NLOPT=OFF \
+               -DWITH_SFML=OFF \
+               -DWITH_SDL=OFF \
+               -DWITH_WT=OFF \
+               -DWITH_GNU_GSL=OFF \
+               -DWITH_POSTGRES=OFF \
+               -DWITH_JANSSON=OFF \
+               -DWITH_THRIFT=OFF \
+               -DWITH_EXT_SYCL=OFF \
+               -DWITH_PYTHON=ON \
+               -DWITH_PYTHON_EXTENSION=ON \
+               -DWITH_PYTHON_EMBED=ON \
+               -DWITH_FETCHCONTENT_FALLBACK=ON
+      - name: build_and_test
+        run: |
+             cmake --build build-python --target _dicomautomaton dicomautomaton_dispatcher --parallel 2
+             ctest --test-dir build-python --output-on-failure -R '^python_(extension|embed)$'
+
   build_cross_mxe_x86_64:
     runs-on: ubuntu-latest
     container:
@@ -439,4 +491,3 @@ jobs:
       - name: perform_tests
         run: |
              dicomautomaton_dispatcher -t
-

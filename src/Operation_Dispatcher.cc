@@ -316,6 +316,10 @@
     #include "Operations/RPCSend.h"
 #endif // DCMA_USE_THRIFT
 
+#ifdef DCMA_USE_PYTHON_EMBED
+    #include "Operations/Python.h"
+#endif // DCMA_USE_PYTHON_EMBED
+
 #include "Operation_Dispatcher.h"
 
 
@@ -615,6 +619,10 @@ known_ops_t Known_Operations(){
     out["RPCSend"] = std::make_pair(OpArgDocRPCSend, RPCSend);
 #endif // DCMA_USE_THRIFT
 
+#ifdef DCMA_USE_PYTHON_EMBED
+    out["Python"] = std::make_pair(OpArgDocPython, Python);
+#endif // DCMA_USE_PYTHON_EMBED
+
     return out;
 }
 
@@ -773,17 +781,22 @@ known_ops_tags_t Get_Unique_Tags(const known_ops_t &kos){
 bool Operation_Dispatcher( Drover &DICOM_data,
                            std::map<std::string,std::string> &InvocationMetadata,
                            const std::string &FilenameLex,
-                           const std::list<OperationArgPkg> &Operations ){
+                           const std::list<OperationArgPkg> &Operations,
+                           std::string *failure_reason ){
+
+    if(failure_reason != nullptr) failure_reason->clear();
 
     auto op_name_mapping = Known_Operations();
     Explicator op_name_X( Operation_Lexicon() );
 
+    std::string current_operation;
     try{
         for(const auto &OptArgs : Operations){
             auto optargs = OptArgs;
 
             // Find or estimate the canonical name. If not an exact match, issue a warning.
             const auto user_op_name = optargs.getName();
+            current_operation = user_op_name;
             const auto canonical_op_name = op_name_X(user_op_name);
             if( op_name_X.last_best_score < 1.0 ){
                 YLOGWARN("Selecting operation '" << canonical_op_name << "' because '" << user_op_name << "' not understood");
@@ -843,6 +856,11 @@ bool Operation_Dispatcher( Drover &DICOM_data,
             if(!WasFound) throw std::invalid_argument("No operation matched '" + optargs.getName() + "'");
         }
     }catch(const std::exception &e){
+        if(failure_reason != nullptr){
+            *failure_reason = current_operation.empty()
+                            ? e.what()
+                            : "operation '" + current_operation + "': " + e.what();
+        }
         YLOGWARN("Analysis failed: '" << e.what() << "'. Aborting remaining analyses");
         return false;
     }

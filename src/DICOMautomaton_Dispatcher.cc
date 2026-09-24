@@ -34,10 +34,8 @@
 
 #include "Documentation.h"
 #include "PACS_Loader.h"
-#include "File_Loader.h"
-#include "Lexicon_Loader.h"
+#include "Session.h"
 
-#include "Operation_Dispatcher.h"
 #include "DCMA_Version.h"
 
 //extern const std::string DCMA_VERSION_STR;
@@ -62,18 +60,11 @@ try{
     // The following objects should remain available for the analysis dispatcher and for some analysis routines (where
     // appopriate).
 
-    //The main storage place and manager class for loaded image sets, contours, dose matrices, etc..
-    Drover DICOM_data;
-
-    //Lexicon filename, for the Explicator class. This is used in select cases for string translation.
-    std::string FilenameLex;
-
-    //User-defined tags which are used for helping to keep track of information not present (or easily available) in the
-    // loaded DICOM data. Things like volunteer tracking numbers, information from imaging/scanning sessions, etc..
-    std::map<std::string,std::string> InvocationMetadata;
-
-    //Operations to perform on the data.
-    std::list<OperationArgPkg> Operations;
+    dcma::Session session;
+    auto &DICOM_data = session.data();
+    auto &FilenameLex = session.lexicon_filename();
+    auto &InvocationMetadata = session.metadata();
+    auto &Operations = session.pending_operations();
     int64_t OperationDepth = 0;
 
     //A explicit declaration that the user will generate data in an operation.
@@ -392,20 +383,9 @@ try{
         StandaloneFilesDirsReachable.emplace_back(auri);
     }
 
-    //Try find a lexicon file if none were provided.
-    if(FilenameLex.empty()){
-        FilenameLex = Locate_Lexicon_File();
-        if(FilenameLex.empty()){
-            YLOGINFO("No lexicon was explicitly provided. Using located file '" << FilenameLex << "' as lexicon");
-        }
-    }
-    if(FilenameLex.empty()){
-        YLOGINFO("No lexicon provided or located. Attempting to write a default lexicon");
-        FilenameLex = Create_Default_Lexicon_File();
-        YLOGINFO("Using file '" << FilenameLex << "' as lexicon");
-    }
-
     //================================================= Data Loading =================================================
+
+    session.prepare_lexicon();
 
 #ifdef DCMA_USE_POSTGRES
     //PACS db loading.
@@ -419,8 +399,7 @@ try{
 
     //Standalone file loading.
     {
-        std::list<OperationArgPkg> l_Operations;
-        if(!Load_Files(DICOM_data, InvocationMetadata, FilenameLex, l_Operations, StandaloneFilesDirsReachable)){
+        if(!session.load(StandaloneFilesDirsReachable)){
 #ifdef DCMA_FUZZ_TESTING
             // If file loading failed, then the loader successfully rejected bad data. Terminate to indicate this success.
             return 0;
@@ -430,16 +409,12 @@ try{
 #endif // DCMA_FUZZ_TESTING
         }
 
-        // Make all loaded scripts run prior to user-specified scripts.
-        // If scripts need to be run afterward, they can be loaded in the file loader operation.
-        // Could the order of each operation on the command line be imbued / sidecar'd to sort out precendence?? TODO
-        Operations.splice(std::begin(Operations), l_Operations);
     }
 
     //============================================= Dispatch to Analyses =============================================
 
     // Default to an interactive viewer that is known to handle missing data.
-    if( Operations.empty() ){
+    if( !session.has_pending_operations() ){
         YLOGWARN("No operations specified: defaulting to operation 'SDL_Viewer'");
         Operations.emplace_back("SDL_Viewer");
 
@@ -460,8 +435,8 @@ try{
         throw std::runtime_error("No data was loaded, and virtual data switch was not provided. Refusing to proceed");
     }
 
-    if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, Operations)){
-        throw std::runtime_error("Analysis failed. Cannot continue");
+    if(!session.run()){
+        throw std::runtime_error("Analysis failed: " + session.last_error());
     }
 
 }catch(const std::exception &e){

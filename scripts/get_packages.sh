@@ -19,7 +19,7 @@
 #                       Values: x86_64, aarch64, armv7l, etc.
 #   --tier <tier>       Installation tier (optional, can be repeated)
 #                       Values: build_tools, development, ygor_deps, dcma_deps,
-#                               appimage_runtime
+#                               appimage_runtime, and python_extension where supported
 #   --required-only     Only list required packages (no optional dependencies)
 #   --optional-only     Only list optional packages
 #   --list              Output packages as a space-separated list (default)
@@ -668,6 +668,18 @@ get_debian_bookworm_dcma_deps_optional() {
     printf '\n'
 }
 
+get_debian_bookworm_python_extension_required() {
+    printf "python3 "
+    printf "python3-dev "
+    printf "python3-numpy "
+    printf "pybind11-dev "
+    printf '\n'
+}
+
+get_debian_bookworm_python_extension_optional() {
+    printf '\n'
+}
+
 get_debian_bookworm_appimage_runtime_required() {
     printf "bash "
     printf "coreutils "
@@ -783,6 +795,18 @@ get_debian_bullseye_dcma_deps_optional() {
     printf "bash-completion "
     printf "gnuplot "
     printf "zenity "
+    printf '\n'
+}
+
+get_debian_bullseye_python_extension_required() {
+    printf "python3 "
+    printf "python3-dev "
+    printf "python3-numpy "
+    printf "pybind11-dev "
+    printf '\n'
+}
+
+get_debian_bullseye_python_extension_optional() {
     printf '\n'
 }
 
@@ -1420,7 +1444,14 @@ normalize_os() {
 # Get all valid tiers for an OS
 get_valid_tiers() {
     local os="$1"
-    echo "build_tools development ygor_deps dcma_deps appimage_runtime"
+    case "$os" in
+        debian_bookworm|debian_bullseye)
+            echo "build_tools development ygor_deps dcma_deps appimage_runtime python_extension"
+            ;;
+        *)
+            echo "build_tools development ygor_deps dcma_deps appimage_runtime"
+            ;;
+    esac
 }
 
 # Architecture-specific package adjustments

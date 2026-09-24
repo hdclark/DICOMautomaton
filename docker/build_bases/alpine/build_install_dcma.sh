@@ -41,6 +41,9 @@ set -eux
         -DWITH_POSTGRES=OFF \
         -DWITH_JANSSON=OFF \
         -DWITH_THRIFT=ON \
+        -DWITH_PYTHON=OFF \
+        -DWITH_PYTHON_EXTENSION=OFF \
+        -DWITH_PYTHON_EMBED=OFF \
         -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
         -DBoost_USE_STATIC_LIBS=ON \
         -DBoost_USE_STATIC_RUNTIME=ON \

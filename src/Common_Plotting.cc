@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Common_Plotting.h"
+#include "Process_Fork.h"
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
@@ -35,7 +36,9 @@ PlotTimeCourses(const std::string& title,
     //       better for managing the plots and data, better for archiving, etc..
 
 #if !defined(_WIN32) && !defined(_WIN64)
+    ProcessForkGuard fork_guard;
     auto pid = fork();
+    fork_guard.release();
     if(pid == 0){ //Child process.
 #endif
         //Package the data into a shuttle and write the to file.
@@ -87,4 +90,3 @@ PlotTimeCourses(const std::string& title,
 #endif
     return;
 }
-

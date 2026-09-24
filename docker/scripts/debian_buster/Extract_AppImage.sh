@@ -98,6 +98,9 @@ cmake \
   -DWITH_POSTGRES=ON \
   -DWITH_JANSSON=ON \
   -DWITH_THRIFT=ON \
+  -DWITH_PYTHON=OFF \
+  -DWITH_PYTHON_EXTENSION=OFF \
+  -DWITH_PYTHON_EMBED=OFF \
   ../
 make -j 8 VERBOSE=1
 make install DESTDIR=/scratch/AppDir/
@@ -143,4 +146,3 @@ sudo docker run -it --rm \
     /start/create.sh 
 
 sudo chown $(id -u -n):$(id -g -n) *AppImage
-

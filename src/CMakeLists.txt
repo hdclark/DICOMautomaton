@@ -255,6 +255,26 @@ set_target_properties(  Write_File_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 
 add_library(            Operation_Dispatcher_obj OBJECT Operation_Dispatcher.cc )
 set_target_properties(  Operation_Dispatcher_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+if(WITH_PYTHON_EMBED)
+    target_compile_definitions(Operation_Dispatcher_obj PRIVATE DCMA_USE_PYTHON_EMBED=1)
+endif()
+
+add_library(            Session_obj OBJECT Session.cc )
+set_target_properties(  Session_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+if(WITH_PYTHON)
+    add_library(            Python_Bindings_obj OBJECT Python_Bindings.cc )
+    set_target_properties(  Python_Bindings_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+    target_include_directories(Python_Bindings_obj SYSTEM PRIVATE ${Python3_INCLUDE_DIRS})
+    target_link_libraries(  Python_Bindings_obj PRIVATE dcma_compile_settings pybind11::pybind11 )
+endif()
+
+if(WITH_PYTHON_EMBED)
+    add_library(            Python_Embed_obj OBJECT Python_Embed.cc )
+    set_target_properties(  Python_Embed_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+    target_include_directories(Python_Embed_obj SYSTEM PRIVATE ${Python3_INCLUDE_DIRS})
+    target_link_libraries(  Python_Embed_obj PRIVATE dcma_compile_settings pybind11::embed )
+endif()
 
 add_library(            Perlin_Noise_obj OBJECT Perlin_Noise.cc )
 set_target_properties(  Perlin_Noise_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -410,6 +430,11 @@ target_link_libraries(imebrashim
 )
 
 # Dialog library, built as a library to minimize header/macro clashes.
+add_library(processforkshim
+    Process_Fork.cc
+)
+set_target_properties(processforkshim PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(dialogshim
     Dialogs.cc 
     Dialogs/Text_Query.cc
@@ -418,6 +443,7 @@ add_library(dialogshim
 )
 set_target_properties(dialogshim PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 target_link_libraries(dialogshim
+    processforkshim
     "$<$<BOOL:${MINGW}>:ws2_32>"
     "$<$<BOOL:${MINGW}>:wsock32>"
     "$<$<BOOL:${MINGW}>:comctl32>"
@@ -495,10 +521,11 @@ if(MINGW)
     target_include_directories(WindowsIcon_obj PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../artifacts/logos/")
 endif()
 
-# Executable.
-add_executable (dicomautomaton_dispatcher
-    DICOMautomaton_Dispatcher.cc
-
+# Reusable static application core. It remains static even in shared builds so the
+# same archive can back executables and loadable modules without a DLL export ABI.
+# Test registration objects stay attached directly to native executables so the
+# archive cannot discard them as unreferenced.
+add_library(dcma_core STATIC
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Partition_Drover_obj>
@@ -506,19 +533,11 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:BED_Conversion_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
-    $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
-    $<TARGET_OBJECTS:Alignment_TPSRPM_Tests_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
-    $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
     $<TARGET_OBJECTS:Alignment_Demons_obj>
-    $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_obj>>
-    $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
-    $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
-    $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Serialization_obj>
-    $<TARGET_OBJECTS:Serialization_Tests_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
     $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
@@ -531,16 +550,12 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Sketch_Extrude_obj>
     $<TARGET_OBJECTS:Sketch_Constraints_obj>
     $<TARGET_OBJECTS:Sketch_Fillets_obj>
-    $<TARGET_OBJECTS:Sketch_Tests_obj>
     $<TARGET_OBJECTS:Sketch_Mesh_Builder_obj>
-    $<TARGET_OBJECTS:Sketch_Mesh_Builder_Tests_obj>
     $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:CSG_SDF_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
-    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Tests_obj>>
-    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Meshes_Tests_obj>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
@@ -572,6 +587,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Triple_Three_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
+    $<TARGET_OBJECTS:Session_obj>
     $<TARGET_OBJECTS:Perlin_Noise_obj>
     $<TARGET_OBJECTS:Documentation_obj>
     $<TARGET_OBJECTS:Font_DCMA_Minimal_obj>
@@ -580,17 +596,20 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
     $<TARGET_OBJECTS:Operations_objs>
-    $<TARGET_OBJECTS:OptimizeSchedule_Tests_obj>
     $<TARGET_OBJECTS:Contour_Mask_obj>
-    $<TARGET_OBJECTS:Contour_Mask_Tests_obj>
     $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
     $<TARGET_OBJECTS:DCMA_Version_obj>
     $<TARGET_OBJECTS:Doctest_impl_obj>
-    $<$<BOOL:${MINGW}>:$<TARGET_OBJECTS:WindowsIcon_obj>>
 )
-target_link_libraries (dicomautomaton_dispatcher PUBLIC
+add_library(DICOMautomaton::core ALIAS dcma_core)
+set_target_properties(dcma_core PROPERTIES
+    POSITION_INDEPENDENT_CODE TRUE
+)
+target_link_libraries(dcma_core PUBLIC
+    dcma_compile_settings
     imebrashim
     dialogshim
+    processforkshim
     commonimgshim
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
@@ -621,8 +640,126 @@ target_link_libraries (dicomautomaton_dispatcher PUBLIC
     m
     Threads::Threads
 )
+
+# Executable.
+add_executable (dicomautomaton_dispatcher
+    DICOMautomaton_Dispatcher.cc
+    $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
+    $<TARGET_OBJECTS:Alignment_TPSRPM_Tests_obj>
+    $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
+    $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
+    $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
+    $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
+    $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
+    $<TARGET_OBJECTS:Serialization_Tests_obj>
+    $<TARGET_OBJECTS:Sketch_Tests_obj>
+    $<TARGET_OBJECTS:Sketch_Mesh_Builder_Tests_obj>
+    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Tests_obj>>
+    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Meshes_Tests_obj>>
+    $<TARGET_OBJECTS:OptimizeSchedule_Tests_obj>
+    $<TARGET_OBJECTS:Contour_Mask_Tests_obj>
+    $<$<BOOL:${MINGW}>:$<TARGET_OBJECTS:WindowsIcon_obj>>
+)
+target_link_libraries (dicomautomaton_dispatcher PRIVATE DICOMautomaton::core)
+if(WITH_PYTHON_EMBED)
+    target_sources(dicomautomaton_dispatcher PRIVATE
+        $<TARGET_OBJECTS:Python_Bindings_obj>
+        $<TARGET_OBJECTS:Python_Embed_obj>
+    )
+    target_link_libraries(dicomautomaton_dispatcher PRIVATE Python3::Python)
+endif()
 if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
     add_sycl_to_target( TARGET dicomautomaton_dispatcher )
+endif()
+
+if(WITH_PYTHON_EXTENSION)
+    pybind11_add_module(_dicomautomaton MODULE
+        Python_Extension_Module.cc
+        $<TARGET_OBJECTS:Python_Bindings_obj>
+    )
+    target_link_libraries(_dicomautomaton PRIVATE Python3::Module)
+    if(WITH_PYTHON_EMBED)
+        target_sources(_dicomautomaton PRIVATE $<TARGET_OBJECTS:Python_Embed_obj>)
+        target_link_libraries(_dicomautomaton PRIVATE Python3::Python)
+    endif()
+    target_link_libraries(_dicomautomaton PRIVATE DICOMautomaton::core)
+    target_compile_features(_dicomautomaton PRIVATE cxx_std_17)
+    if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
+        add_sycl_to_target( TARGET _dicomautomaton )
+    endif()
+    set_target_properties(_dicomautomaton PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/py/dicomautomaton"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/py/dicomautomaton"
+    )
+    foreach(_dcma_config Debug Release RelWithDebInfo MinSizeRel)
+        string(TOUPPER "${_dcma_config}" _dcma_config_upper)
+        set_target_properties(_dicomautomaton PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY_${_dcma_config_upper} "${CMAKE_BINARY_DIR}/py/dicomautomaton"
+            RUNTIME_OUTPUT_DIRECTORY_${_dcma_config_upper} "${CMAKE_BINARY_DIR}/py/dicomautomaton"
+        )
+    endforeach()
+
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/py/dicomautomaton")
+    configure_file(
+        "${CMAKE_SOURCE_DIR}/py/dicomautomaton/__init__.py"
+        "${CMAKE_BINARY_DIR}/py/dicomautomaton/__init__.py"
+        COPYONLY
+    )
+
+    if(BUILD_TESTING)
+        add_test(
+            NAME python_extension
+            COMMAND "${CMAKE_COMMAND}" -E env
+                    "PYTHONPATH=${CMAKE_BINARY_DIR}/py"
+                    "DCMA_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+                    "DCMA_BIN=$<TARGET_FILE:dicomautomaton_dispatcher>"
+                    "DCMA_EXPECT_PYTHON_EMBED=$<BOOL:${WITH_PYTHON_EMBED}>"
+                    "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/py/tests/test_session.py"
+        )
+    endif()
+
+    set(DCMA_PYTHON_INSTALL_DIR
+        "${DCMA_PYTHON_SITEARCH_RELATIVE}/dicomautomaton"
+        CACHE PATH "Installation directory for the DICOMautomaton Python module"
+    )
+    if(UNIX)
+        if(IS_ABSOLUTE "${DCMA_PYTHON_INSTALL_DIR}")
+            set(_dcma_python_install_full "${DCMA_PYTHON_INSTALL_DIR}")
+        else()
+            set(_dcma_python_install_full "${CMAKE_INSTALL_PREFIX}/${DCMA_PYTHON_INSTALL_DIR}")
+        endif()
+        if(IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
+            set(_dcma_library_install_full "${CMAKE_INSTALL_LIBDIR}")
+        else()
+            set(_dcma_library_install_full "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+        endif()
+        file(RELATIVE_PATH _dcma_python_to_libdir
+             "${_dcma_python_install_full}" "${_dcma_library_install_full}")
+        if(APPLE)
+            set_property(TARGET _dicomautomaton PROPERTY INSTALL_RPATH
+                         "@loader_path/${_dcma_python_to_libdir}")
+        else()
+            set_property(TARGET _dicomautomaton PROPERTY INSTALL_RPATH
+                         "$ORIGIN/${_dcma_python_to_libdir}")
+        endif()
+    endif()
+    install(TARGETS _dicomautomaton
+        LIBRARY DESTINATION "${DCMA_PYTHON_INSTALL_DIR}"
+        RUNTIME DESTINATION "${DCMA_PYTHON_INSTALL_DIR}"
+    )
+    install(FILES "${CMAKE_SOURCE_DIR}/py/dicomautomaton/__init__.py"
+        DESTINATION "${DCMA_PYTHON_INSTALL_DIR}"
+    )
+endif()
+
+if(WITH_PYTHON_EMBED AND BUILD_TESTING)
+    add_test(
+        NAME python_embed
+        COMMAND "${CMAKE_COMMAND}" -E env
+                "DCMA_BIN=$<TARGET_FILE:dicomautomaton_dispatcher>"
+                "DCMA_PYTHONPATH=$<$<BOOL:${WITH_PYTHON_EXTENSION}>:${CMAKE_BINARY_DIR}/py>"
+                "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/py/tests/test_embed.py"
+    )
 endif()
 
 
@@ -630,129 +767,33 @@ if(WITH_WT)
     # Executable.
     add_executable(dicomautomaton_webserver
         DICOMautomaton_WebServer.cc
-
-        $<TARGET_OBJECTS:Structs_obj>
-        $<TARGET_OBJECTS:Tables_obj>
-        $<TARGET_OBJECTS:Partition_Drover_obj>
-        $<TARGET_OBJECTS:Dose_Meld_obj>
-        $<TARGET_OBJECTS:BED_Conversion_obj>
-        $<TARGET_OBJECTS:Alignment_Rigid_obj>
-        $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
         $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
         $<TARGET_OBJECTS:Alignment_TPSRPM_Tests_obj>
-        $<TARGET_OBJECTS:Alignment_Field_obj>
         $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
-        $<TARGET_OBJECTS:Alignment_Demons_obj>
         $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
-        $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_obj>>
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
         $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
         $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
-        $<TARGET_OBJECTS:Colour_Maps_obj>
-        $<TARGET_OBJECTS:Common_Serialization_obj>
         $<TARGET_OBJECTS:Serialization_Tests_obj>
-        $<TARGET_OBJECTS:Common_Plotting_obj>
-        $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
-        $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
-        $<TARGET_OBJECTS:Insert_Contours_obj>
-        $<TARGET_OBJECTS:Surface_Meshes_obj>
-        $<TARGET_OBJECTS:Simple_Meshing_obj>
-        $<TARGET_OBJECTS:Regex_Selectors_obj>
-        $<TARGET_OBJECTS:String_Parsing_obj>
-        $<TARGET_OBJECTS:Sketch_obj>
-        $<TARGET_OBJECTS:Sketch_Extrude_obj>
-        $<TARGET_OBJECTS:Sketch_Constraints_obj>
-        $<TARGET_OBJECTS:Sketch_Fillets_obj>
         $<TARGET_OBJECTS:Sketch_Tests_obj>
-        $<TARGET_OBJECTS:Sketch_Mesh_Builder_obj>
         $<TARGET_OBJECTS:Sketch_Mesh_Builder_Tests_obj>
-        $<TARGET_OBJECTS:Metadata_obj>
-        $<TARGET_OBJECTS:CSG_SDF_obj>
-        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
-        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
-        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Meshes_Tests_obj>>
-        $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
-        $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
-        $<TARGET_OBJECTS:File_Loader_obj>
-        $<TARGET_OBJECTS:Serialization_File_Loader_obj>
-        $<TARGET_OBJECTS:DICOM_File_Loader_obj>
-        $<TARGET_OBJECTS:Lexicon_Loader_obj>
-        $<TARGET_OBJECTS:FITS_File_Loader_obj>
-        $<TARGET_OBJECTS:Common_Image_File_Loader_obj>
-        $<TARGET_OBJECTS:XYZ_File_Loader_obj>
-        $<TARGET_OBJECTS:XML_File_Loader_obj>
-        $<TARGET_OBJECTS:XML_Tools_obj>
-        $<TARGET_OBJECTS:GIS_obj>
-        $<TARGET_OBJECTS:XIM_File_Loader_obj>
-        $<TARGET_OBJECTS:SNC_File_Loader_obj>
-        $<TARGET_OBJECTS:CSV_File_Loader_obj>
-        $<TARGET_OBJECTS:DVH_File_Loader_obj>
-        $<TARGET_OBJECTS:TAR_File_Loader_obj>
-        $<TARGET_OBJECTS:3ddose_File_Loader_obj>
-        $<TARGET_OBJECTS:OFF_File_Loader_obj>
-        $<TARGET_OBJECTS:STL_File_Loader_obj>
-        $<TARGET_OBJECTS:OBJ_File_Loader_obj>
-        $<TARGET_OBJECTS:PLY_File_Loader_obj>
-        $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
-        $<TARGET_OBJECTS:Transformation_File_Loader_obj>
-        $<TARGET_OBJECTS:Script_Loader_obj>
-        $<TARGET_OBJECTS:CC_File_Loader_obj>
-        $<TARGET_OBJECTS:Standard_Scripts_obj>
-        $<TARGET_OBJECTS:Standard_Guides_obj>
-        $<TARGET_OBJECTS:Triple_Three_obj>
-        $<TARGET_OBJECTS:Write_File_obj>
-        $<TARGET_OBJECTS:Operation_Dispatcher_obj>
-        $<TARGET_OBJECTS:Perlin_Noise_obj>
-        $<TARGET_OBJECTS:Documentation_obj>
-        $<TARGET_OBJECTS:Font_DCMA_Minimal_obj>
-
-        $<TARGET_OBJECTS:YgorImaging_Functor_objs>
-        $<TARGET_OBJECTS:YgorImaging_Helper_objs>
-
-        $<TARGET_OBJECTS:Operations_objs>
+        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Tests_obj>>
         $<TARGET_OBJECTS:OptimizeSchedule_Tests_obj>
-        $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
-        $<TARGET_OBJECTS:DCMA_Version_obj>
-        $<TARGET_OBJECTS:Doctest_impl_obj>
-        $<TARGET_OBJECTS:Contour_Mask_obj>
         $<TARGET_OBJECTS:Contour_Mask_Tests_obj>
     )
-    target_link_libraries(dicomautomaton_webserver PUBLIC
-        imebrashim
-        dialogshim
-        commonimgshim
-        $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
-        $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
-        $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
-        $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
-        Explicator::explicator
-        Ygor::ygor
-        $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
-        $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
-        "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
-        $<$<BOOL:${WITH_JANSSON}>:jansson>
-        "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
-        "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
-        "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2-static,SDL2::SDL2>>"
-        "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
-        "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
-        "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
-        "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
+    target_link_libraries(dicomautomaton_webserver PRIVATE
+        DICOMautomaton::core
         wt
         wthttp
-        Boost::iostreams
-        Boost::thread
-        "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
-        "$<$<BOOL:${MINGW}>:ws2_32>"
-        "$<$<BOOL:${MINGW}>:wsock32>"
-        z
-        "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
-        "$<$<BOOL:${MPFR_LIBRARY}>:${MPFR_LIBRARY}>"
-        "$<$<BOOL:${GMP_LIBRARY}>:${GMP_LIBRARY}>"
-        m
-        Threads::Threads
     )
+    if(WITH_PYTHON_EMBED)
+        target_sources(dicomautomaton_webserver PRIVATE
+            $<TARGET_OBJECTS:Python_Bindings_obj>
+            $<TARGET_OBJECTS:Python_Embed_obj>
+        )
+        target_link_libraries(dicomautomaton_webserver PRIVATE Python3::Python)
+    endif()
     if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
         add_sycl_to_target( TARGET dicomautomaton_webserver )
     endif()
@@ -861,6 +902,29 @@ target_link_libraries(dicomautomaton_deidentify
     Threads::Threads
 )
 
+# Keep fully static linkage specific to application executables. Loadable Python
+# modules must remain dynamically loadable even when BUILD_SHARED_LIBS is OFF.
+if(NOT BUILD_SHARED_LIBS)
+    set(_dcma_static_executables
+        dicomautomaton_dispatcher
+        dicomautomaton_dump
+        dicomautomaton_deidentify
+    )
+    if(WITH_WT)
+        list(APPEND _dcma_static_executables dicomautomaton_webserver)
+    endif()
+    if(WITH_POSTGRES)
+        list(APPEND _dcma_static_executables
+            pacs_ingress
+            pacs_duplicate_cleaner
+            pacs_refresh
+        )
+    endif()
+    foreach(_dcma_executable IN LISTS _dcma_static_executables)
+        set_property(TARGET ${_dcma_executable} APPEND_STRING PROPERTY LINK_FLAGS " -static")
+    endforeach()
+endif()
+
 # Installation info.
 # Note: The EXPORT keyword adds targets to the DICOMautomatonTargets export set,
 # which is written to disk by the install(EXPORT ...) call in the top-level
@@ -871,6 +935,7 @@ install(TARGETS dicomautomaton_dispatcher
                 dicomautomaton_deidentify
                 imebrashim
                 dialogshim
+                processforkshim
                 commonimgshim
         EXPORT  DICOMautomatonTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

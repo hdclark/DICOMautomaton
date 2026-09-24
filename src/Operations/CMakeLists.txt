@@ -282,7 +282,8 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_THRIFT}>:ImportDrover.cc>
     $<$<BOOL:${WITH_THRIFT}>:RPCReceive.cc>
     $<$<BOOL:${WITH_THRIFT}>:RPCSend.cc>
+
+    $<$<BOOL:${WITH_PYTHON_EMBED}>:Python.cc>
 )
 
 set_target_properties( Operations_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-

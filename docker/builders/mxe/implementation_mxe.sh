@@ -72,6 +72,9 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
       -DWITH_POSTGRES=OFF \
       -DWITH_JANSSON=OFF \
       -DWITH_THRIFT=ON \
+      -DWITH_PYTHON=OFF \
+      -DWITH_PYTHON_EXTENSION=OFF \
+      -DWITH_PYTHON_EMBED=OFF \
       -DBUILD_SHARED_LIBS=OFF \
       ../
 
@@ -93,4 +96,3 @@ done
 #    "${TOOLCHAIN}-g++" -o dicomautomaton_dispatcher.exe ... win_res.o ...
 #
 # However, this needs to be added to CMake so the object file can be linked into binaries.
-

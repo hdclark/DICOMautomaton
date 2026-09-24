@@ -47,6 +47,9 @@ for repo in Explicator Ygor YgorClustering DICOMautomaton ; do
         -DWITH_SFML=OFF \
         -DWITH_CGAL=OFF \
         -DWITH_POSTGRES=OFF \
+        -DWITH_PYTHON=OFF \
+        -DWITH_PYTHON_EXTENSION=OFF \
+        -DWITH_PYTHON_EMBED=OFF \
         ../ &&
         make -j"${JOBS}" VERBOSE=1 &&
         make install VERBOSE=1
@@ -57,4 +60,3 @@ for repo in Explicator Ygor YgorClustering DICOMautomaton ; do
       git reset --hard || true
     )
 done
-

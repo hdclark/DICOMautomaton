@@ -87,6 +87,9 @@ build() {
     -DWITH_GNU_GSL=ON \
     -DWITH_POSTGRES=OFF \
     -DWITH_JANSSON=ON \
+    -DWITH_PYTHON=OFF \
+    -DWITH_PYTHON_EXTENSION=OFF \
+    -DWITH_PYTHON_EMBED=OFF \
     -DAdaptiveCpp_DIR="/usr/include/AdaptiveCPP/" \
     -DWITH_FETCHCONTENT_FALLBACK=OFF \
     \

@@ -19,6 +19,7 @@ PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os debian_bookworm --tier build_tools)"
 PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os debian_bookworm --tier development)"
 PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os debian_bookworm --tier ygor_deps)"
 PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os debian_bookworm --tier dcma_deps)"
+PKGS_PYTHON_EXTENSION="$("${GET_PACKAGES}" --os debian_bookworm --tier python_extension)"
 
 retry_count=0
 retry_limit=5
@@ -31,7 +32,9 @@ until
     `# Ygor dependencies ` \
     apt-get install --yes --no-install-recommends ${PKGS_YGOR_DEPS} && \
     `# DCMA dependencies ` \
-    apt-get install --yes --no-install-recommends ${PKGS_DCMA_DEPS}
+    apt-get install --yes --no-install-recommends ${PKGS_DCMA_DEPS} && \
+    `# Optional DICOMautomaton Python extension dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_PYTHON_EXTENSION}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
@@ -128,4 +131,3 @@ if clone_or_pull "https://github.com/hdclark/YgorClustering" ; then
 else
     printf 'Ygor Clustering already up-to-date.\n'
 fi
-

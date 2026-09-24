@@ -28,7 +28,6 @@ macro(_dcma_find_or_fetch pkg_name git_url git_tag)
                 ${pkg_name}
                 GIT_REPOSITORY ${git_url}
                 GIT_TAG        ${git_tag}
-                GIT_SHALLOW    true
             )
 
             # FetchContent_Populate is used instead of FetchContent_MakeAvailable
@@ -70,13 +69,12 @@ endmacro()
 
 _dcma_find_or_fetch(Ygor
     "https://github.com/hdclark/Ygor.git"
-    master)
+    0e7b9bb89696c64f0065649a738e103b05b0d8d5)
 
 _dcma_find_or_fetch(YgorClustering
     "https://github.com/hdclark/YgorClustering.git"
-    master)
+    74d6f89c8f1a5112a55a4d7f349b7fc9a8971ad5)
 
 _dcma_find_or_fetch(Explicator
     "https://github.com/hdclark/Explicator.git"
-    master)
-
+    6e085698aa36461733e1cee65070c50ff3ae411a)

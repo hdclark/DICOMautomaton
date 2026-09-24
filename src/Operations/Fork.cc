@@ -12,6 +12,7 @@
 #include <set> 
 #include <stdexcept>
 #include <string>    
+#include <thread>
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <filesystem>
@@ -30,9 +31,9 @@
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 #include "../Operation_Dispatcher.h"
+#include "../Process_Fork.h"
 
 #include "Fork.h"
-
 
 OperationDoc OpArgDocFork() {
     OperationDoc out;
@@ -69,6 +70,10 @@ OperationDoc OpArgDocFork() {
         " Also, thread-emulated fork does not create a new process, so when the parent process terminates"
         " normally any thread-emulated \"forks\" will likely be terminated as well."
     );
+    out.notes.emplace_back(
+        "On POSIX systems this operation is unavailable after CPython has been initialized because a raw fork"
+        " can inherit interpreter locks in an unsafe state."
+    );
 
     return out;
 }
@@ -81,7 +86,9 @@ bool Fork(Drover &DICOM_data,
     auto children = OptArgs.getChildren();
 
 #if !defined(_WIN32) && !defined(_WIN64)
+    ProcessForkGuard fork_guard;
     auto pid = fork();
+    fork_guard.release();
     if(pid == -1){ // Parent process.
         throw std::runtime_error("Unable to fork");
 
@@ -121,4 +128,3 @@ bool Fork(Drover &DICOM_data,
 
     return true;
 }
-
