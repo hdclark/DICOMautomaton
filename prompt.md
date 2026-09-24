@@ -1,4 +1,3 @@
-# Python integration implementation prompt
 
 ## Purpose
 
@@ -300,19 +299,19 @@ Expose a compact numeric representation and metadata. Test exact round trips.
 
 ### Sparse tables
 
-Keep the native table representation dependency-free. A pure-Python adapter may convert it to and from pandas when pandas is installed, but pandas must not become a native build dependency.
+Keep the native table representation dependency-free. A pure-Python adapter may convert it to and from pandas when pandas is installed, but pandas must not become a native build dependency. Preserve metadata.
 
 ### Surface meshes
 
-Expose vertices and faces first, then normals/colours where present. The current runtime std::any vertex/face attributes are intentionally difficult to serialize generically; do not invent unsafe type erasure. Support only explicitly recognized attribute types or defer arbitrary attributes until a typed representation exists.
+Expose vertices and faces first, then normals/colours where present. The current runtime std::any vertex/face attributes are intentionally difficult to serialize generically; do not invent unsafe type erasure. Support only explicitly recognized attribute types or defer arbitrary attributes until a typed representation exists. Preserve metadata.
 
 ### RT plans
 
-Bind the existing nested static/dynamic machine-state structures conservatively. Preserve metadata and NaN semantics.
+Bind the existing nested static/dynamic machine-state structures conservatively. Preserve metadata and NaN semantics. Preserve metadata.
 
 ### Transformations
 
-Defer full Transform3 support until the simpler data types are stable. The native variant contains affine, thin-plate-spline, and deformation-field forms with very different data. Design a tagged Python representation rather than flattening them into an ambiguous structure.
+Defer full Transform3 support until the simpler data types are stable. The native variant contains affine, thin-plate-spline, and deformation-field forms with very different data. Design a tagged Python representation rather than flattening them into an ambiguous structure. Preserve metadata.
 
 ## Phase 6: pure-Python ergonomics
 
@@ -357,7 +356,7 @@ def process(session):
 The operation must use the same bindings/adapters as the external Python extension wherever possible. Do not maintain separate conversion code for embedded and extension modes.
 
 ### Interpreter lifecycle
-
+4
 Embedding CPython must be conservative.
 
 - Prefer the modern CPython configuration API supported by the selected minimum Python version.
@@ -678,7 +677,7 @@ Do not make the first implementation responsible for all of the following at onc
 - replacing the existing C++ operation documentation system
 - rewriting operations in Python
 
-These can be revisited after the Session API and copy-based data exchange are stable.
+Some of these can be revisited after the Session API and copy-based data exchange are stable, and some are non-goals (e.g., rewriting any of the authoritative C++ code in Python).
 
 ## Later enhancement: Python-defined operations
 
