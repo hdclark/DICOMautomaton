@@ -201,6 +201,9 @@ if [[ "${MINIMAL}" =~ ^y.* ]] ; then
       -DWITH_JANSSON=OFF \
       -DWITH_THRIFT=OFF \
       -DWITH_EXT_SYCL=OFF \
+      -DWITH_PYTHON=OFF \
+      -DWITH_PYTHON_EXTENSION=OFF \
+      -DWITH_PYTHON_EMBED=OFF \
       -DWITH_FETCHCONTENT_FALLBACK=ON \
       ../
     JOBS=$(nproc)
@@ -267,6 +270,9 @@ elif [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
           -DWITH_ASAN=OFF \
           -DWITH_TSAN=OFF \
           -DWITH_MSAN=OFF \
+          -DWITH_PYTHON=OFF \
+          -DWITH_PYTHON_EXTENSION=OFF \
+          -DWITH_PYTHON_EMBED=OFF \
           -DWITH_FETCHCONTENT_FALLBACK=OFF \
           ../
     fi
@@ -317,6 +323,9 @@ else  # Generic build and install.
       -DWITH_ASAN=OFF \
       -DWITH_TSAN=OFF \
       -DWITH_MSAN=OFF \
+      -DWITH_PYTHON=OFF \
+      -DWITH_PYTHON_EXTENSION=OFF \
+      -DWITH_PYTHON_EMBED=OFF \
       -DWITH_FETCHCONTENT_FALLBACK=ON \
       ../
     JOBS=$(nproc)
@@ -333,4 +342,3 @@ fi
 compile_ret_val=$?
 printf 'Done.\n'
 exit $compile_ret_val
-

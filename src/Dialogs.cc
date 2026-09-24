@@ -12,6 +12,7 @@
 
 // This header interacts negatively with other headers (SDL and ASIO), so only include at the end.
 #include "pfd20211102/portable-file-dialogs.h"
+#include "Process_Fork.h"
 
 
 // ================================================================================================
@@ -36,6 +37,7 @@
 select_files::select_files( const std::string &title,
                             const std::filesystem::path &root,
                             const std::vector<std::string> &filters ){
+    ProcessForkGuard fork_guard;
     if(!pfd::settings::available()){
         throw std::runtime_error("No dialog options available");
     }
@@ -102,6 +104,7 @@ select_files::get_selection(){
 select_filename::select_filename( const std::string &title,
                                   const std::filesystem::path &root,
                                   const std::vector<std::string> &filters ){
+    ProcessForkGuard fork_guard;
     if(!pfd::settings::available()){
         throw std::runtime_error("No dialog options available");
     }
@@ -161,5 +164,3 @@ select_filename::get_selection(){
     this->terminate();
     return res;
 }
-
-

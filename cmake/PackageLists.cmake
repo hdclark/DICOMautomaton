@@ -75,6 +75,13 @@ if(WITH_THRIFT OR NOT DEFINED WITH_THRIFT)
     list(APPEND DCMA_DEBIAN_BUILD_DEPS libthrift-dev)
 endif()
 
+if(DEFINED WITH_PYTHON AND WITH_PYTHON)
+    list(APPEND DCMA_DEBIAN_BUILD_DEPS python3 python3-dev pybind11-dev)
+    if(WITH_PYTHON_EXTENSION)
+        list(APPEND DCMA_DEBIAN_BUILD_DEPS python3-numpy)
+    endif()
+endif()
+
 set(DCMA_DEBIAN_RECOMMENDED_DEPS
     gnuplot
     zenity
@@ -149,6 +156,13 @@ if(WITH_THRIFT OR NOT DEFINED WITH_THRIFT)
     list(APPEND DCMA_ARCH_BUILD_DEPS thrift)
 endif()
 
+if(DEFINED WITH_PYTHON AND WITH_PYTHON)
+    list(APPEND DCMA_ARCH_BUILD_DEPS python pybind11)
+    if(WITH_PYTHON_EXTENSION)
+        list(APPEND DCMA_ARCH_BUILD_DEPS python-numpy)
+    endif()
+endif()
+
 set(DCMA_ARCH_OPTIONAL_DEPS
     ${DCMA_ARCH_OPTIONAL_DEPS}
     gnuplot
@@ -158,4 +172,3 @@ set(DCMA_ARCH_OPTIONAL_DEPS
     adaptivecpp
     libnotify
 )
-

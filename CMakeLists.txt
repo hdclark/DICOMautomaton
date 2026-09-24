@@ -31,6 +31,10 @@ option(WITH_JANSSON   "Compile assuming Jansson is available."                  
 option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
 option(WITH_EXT_SYCL  "Compile assuming external SYCL support is available."    ON)
 
+option(WITH_PYTHON           "Enable DICOMautomaton Python integration."         OFF)
+option(WITH_PYTHON_EXTENSION "Build the CPython extension module."               OFF)
+option(WITH_PYTHON_EMBED     "Enable embedded CPython support."                  OFF)
+
 option(WITH_LTO       "Use link-time optimization when available."              OFF)
 
 option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       ON)
@@ -51,18 +55,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14). Enforced via target_compile_features.
 
 
-# High-level configuration.
-if(NOT BUILD_SHARED_LIBS)
-    #set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-    link_libraries("-static")
-    set(CMAKE_EXE_LINKER_FLAGS "-static")
-endif()
-
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For use with clang-tidy et al.
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(POSITION_INDEPENDENT_CODE TRUE)
+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
 if(NOT CMAKE_BUILD_TYPE)
     # Default to debug builds.
@@ -95,6 +91,138 @@ set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 # FetchContent is available in CMake 3.11+. We require 3.12+ so it is always available.
 include(FetchContent)
 
+if(WITH_PYTHON)
+    include(CTest)
+endif()
+
+if((WITH_PYTHON_EXTENSION OR WITH_PYTHON_EMBED) AND NOT WITH_PYTHON)
+    message(FATAL_ERROR "WITH_PYTHON must be enabled when a Python subfeature is requested.")
+endif()
+if(WITH_PYTHON)
+    if(CMAKE_VERSION VERSION_LESS 3.18)
+        message(FATAL_ERROR
+            "Python integration requires CMake 3.18 or newer for "
+            "component-specific development artifact discovery. Python-disabled "
+            "builds continue to support CMake 3.12.")
+    endif()
+    if(CMAKE_CROSSCOMPILING)
+        message(FATAL_ERROR
+            "Python integration is not configured for cross compilation. Disable "
+            "WITH_PYTHON or provide a deliberate target-Python integration first.")
+    endif()
+    if(WITH_PYTHON_EMBED AND NOT BUILD_SHARED_LIBS)
+        message(FATAL_ERROR
+            "WITH_PYTHON_EMBED is not supported by the fully static executable "
+            "configuration. Enable BUILD_SHARED_LIBS or disable embedding.")
+    endif()
+    if(NOT WITH_PYTHON_EXTENSION AND NOT WITH_PYTHON_EMBED)
+        message(FATAL_ERROR
+            "WITH_PYTHON is enabled, but neither WITH_PYTHON_EXTENSION nor "
+            "WITH_PYTHON_EMBED is enabled.")
+    endif()
+
+    set(_dcma_python_components Interpreter)
+    if(WITH_PYTHON_EXTENSION)
+        list(APPEND _dcma_python_components Development.Module)
+    endif()
+    if(WITH_PYTHON_EMBED)
+        list(APPEND _dcma_python_components Development.Embed)
+    endif()
+    find_package(Python3 REQUIRED COMPONENTS ${_dcma_python_components})
+    if(Python3_VERSION VERSION_LESS 3.8 OR NOT Python3_VERSION VERSION_LESS 3.12)
+        message(FATAL_ERROR
+            "Python ${Python3_VERSION} is not in the supported CPython 3.8-3.11 window.")
+    endif()
+
+    # Older pybind11 packages use FindPythonInterp internally. Keep that
+    # discovery aligned with the interpreter already selected by FindPython3.
+    set(PYTHON_EXECUTABLE "${Python3_EXECUTABLE}")
+    find_package(pybind11 CONFIG QUIET)
+    if(NOT pybind11_FOUND)
+        if(WITH_FETCHCONTENT_FALLBACK)
+            message(STATUS "pybind11 not found via find_package; fetching via FetchContent.")
+            FetchContent_Declare(
+                pybind11
+                GIT_REPOSITORY https://github.com/pybind/pybind11.git
+                # Immutable commit for pybind11 v2.10.4.
+                GIT_TAG        a2e59f0e7065404b44dfe92a28aca47ba1378dc4
+            )
+            FetchContent_MakeAvailable(pybind11)
+            set(_dcma_pybind11_version 2.10.4)
+        else()
+            message(FATAL_ERROR
+                "pybind11 not found. Install the pybind11 development package or "
+                "set WITH_FETCHCONTENT_FALLBACK=ON.")
+        endif()
+    else()
+        set(_dcma_pybind11_version "${pybind11_VERSION}")
+    endif()
+    if(_dcma_pybind11_version VERSION_LESS 2.6)
+        message(FATAL_ERROR "Python integration requires pybind11 2.6 or newer.")
+    endif()
+    if((NOT Python3_VERSION VERSION_LESS 3.10) AND _dcma_pybind11_version VERSION_LESS 2.7)
+        message(FATAL_ERROR "CPython ${Python3_VERSION} requires pybind11 2.7 or newer.")
+    endif()
+    if((NOT Python3_VERSION VERSION_LESS 3.11) AND _dcma_pybind11_version VERSION_LESS 2.10)
+        message(FATAL_ERROR "CPython ${Python3_VERSION} requires pybind11 2.10 or newer.")
+    endif()
+
+    if(WITH_PYTHON_EXTENSION AND BUILD_TESTING)
+        execute_process(
+            COMMAND "${Python3_EXECUTABLE}" -c "import numpy; print(numpy.__version__)"
+            RESULT_VARIABLE _dcma_numpy_result
+            OUTPUT_VARIABLE _dcma_numpy_version
+            ERROR_VARIABLE _dcma_numpy_error
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if(NOT _dcma_numpy_result EQUAL 0)
+            message(FATAL_ERROR
+                "NumPy is required by the Python extension data adapters and tests. "
+                "Install the NumPy package matching ${Python3_EXECUTABLE}. "
+                "Import failed with: ${_dcma_numpy_error}")
+        endif()
+    endif()
+
+    if(WITH_PYTHON_EXTENSION)
+        execute_process(
+            COMMAND "${Python3_EXECUTABLE}" -c
+                    "import sysconfig; print(sysconfig.get_path('platlib', vars={'base': '', 'platbase': ''}).lstrip('/'))"
+            RESULT_VARIABLE _dcma_python_sitearch_result
+            OUTPUT_VARIABLE DCMA_PYTHON_SITEARCH_RELATIVE
+            ERROR_VARIABLE _dcma_python_sitearch_error
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        if((NOT _dcma_python_sitearch_result EQUAL 0) OR (NOT DCMA_PYTHON_SITEARCH_RELATIVE))
+            message(FATAL_ERROR
+                "Unable to determine the selected interpreter's prefix-relative "
+                "module installation path: ${_dcma_python_sitearch_error}")
+        endif()
+    endif()
+
+    message(STATUS "Python integration:")
+    message(STATUS "  executable: ${Python3_EXECUTABLE}")
+    message(STATUS "  version: ${Python3_VERSION}")
+    message(STATUS "  include directories: ${Python3_INCLUDE_DIRS}")
+    message(STATUS "  pybind11 version: ${_dcma_pybind11_version}")
+    if(TARGET Python3::Module)
+        set(_dcma_python_module_target "available")
+    else()
+        set(_dcma_python_module_target "unavailable")
+    endif()
+    if(TARGET Python3::Python)
+        set(_dcma_python_embed_target "available")
+    else()
+        set(_dcma_python_embed_target "unavailable")
+    endif()
+    message(STATUS "  extension enabled: ${WITH_PYTHON_EXTENSION} (Python3::Module ${_dcma_python_module_target})")
+    if(WITH_PYTHON_EXTENSION AND DEFINED _dcma_numpy_version)
+        message(STATUS "  NumPy version: ${_dcma_numpy_version}")
+    endif()
+    if(WITH_PYTHON_EXTENSION)
+        message(STATUS "  prefix-relative module path: ${DCMA_PYTHON_SITEARCH_RELATIVE}")
+    endif()
+    message(STATUS "  embedding enabled: ${WITH_PYTHON_EMBED} (Python3::Python ${_dcma_python_embed_target})")
+endif()
 
 ####################################################################################
 #                                  Dependencies 
@@ -411,11 +539,13 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "Science")
 
 
 # Build and runtime dependency package lists are defined centrally in
-# cmake/PackageLists.cmake. The DCMA_DEBIAN_BUILD_DEPS variable
-# is populated there and used here directly.
+# cmake/PackageLists.cmake. Legacy packaging uses the build-dependency list,
+# but Python header-only build dependencies are not runtime requirements.
 #
 # Note: none of the SYCL external dependencies seem to be packaged for Debian (yet).
-list(JOIN DCMA_DEBIAN_BUILD_DEPS ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
+set(_dcma_debian_package_deps ${DCMA_DEBIAN_BUILD_DEPS})
+list(REMOVE_ITEM _dcma_debian_package_deps python3-dev pybind11-dev)
+list(JOIN _dcma_debian_package_deps ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
 list(JOIN DCMA_DEBIAN_RECOMMENDED_DEPS ", " CPACK_DEBIAN_PACKAGE_RECOMMENDS)
 
 include(CPack)

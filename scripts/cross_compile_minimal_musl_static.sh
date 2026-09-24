@@ -512,6 +512,9 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
         -DWITH_POSTGRES=OFF \
         -DWITH_JANSSON=OFF \
         -DWITH_THRIFT=OFF \
+        -DWITH_PYTHON=OFF \
+        -DWITH_PYTHON_EXTENSION=OFF \
+        -DWITH_PYTHON_EMBED=OFF \
         -DBOOST_INCLUDEDIR=/pot/usr/include/ \
         -DBOOST_LIBRARYDIR=/pot/usr/lib/ \
         -DBOOST_ROOT=/pot/ \
@@ -528,4 +531,3 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
 # Note: ldd-equivalent for musl libc:
 #apt-get install -y musl-dev
 #/lib/ld-musl-x86_64.so.1 --list /pot/bin/dicomautomaton_dispatcher
-

@@ -655,7 +655,7 @@ struct OperationArgDoc {
     std::string name;
     std::string desc;
     std::string default_val;
-    bool expected;
+    bool expected = false;
     std::list<std::string> examples;
 
     // Auxiliary information.
@@ -679,4 +679,3 @@ struct OperationDoc {
     std::list<std::string> tags; // Explicit tags used to categorize operations.
 
 };
-

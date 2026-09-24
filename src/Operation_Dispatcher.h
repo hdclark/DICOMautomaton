@@ -35,5 +35,5 @@ known_ops_tags_t Get_Unique_Tags(const known_ops_t &);
 bool Operation_Dispatcher( Drover &DICOM_data,
                            std::map<std::string,std::string> &InvocationMetadata,
                            const std::string &FilenameLex,
-                           const std::list<OperationArgPkg> &Operations);
-
+                           const std::list<OperationArgPkg> &Operations,
+                           std::string *failure_reason = nullptr);
