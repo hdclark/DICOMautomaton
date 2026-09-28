@@ -7,6 +7,7 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -51,11 +52,11 @@ struct ComputeVolumetricNeighbourhoodSamplerUserData {
     std::vector<std::array<int64_t, 3>> voxel_triplets;
 
     // -----------------------------
-    // The channel to consider. 
+    // The channels to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
-    //       Negative values will use all channels.
-    int64_t channel = -1;
+    //       Negative values or an empty set will select all channels.
+    std::set<int64_t> channels;
 
     // -----------------------------
     // Reduction functor for bounded voxels.

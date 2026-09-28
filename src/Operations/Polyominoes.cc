@@ -16,6 +16,7 @@
 #include <limits>
 #include <vector>
 #include <cmath>
+#include <set>
 #include <utility>
 
 #include "YgorImages.h"
@@ -24,6 +25,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -56,12 +58,14 @@ OperationDoc OpArgDocPolyominoes(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The image channel to operated on (zero-based)."
-                           " Negative values will cause all channels to be operated on.";
+                           " Negative values will cause all channels to be operated on."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2').";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
     out.args.emplace_back();
     out.args.back().name = "Family";
@@ -142,7 +146,7 @@ bool Polyominoes(Drover &DICOM_data,
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     const auto ActionStr = OptArgs.getValueStr("Action").value();
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto Family = std::stol( OptArgs.getValueStr("Family").value() );
 
     const auto Low = std::stod( OptArgs.getValueStr("Low").value() );
@@ -184,20 +188,8 @@ bool Polyominoes(Drover &DICOM_data,
     using img_t = planar_image<float, double>;
     using coord_t = std::array<int64_t, 2>;
 
-    const auto select_channels = [](const img_t& img, int64_t x){
-        // Given a selection request, return the intersection of requested and available channels.
-        // Negative selection implies selecting all available channels.
-        // Positive selection implies selecting the single channel (zero-based).
-        // Throws when requesting a channel that does not exist.
-        std::set<int64_t> channels;
-        if(x < 0){
-            for(int64_t i = 0; i < img.channels; ++i) channels.insert(i);
-        }else if(x < img.channels){
-            channels.insert(x);
-        }else{
-            throw std::runtime_error("Channel selection not present in image.");
-        }
-        return channels;
+    const auto select_channels = [&Channels](const img_t& img){
+        return img.resolve_channels(Channels);
     };
 
 
@@ -1103,7 +1095,7 @@ bool Polyominoes(Drover &DICOM_data,
 
     for(auto & iap_it : IAs){
         for(auto& img : (*iap_it)->imagecoll.images){
-            for(const auto chn : select_channels(img, Channel)){
+            for(const auto chn : select_channels(img)){
 
                 // Look for metadata to indicate where/which the current moving poly is.
                 //

@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <regex>
+#include <set>
 #include <stdexcept>
 #include <string>    
 #include <utility>            //Needed for std::pair.
@@ -13,6 +14,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/Compute/Interpolate_Image_Slices.h"
 #include "InterpolateSlices.h"
 #include "YgorImages.h"
@@ -59,6 +61,7 @@ OperationDoc OpArgDocInterpolateSlices(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to compare (zero-based)."
+                           " Comma-separated values (e.g., '0,2') are supported."
                            " A negative value will result in all channels being interpolated, otherwise"
                            " unspecified channels are merely default initialized."
                            " Note that both test images and reference images will share this specifier.";
@@ -67,7 +70,8 @@ OperationDoc OpArgDocInterpolateSlices(){
     out.args.back().examples = { "-1",
                                  "0",
                                  "1",
-                                 "2" };
+                                 "2",
+                                 "0,2" };
 
     return out;
 }
@@ -84,7 +88,7 @@ bool InterpolateSlices(Drover &DICOM_data,
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto ReferenceImageSelectionStr = OptArgs.getValueStr("ReferenceImageSelection").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -100,7 +104,7 @@ bool InterpolateSlices(Drover &DICOM_data,
         const auto common_metadata = (*iap_it)->imagecoll.get_common_metadata({});
 
         ComputeInterpolateImageSlicesUserData ud;
-        ud.channel = Channel;
+        ud.channels = Channels;
 
         std::list<std::reference_wrapper<planar_image_collection<float, double>>> IARL = { std::ref( (*iap_it)->imagecoll ) };
 

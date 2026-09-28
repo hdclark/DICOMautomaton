@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <regex>
+#include <set>
 #include <stdexcept>
 #include <string>    
 #include <mutex>
@@ -20,6 +21,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
@@ -49,10 +51,12 @@ OperationDoc OpArgDocGenerateCalibrationCurve(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based. Use '-1' to operate on all available channels.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Comma-separated values (e.g., '0,2') are supported."
+                           " Use '-1' to operate on all available channels.";
     out.args.back().default_val = "-1";
     out.args.back().expected = true;
-    out.args.back().examples = { "-1", "0", "1", "2" };
+    out.args.back().examples = { "-1", "0", "1", "2", "0,2" };
 
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
@@ -133,7 +137,7 @@ bool GenerateCalibrationCurve(Drover &DICOM_data,
                                 const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto RefImageSelectionStr = OptArgs.getValueStr("RefImageSelection").value();
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
@@ -199,6 +203,8 @@ bool GenerateCalibrationCurve(Drover &DICOM_data,
     std::map<float, std::vector<float>> A_to_B; 
 
     for(auto & iap_it : RIAs){
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
+
         PartitionedImageVoxelVisitorMutatorUserData ud;
 
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -230,7 +236,7 @@ bool GenerateCalibrationCurve(Drover &DICOM_data,
                            std::reference_wrapper<planar_image<float,double>> img_refw,
                            std::reference_wrapper<planar_image<float,double>>,
                            float &voxel_val) {
-            if( (Channel < 0) || (Channel == chan) ){
+            if( resolved_chnls.count(chan) != 0 ){
                 try{
                     // Sample the mapping-from image.
                     const auto P = img_refw.get().position(row, col);

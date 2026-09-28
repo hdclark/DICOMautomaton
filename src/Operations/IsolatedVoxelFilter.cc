@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <regex>
+#include <set>
 #include <stdexcept>
 #include <string>    
 #include <cstdint>
@@ -18,6 +19,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -69,12 +71,14 @@ OperationDoc OpArgDocIsolatedVoxelFilter(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operated on (zero-based)."
+                           " Comma-separated values (e.g., '0,2') are supported."
                            " Negative values will cause all channels to be operated on.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
 
     out.args.emplace_back();
@@ -159,7 +163,7 @@ bool IsolatedVoxelFilter(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const auto ReplacementStr = OptArgs.getValueStr("Replacement").value();
     const auto ReplaceStr = OptArgs.getValueStr("Replace").value();
@@ -242,7 +246,7 @@ bool IsolatedVoxelFilter(Drover &DICOM_data,
     for(auto & iap_it : IAs){
 
         ComputeVolumetricNeighbourhoodSamplerUserData ud;
-        ud.channel = Channel;
+        ud.channels = Channels;
         ud.maximum_distance = MaxDistance;
         {
             std::stringstream oss;

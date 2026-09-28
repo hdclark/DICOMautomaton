@@ -28,6 +28,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Thread_Pool.h"
 #include "../Metadata.h"
 
@@ -163,13 +164,15 @@ OperationDoc OpArgDocWarpImages(){
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to use (zero-based)."
                            " Setting to -1 will use each channel separately."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2')."
                            " Note that both images sets will share this specifier.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
                                  "1",
-                                 "2" };
+                                 "2",
+                                 "0,2" };
  
     return out;
 }
@@ -192,7 +195,7 @@ bool WarpImages(Drover &DICOM_data,
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const float InaccessibleValue = 0.0;
 
@@ -297,8 +300,8 @@ bool WarpImages(Drover &DICOM_data,
             std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
             for(auto & iap_it : IAs){
                 for(auto &img : (*iap_it)->imagecoll.images){
-                    if( (0 <= Channel)
-                    &&  (img.channels <= Channel) ){
+                    const auto resolved = img.resolve_channels(Channels);
+                    if(resolved.empty()){
                         throw std::invalid_argument("Encountered image without requested channel");
                     }
                     selected_imgs.push_back( std::ref(img) );
@@ -384,6 +387,9 @@ bool WarpImages(Drover &DICOM_data,
                     rimg.metadata = l_meta;
                 }
 
+                if(edit_ia_ptr->imagecoll.images.empty()) continue;
+                const auto resolved_chnls = edit_ia_ptr->imagecoll.images.front().resolve_channels(Channels);
+
                 PartitionedImageVoxelVisitorMutatorUserData ud;
                 ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
                 ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
@@ -419,7 +425,7 @@ bool WarpImages(Drover &DICOM_data,
                                    std::reference_wrapper<planar_image<float,double>> img_refw,
                                    std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                    float &voxel_val) {
-                    if( (Channel < 0) || (Channel == chan) ){
+                    if(resolved_chnls.count(chan) != 0){
                         // Get position of this voxel.
                         const auto ref_p = img_refw.get().position(row, col);
 

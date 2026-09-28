@@ -18,6 +18,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Metadata.h"
 #include "../YgorImages_Functors/Compute/Joint_Pixel_Sampler.h"
 
@@ -90,13 +91,15 @@ OperationDoc OpArgDocResampleImages(){
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to compare (zero-based)."
                            " Setting to -1 will compare each channel separately."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2')."
                            " Note that both image arrays must share this specifier.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
                                  "1",
-                                 "2" };
+                                 "2",
+                                 "0,2" };
 
     out.args.emplace_back();
     out.args.back().name = "Lower";
@@ -156,7 +159,7 @@ bool ResampleImages(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto ImgLowerThreshold = std::stod( OptArgs.getValueStr("Lower").value() );
     const auto ImgUpperThreshold = std::stod( OptArgs.getValueStr("Upper").value() );
     const auto IncludeNaNStr = OptArgs.getValueStr("IncludeNaN").value();
@@ -193,7 +196,7 @@ bool ResampleImages(Drover &DICOM_data,
 
     ComputeJointPixelSamplerUserData ud;
     ud.sampling_method = ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation;
-    ud.channel = Channel;
+    ud.channels = Channels;
     ud.description = "Resampled";
     ud.inc_lower_threshold = ImgLowerThreshold;
     ud.inc_upper_threshold = ImgUpperThreshold;

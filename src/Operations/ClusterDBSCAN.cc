@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>    
 #include <cstdint>
+#include <set>
 
 #include "YgorClustering.hpp"
 
@@ -21,6 +22,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -97,12 +99,14 @@ OperationDoc OpArgDocClusterDBSCAN(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operated on (zero-based)."
-                           " Negative values will cause all channels to be operated on.";
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
     out.args.emplace_back();
     out.args.back().name = "Lower";
@@ -211,7 +215,7 @@ bool ClusterDBSCAN(Drover &DICOM_data,
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const auto Lower = std::stod( OptArgs.getValueStr("Lower").value());
     const auto Upper = std::stod( OptArgs.getValueStr("Upper").value());
@@ -261,6 +265,8 @@ bool ClusterDBSCAN(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
 
         // --------------------------------
         // Prepare for clustering.
@@ -299,7 +305,7 @@ bool ClusterDBSCAN(Drover &DICOM_data,
                            std::reference_wrapper<planar_image<float,double>> img_refw,
                            std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                            float &voxel_val) {
-            if( (Channel < 0) || (Channel == chan) ){
+            if(resolved_chnls.count(chan) != 0){
                 if(isininc(Lower, voxel_val, Upper)){
                 //|| !std::isfinite(voxel_val) ){
                     const auto p = img_refw.get().position(row,col);
@@ -418,7 +424,8 @@ bool ClusterDBSCAN(Drover &DICOM_data,
                 //
                 // TODO: support point clouds so this step will not be necessary.
                 for(auto &img : (*iap_it)->imagecoll.images){
-                    const auto index = img.index( med, Channel );
+                    const auto first_chnl = resolved_chnls.empty() ? static_cast<int64_t>(0) : *resolved_chnls.begin();
+                    const auto index = img.index( med, first_chnl );
                     if(index < 0) continue;
                     img.reference(index) = new_val;
                     break;

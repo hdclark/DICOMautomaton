@@ -5,6 +5,7 @@
 #include <any>
 #include <functional>
 #include <list>
+#include <set>
 #include <cstdint>
 
 #include "YgorImages.h"
@@ -25,7 +26,7 @@ struct DecayDoseOverTimeUserData {
 
 
     //General parameters.
-    int64_t channel = -1; // Which channel to consider. Use '-1' for all channels.
+    std::set<int64_t> channels; // Which channels to consider. Empty or negative values for all channels.
 
     // Model selection.
     DecayDoseOverTimeMethod model = DecayDoseOverTimeMethod::Halve;

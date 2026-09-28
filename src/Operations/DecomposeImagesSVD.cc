@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>    
 #include <cstdint>
+#include <set>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -29,6 +30,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
@@ -62,10 +64,12 @@ OperationDoc OpArgDocDecomposeImagesSVD(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based. Use '-1' to operate on all available channels.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "-1";
     out.args.back().expected = true;
-    out.args.back().examples = { "-1", "0", "1", "2" };
+    out.args.back().examples = { "-1", "0", "1", "2", "0,2" };
 
     return out;
 }
@@ -79,7 +83,7 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto ChannelSet = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -113,16 +117,14 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
     if(imgs == 0L){
         throw std::invalid_argument("No images selected. Cannot continue");
     }
-    if(chns <= Channel){
-        throw std::invalid_argument("Requested channel does not exist");
+    if(chns < 1){
+        throw std::invalid_argument("No channels available in selected images");
     }
 
-    std::set<int64_t> Channels;
-    if(Channel < 0){
-        for(int64_t i = 0; i < chns; ++i) Channels.insert(i);
-    }else{
-        Channels.insert(Channel);
-    }
+    // Resolve the channel set using the first image.
+    // All images share the same layout, so this is valid for all.
+    const auto &first_img = (*IAs.front())->imagecoll.images.front();
+    const auto Channels = first_img.resolve_channels(ChannelSet);
 
     // Compute the average for every voxel.
     const int64_t N_cols = imgs;
