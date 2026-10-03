@@ -131,9 +131,9 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.back().name = "Model";
     out.args.back().desc = "The model that will be fitted."
 #ifdef DCMA_USE_EIGEN
-                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp', 'biexp-ols', and 'kurtosis' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp-lm', 'biexp-ls', and 'kurtosis' are available."
 #else
-                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp', and 'biexp-ols' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp-lm', and 'biexp-ls' are available."
 #endif //DCMA_USE_EIGEN
                            "\n\n"
                            "The 'adc-simple' is a simplistic diffusion model that ignores perfusion:"
@@ -158,15 +158,17 @@ OperationDoc OpArgDocModelIVIM(){
                            " This model estimates the pseudodiffusion fraction, the diffusion"
                            " coefficient, and the pseudodiffusion coefficient for each voxel in two stages."
                            ""
-                           " In the first stage, samples at b-values less than the provided threshold are ignored"
-                           " (as they contain the most contribution from perfusion effects) and the diffusion parameter"
-                           " is fitted. In the second stage"
-                           " only samples at b-values less than or equal to the threshold are used to fit the"
-                           " pseudodiffusion parameters."
+                           " In the first stage, samples at b-values less than or equal to the provided threshold are"
+                           " ignored (as they contain the most contribution from perfusion effects) and the diffusion"
+                           " parameter is fitted using weighted linear least-squares on the log signal."
+                           " In the second stage the diffusion parameter is held fixed and the pseudodiffusion fraction"
+                           " and pseudodiffusion coefficient are fitted to samples at all b-values."
                            ""
                            " The output images have channels for: pseudodiffusion fraction (f), diffusion (D),"
                            " pseudodiffusion (Dp), the number of attempted iterations, the number of steps in"
                            " Marquardt's algorithm where updates were accepted, final model cost, and voxel status."
+                           " A voxel status of 1100 means the fit converged; 1061 means the iteration limit was reached"
+                           " before convergence; other values indicate the fit failed and the parameters are NaN."
                            "\n\n"
                            "The 'biexp-ls' model uses a segmented fitting approach with linearized data to perform"
                            " analytical ordinary least-squares fitting of the biexponential model"
@@ -640,7 +642,7 @@ bool ModelIVIM(Drover &DICOM_data,
                 if(vals.empty()){
                     throw std::runtime_error("No overlapping images detected. Unable to continue.");
                 }
-                int numIterations = 100;
+                int numIterations = 500;
                 const auto [f, D, pseudoD, num_iters, num_updates, cost, voxel_status] = GetBiExp(bvalues, vals, numIterations, BValueThreshold);
                 if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
 

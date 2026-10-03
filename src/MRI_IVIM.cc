@@ -610,6 +610,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
     
     int64_t iters_attempted = 0;
     int64_t successful_updates = 0;
+    bool converged = false;
     
     for(int64_t iter = 0; iter < numIterations; iter++){
         ++iters_attempted;
@@ -692,7 +693,12 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
 
         // Accept or reject update
         if(new_cost < cost){
-            // Update accepted
+            // Update accepted.
+            //
+            // The relative change must be computed before 'cost' is overwritten. Computing it afterward always gives
+            // zero, which ends the fit after the fifth accepted step regardless of whether it has converged.
+            const double rel_change = std::abs(cost - new_cost) / (cost + 1e-12);
+
             r = r_new;
             f = new_f;
             pseudoD = new_pseudoD;
@@ -701,10 +707,8 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
             successful_updates++;
             
             // Check for convergence
-            double rel_change = std::abs(cost - new_cost) / (cost + 1e-12);
             if((rel_change < 1e-8) && (successful_updates >= 5)){
-                // Converged...
-                std::get<index_vox_status>(default_out) = 1051.0;
+                converged = true;
                 break;
             }
 
@@ -713,8 +717,10 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
             lambda *= 2.0;  // Increase damping
         }
         
-        // Prevent lambda from becoming too large
+        // Prevent lambda from becoming too large. No step in any direction reduces the cost, so the fit is at a
+        // (local) minimum; treat this as converged.
         if(lambda > 1e8){
+            converged = true;
             break;
         }
 
@@ -730,7 +736,10 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
         return default_out;
     }
     
-    return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost, 1100.0};
+    // 1100: converged. 1061: the iteration limit was reached before convergence; the parameters are the best found
+    // so far but may not be at the minimum.
+    const double vox_status = converged ? 1100.0 : 1061.0;
+    return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost, vox_status};
 }
 
 
@@ -1479,5 +1488,35 @@ TEST_CASE( "MRI_IVIM::Compare GetBiExp vs SegmentedOLS accuracy" ){
             CHECK(valid_biexp >= N_trials / 2);
             CHECK(valid_ols >= N_trials / 2);
         }
+    }
+}
+
+
+TEST_CASE( "MRI_IVIM::GetBiExp runs to convergence" ){
+    // Regression test. The convergence check used to compare the cost with itself after it had been updated, so
+    // every fit stopped after the fifth accepted step. For low-f, high-D* signals that is far from the minimum
+    // (e.g., a noise-free D* of 150e-3 mm^2/s was returned as ~93e-3). Noise-free signals must now be recovered
+    // closely, and the fit must report convergence.
+    const std::vector<float> b_vals = {0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000};
+    const double D = 1.2e-3;
+    const float bvalue_threshold = 200.0f;
+    const int num_iters = 500;
+
+    struct tc_t { double f; double Dp; };
+    for(const auto &tc : std::vector<tc_t>{ {0.05, 100.0e-3}, {0.05, 150.0e-3}, {0.10, 150.0e-3} }){
+        std::vector<float> S_vals;
+        for(const auto b : b_vals){
+            S_vals.push_back( static_cast<float>( tc.f * std::exp(-b * tc.Dp) + (1.0 - tc.f) * std::exp(-b * D) ) );
+        }
+        const auto out = MRI_IVIM::GetBiExp(b_vals, S_vals, num_iters, bvalue_threshold);
+        CAPTURE(tc.f);
+        CAPTURE(tc.Dp);
+        CAPTURE(out.at(0));
+        CAPTURE(out.at(2));
+        CAPTURE(out.at(4));
+        CAPTURE(out.at(6));
+        CHECK(out.at(6) == 1100.0);
+        CHECK(tc.f  == doctest::Approx(out.at(0)).epsilon(0.01));
+        CHECK(tc.Dp == doctest::Approx(out.at(2)).epsilon(0.01));
     }
 }
